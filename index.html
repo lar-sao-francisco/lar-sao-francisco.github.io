@@ -502,11 +502,12 @@ function defaultShiftTypes(){
     {code:"MT1", label:"Manhã/Tarde 1", blocks:[[8,13],[17,20]], needed:1, color:DEFAULT_COLORS[4]},
     {code:"DC",  label:"Descanso Complementar", blocks:[], needed:0, color:"#94A3B8", isRest:true},
     {code:"DO",  label:"Descanso Obrigatório",  blocks:[], needed:0, color:"#CBD5E1", isRest:true},
+    {code:"Fe",  label:"Férias",                blocks:[], needed:0, color:"#EC4899", isRest:true},
   ];
 }
 let state = {
   staff: [
-    {id:"s1", nome:"Catia", tipo:"efetivo", off:[5,6], principal:true, isManager:true, exceptions:{}, allowedWeekday:["M","T","DC","DO"], allowedWeekend:["M1","T1","DC","DO"], pin:"9999"},
+    {id:"s1", nome:"Catia", tipo:"efetivo", off:[5,6], principal:true, isManager:true, exceptions:{}, allowedWeekday:["M","T","DC","DO","Fe"], allowedWeekend:["M1","T1","DC","DO","Fe"], pin:"9999"},
     {id:"s7", nome:"Luis", tipo:"rv_gestao", off:[], principal:false, isManager:true, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"6666"},
     {id:"s2", nome:"Catarina", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"1111"},
     {id:"s3", nome:"Diana", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"2222"},
@@ -670,7 +671,7 @@ async function loadState(){
       else { parsed.monthStart = startOfMonth(new Date()); }
       if(!parsed.shiftTypes || !parsed.shiftTypes.length) parsed.shiftTypes = defaultShiftTypes();
       parsed.shiftTypes.forEach((st,i)=>{ if(!st.color) st.color = DEFAULT_COLORS[i % DEFAULT_COLORS.length]; });
-      ["DC","DO"].forEach(code=>{
+      ["DC","DO","Fe"].forEach(code=>{
         if(!parsed.shiftTypes.some(st=>st.code===code)){
           const defs = defaultShiftTypes();
           parsed.shiftTypes.push(defs.find(d=>d.code===code));
@@ -691,6 +692,8 @@ async function loadState(){
         if(p.tipo==="efetivo"){
           if(p.allowedWeekday.length && !p.allowedWeekday.includes("DC")) p.allowedWeekday.push("DC","DO");
           if(p.allowedWeekend.length && !p.allowedWeekend.includes("DC")) p.allowedWeekend.push("DC","DO");
+          if(p.allowedWeekday.length && !p.allowedWeekday.includes("Fe")) p.allowedWeekday.push("Fe");
+          if(p.allowedWeekend.length && !p.allowedWeekend.includes("Fe")) p.allowedWeekend.push("Fe");
         }
       });
       if(!parsed.schedules) parsed.schedules = {};
@@ -1181,15 +1184,15 @@ function renderShiftTypes(){
     labelInput.value = st.label;
     labelInput.title = "Nome do turno";
     labelInput.addEventListener("input", e=>{ st.label = e.target.value; scheduleSave(); });
-    const b1s = document.createElement("input"); b1s.type="time"; b1s.value = hourToTime(st.blocks[0][0]);
-    const b1e = document.createElement("input"); b1e.type="time"; b1e.value = hourToTime(st.blocks[0][1]);
-    b1s.addEventListener("change", e=>{ st.blocks[0][0]=timeToHour(e.target.value); scheduleSave(); });
-    b1e.addEventListener("change", e=>{ st.blocks[0][1]=timeToHour(e.target.value); scheduleSave(); });
+    const b1s = document.createElement("input"); b1s.type="time"; b1s.value = st.blocks[0] ? hourToTime(st.blocks[0][0]) : "";
+    const b1e = document.createElement("input"); b1e.type="time"; b1e.value = st.blocks[0] ? hourToTime(st.blocks[0][1]) : "";
+    b1s.addEventListener("change", e=>{ if(!st.blocks[0]) st.blocks[0]=[8,16]; st.blocks[0][0]=timeToHour(e.target.value); scheduleSave(); });
+    b1e.addEventListener("change", e=>{ if(!st.blocks[0]) st.blocks[0]=[8,16]; st.blocks[0][1]=timeToHour(e.target.value); scheduleSave(); });
     const b2s = document.createElement("input"); b2s.type="time"; b2s.value = st.blocks[1] ? hourToTime(st.blocks[1][0]) : "";
     const b2e = document.createElement("input"); b2e.type="time"; b2e.value = st.blocks[1] ? hourToTime(st.blocks[1][1]) : "";
     function updateBlock2(){
       if(b2s.value && b2e.value){ st.blocks[1] = [timeToHour(b2s.value), timeToHour(b2e.value)]; }
-      else { st.blocks = [st.blocks[0]]; }
+      else { st.blocks = st.blocks[0] ? [st.blocks[0]] : []; }
       scheduleSave();
     }
     b2s.addEventListener("change", updateBlock2);
