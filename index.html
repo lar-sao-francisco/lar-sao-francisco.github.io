@@ -231,10 +231,20 @@
       <h3>Disponibilidades</h3>
       <p>Vista para os recibos verdes marcarem os dias em que não podem trabalhar este mês.</p>
     </div>
+    <div class="home-card" data-target="dispequipa" id="teamDispCard">
+      <span class="icon">👥</span>
+      <h3>Disponibilidades da equipa</h3>
+      <p>O que cada recibo verde marcou como disponível no mês em exibição.</p>
+    </div>
     <div class="home-card" data-target="config" id="configCard">
       <span class="icon">⚙️</span>
       <h3>Configurações</h3>
       <p>Equipa, turnos, regras da escala, e revisão das disponibilidades submetidas.</p>
+    </div>
+    <div class="home-card" data-target="relatorios" id="reportCard">
+      <span class="icon">📊</span>
+      <h3>Relatórios</h3>
+      <p>Horas disponibilizadas e horas feitas por cada enfermeiro no mês em exibição.</p>
     </div>
   </div>
   <!-- SECTION: HORÁRIO -->
@@ -298,6 +308,27 @@
           <p class="note" id="changePinSuccess" style="color:var(--sage-deep);"></p>
         </div>
       </div>
+    </div>
+  </div>
+  <!-- SECTION: DISPONIBILIDADES DA EQUIPA (gestão) -->
+  <div id="section-dispequipa" class="section" style="display:none;">
+    <span class="back-link" data-back>← Voltar ao início</span>
+    <div class="panel">
+      <h2>Disponibilidades da equipa — <span id="teamDispMonthLabel"></span></h2>
+      <div id="teamAvailabilityList"></div>
+      <p class="note">Isto é o que cada recibo verde marcou como disponível na vista "Disponibilidades", para o mês em exibição. Usa as setas no topo para mudar de mês. Já se aplica automaticamente à grelha do Horário.</p>
+    </div>
+  </div>
+  <!-- SECTION: RELATORIOS -->
+  <div id="section-relatorios" class="section" style="display:none;">
+    <span class="back-link" data-back>← Voltar ao início</span>
+    <div class="toolbar">
+      <button class="btn btn-ghost" id="printReportBtn">Imprimir / Exportar PDF</button>
+    </div>
+    <div class="panel">
+      <h2>Relatório do mês — <span id="reportMonthLabel"></span></h2>
+      <div class="grid-scroll" id="reportTableWrap"></div>
+      <p class="note">"Horas disponibilizadas" soma as horas de todos os turnos que a pessoa marcou como disponível na vista Disponibilidades (aplica-se aos recibos verdes). "Horas feitas" soma as horas dos turnos atribuídos na grelha do Horário deste mês — os descansos (DC/DO) não contam. "Aproveitamento" = horas feitas ÷ horas disponibilizadas.</p>
     </div>
   </div>
   <!-- SECTION: CONFIGURAÇÕES -->
@@ -738,6 +769,8 @@ function enterApp(){
   document.getElementById("appLoginGate").style.display = "none";
   document.getElementById("homeMenu").style.display = "grid";
   document.getElementById("configCard").style.display = authRole==="gestor" ? "" : "none";
+  document.getElementById("reportCard").style.display = authRole==="gestor" ? "" : "none";
+  document.getElementById("teamDispCard").style.display = authRole==="gestor" ? "" : "none";
   const person = staffById(authNurseId);
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
   document.getElementById("gestorBadge").style.display = authRole==="gestor" ? "" : "none";
@@ -756,7 +789,7 @@ function logoutApp(){
   nurseDraft = null;
   nurseEditing = false;
   document.getElementById("homeMenu").style.display = "none";
-  ["horario","disponibilidade","config"].forEach(n=>{
+  ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = "none";
   });
   document.getElementById("gestorBadge").style.display = "none";
@@ -793,17 +826,19 @@ document.querySelectorAll("[data-back]").forEach(el=>{
   el.addEventListener("click", ()=> showSection(null));
 });
 function showSection(name){
-  if(name === "config" && authRole !== "gestor"){
+  if((name === "config" || name === "relatorios" || name === "dispequipa") && authRole !== "gestor"){
     alert("Acesso restrito à gestão.");
     return;
   }
   document.getElementById("homeMenu").style.display = name ? "none" : "grid";
-  ["horario","disponibilidade","config"].forEach(n=>{
+  ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = (n===name) ? "" : "none";
   });
   if(name==="horario") renderExcelGrid();
   if(name==="disponibilidade") renderNurseView();
   if(name==="config") renderConfigSection();
+  if(name==="relatorios") renderRelatorios();
+  if(name==="dispequipa") renderTeamAvailability();
 }
 // ---------- RENDER: STAFF (Configurações) ----------
 function renderStaff(){
@@ -1170,7 +1205,15 @@ document.getElementById("holidayAddBtn").addEventListener("click", ()=>{
 // ---------- MANAGER: availability requests review ----------
 function monthPrefix(monthStart){ return monthStart.getFullYear() + "-" + pad2(monthStart.getMonth()+1); }
 function renderAvailabilityPanel(){
-  const wrap = document.getElementById("availabilityList");
+  renderAvailabilityInto(document.getElementById("availabilityList"));
+}
+function renderTeamAvailability(){
+  const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+  document.getElementById("monthLabel").textContent = label;
+  document.getElementById("teamDispMonthLabel").textContent = label;
+  renderAvailabilityInto(document.getElementById("teamAvailabilityList"));
+}
+function renderAvailabilityInto(wrap){
   wrap.innerHTML = "";
   const prefix = monthPrefix(state.monthStart);
   const rvStaff = state.staff.filter(p=>isRvLike(p.tipo));
@@ -1533,6 +1576,8 @@ function refreshVisibleSection(){
   if(document.getElementById("section-horario").style.display !== "none") renderExcelGrid();
   if(document.getElementById("section-disponibilidade").style.display !== "none") renderNurseView();
   if(document.getElementById("section-config").style.display !== "none") renderAvailabilityPanel();
+  if(document.getElementById("section-relatorios").style.display !== "none") renderRelatorios();
+  if(document.getElementById("section-dispequipa").style.display !== "none") renderTeamAvailability();
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
 }
@@ -1695,6 +1740,77 @@ document.getElementById("nurseGuardarBtn").addEventListener("click", ()=>{
   scheduleSave();
   renderNurseCalendar();
 });
+// ---------- RELATORIOS ----------
+function renderRelatorios(){
+  const monthStart = state.monthStart;
+  const nDays = daysInMonth(monthStart);
+  const label = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+  document.getElementById("monthLabel").textContent = label;
+  document.getElementById("reportMonthLabel").textContent = label;
+  const wrap = document.getElementById("reportTableWrap");
+  wrap.innerHTML = "";
+  const table = document.createElement("table");
+  table.className = "excel";
+  table.style.width = "100%";
+  const thead = document.createElement("thead");
+  thead.innerHTML = "<tr>" +
+    "<th class=\"name-col\">Enfermeiro(a)</th>" +
+    "<th>Horas disponibilizadas</th>" +
+    "<th>Horas feitas</th>" +
+    "<th>Nº turnos</th>" +
+    "<th>Horas fim de semana</th>" +
+    "<th>Aproveitamento</th>" +
+    "</tr>";
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  let totDisp=0, totFeitas=0, totTurnos=0, totFds=0;
+  state.staff.filter(p=>isSchedulableTipo(p.tipo)).forEach(person=>{
+    let disp=0, feitas=0, turnos=0, fds=0;
+    const reqs = state.availabilityRequests[person.id] || {};
+    for(let day=1; day<=nDays; day++){
+      const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+      const iso = weekKey(date);
+      if(reqs[iso]){
+        Object.keys(reqs[iso]).forEach(code=>{ if(reqs[iso][code]) disp += shiftHours(code); });
+      }
+      const code = getPersonShiftForDate(person.id, date);
+      if(code){
+        const st = shiftType(code);
+        if(!st || !st.isRest){
+          const h = shiftHours(code);
+          feitas += h; turnos++;
+          if(isWeekendDay(date)) fds += h;
+        }
+      }
+    }
+    totDisp+=disp; totFeitas+=feitas; totTurnos+=turnos; totFds+=fds;
+    const rv = isRvLike(person.tipo);
+    const tr = document.createElement("tr");
+    const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
+    const dispTxt = rv ? disp + "h" : "—";
+    const aprTxt = (rv && disp>0) ? Math.round(feitas/disp*100) + "%" : "—";
+    tr.innerHTML = "<td class=\"name-col\"><span class=\"name-cell-inner\"><span class=\"dot " + dotClass + "\"></span>" + person.nome + "</span></td>" +
+      "<td>" + dispTxt + "</td>" +
+      "<td style=\"font-weight:700;\">" + feitas + "h</td>" +
+      "<td>" + turnos + "</td>" +
+      "<td>" + fds + "h</td>" +
+      "<td>" + aprTxt + "</td>";
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  const tfoot = document.createElement("tfoot");
+  tfoot.innerHTML = "<tr>" +
+    "<td class=\"name-col\" style=\"font-weight:700;\">Total</td>" +
+    "<td style=\"font-weight:700;\">" + totDisp + "h</td>" +
+    "<td style=\"font-weight:700;\">" + totFeitas + "h</td>" +
+    "<td style=\"font-weight:700;\">" + totTurnos + "</td>" +
+    "<td style=\"font-weight:700;\">" + totFds + "h</td>" +
+    "<td>" + (totDisp>0 ? Math.round(totFeitas/totDisp*100) + "%" : "—") + "</td>" +
+    "</tr>";
+  table.appendChild(tfoot);
+  wrap.appendChild(table);
+}
+document.getElementById("printReportBtn").addEventListener("click", ()=> window.print());
 loadState().then(()=>{
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
