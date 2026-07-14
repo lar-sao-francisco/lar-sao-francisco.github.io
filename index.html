@@ -271,6 +271,8 @@
     select.cell-select{ border:none; -webkit-appearance:none; appearance:none; background-image:none !important; padding:2px 1px; font-size:9.5px; width:36px; }
     .day-head .num{ font-size:11px; }
     .day-head .dow{ font-size:8px; }
+    .exc-chip{ border:1px solid #999; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .dd-row{ page-break-inside:avoid; }
   }
 </style>
 </head>
@@ -414,6 +416,9 @@
   <!-- SECTION: DISPONIBILIDADES DA EQUIPA (gestão) -->
   <div id="section-dispequipa" class="section" style="display:none;">
     <span class="back-link" data-back>← Voltar ao início</span>
+    <div class="toolbar">
+      <button class="btn btn-ghost" id="printTeamDispBtn">Imprimir / Exportar PDF</button>
+    </div>
     <div class="panel">
       <h2>Disponibilidades da equipa — <span id="teamDispMonthLabel"></span></h2>
       <div id="teamAvailabilityList"></div>
@@ -1914,6 +1919,7 @@ function renderRelatorios(){
   wrap.appendChild(table);
 }
 document.getElementById("printReportBtn").addEventListener("click", ()=> window.print());
+document.getElementById("printTeamDispBtn").addEventListener("click", ()=> window.print());
 loadState().then(()=>{
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
