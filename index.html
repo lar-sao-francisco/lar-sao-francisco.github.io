@@ -1343,7 +1343,7 @@ function renderAvailabilityInto(wrap){
     } else {
       const fmt = d => d.toLocaleDateString("pt-PT",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"});
       const canStillEdit = withinEditWindow(savedAt);
-      statusSpan.textContent = "Guardado em " + fmt(new Date(savedAt)) + (canStillEdit ? " (ainda pode alterar)" : " (prazo terminado)");
+      statusSpan.textContent = "Guardado em " + fmt(new Date(savedAt));
       if(!canStillEdit){
         const reopenBtn = document.createElement("button");
         reopenBtn.className = "exc-add-btn";
@@ -1768,7 +1768,7 @@ function renderNurseCalendar(){
       alterarBtn.style.display = "none";
       guardarBtn.style.display = "";
     } else if(withinWindow){
-      statusText.textContent = "Guardado em " + fmt(savedDate) + ". Podes alterar até " + fmt(deadline) + ".";
+      statusText.textContent = "Guardado em " + fmt(savedDate) + ". Podes alterar sempre que precisares.";
       alterarBtn.style.display = "";
       guardarBtn.style.display = "none";
     } else {
@@ -1826,8 +1826,7 @@ function renderNurseCalendar(){
   }
 }
 function withinEditWindow(savedAtIso){
-  const saved = new Date(savedAtIso);
-  return (Date.now() - saved.getTime()) <= 2*24*3600*1000;
+  return true; // sem prazo: as disponibilidades podem ser alteradas a qualquer momento
 }
 document.getElementById("nurseAlterarBtn").addEventListener("click", ()=>{
   nurseDraft = JSON.parse(JSON.stringify(state.availabilityRequests[nursePersonId] || {}));
@@ -1985,7 +1984,7 @@ loadState().then(()=>{
       a:"1. Entra com o teu nome e PIN\n2. Abre \"Disponibilidades\"\n3. Em cada dia em que podes trabalhar, toca nos turnos que podes fazer (ex: M1, T1) — ficam coloridos\n4. No fim, carrega em \"Guardar disponibilidade\"\n\nSe não tocares em nada num dia, a gestão assume que não tens essa informação. Usa as setas no topo para mudar de mês." },
     { keys:["alterar","prazo","2 dias","dois dias","mudar disponibilidade","corrigir","terminou"],
       sug:"Posso alterar depois de guardar?",
-      a:"Sim, tens 2 dias depois de guardar para alterar — aparece um botão \"Alterar\" na vista Disponibilidades. Passado esse prazo, só a gestão pode reabrir a edição (em Configurações → Disponibilidades submetidas → \"Reabrir edição\")." },
+      a:"Sim, sempre que precisares — abre Disponibilidades, carrega em \"Alterar\", faz as mudanças e volta a carregar em \"Guardar disponibilidade\". Não há prazo limite." },
     { keys:["turno","turnos","m1","t1","mt1","codigos","códigos","horas","horario dos turnos","significa"],
       sug:"O que significam M, T, M1, T1?",
       a:"Códigos dos turnos:\n• M — Manhã (8h–16h)\n• T — Tarde (13h–20h)\n• M1 — Manhã 1 (8h–14h)\n• T1 — Tarde 1 (17h–20h)\n• MT1 — turno partido (8h–13h + 17h–20h)\n• DC / DO — Descanso Complementar / Obrigatório\n\nAs cores e horários exatos podem ser ajustados pela gestão em Configurações → Turnos." },
