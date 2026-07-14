@@ -361,6 +361,10 @@
     </div>
     <div class="panel">
       <h2>Escala do mês</h2>
+      <div id="horarioFilterBar" class="sans" style="display:none; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 12px; padding:8px 12px; background:var(--weekend-bg); border-radius:10px; font-size:13px;">
+        <span id="horarioFilterText"></span>
+        <button class="exc-add-btn" id="horarioFilterClear">Mostrar todos</button>
+      </div>
       <div class="grid-scroll">
         <table class="excel" id="excelTable">
           <thead id="excelHead"></thead>
@@ -536,6 +540,7 @@ let authRole = null;      // null | "gestor"
 let authNurseId = null;   // id of the logged-in person
 let nurseDraft = null;    // in-progress edits before "Guardar"
 let nurseEditing = false; // true while actively editing (after clicking "Alterar", or first time ever)
+let horarioFilterId = null; // quando definido, o horário mostra só esta pessoa
 // ---------- DATE HELPERS ----------
 function startOfWeek(d){
   const date = new Date(d);
@@ -892,6 +897,7 @@ function enterApp(){
   }
 }
 function logoutApp(){
+  horarioFilterId = null;
   authRole = null;
   authNurseId = null;
   nursePersonId = null;
@@ -1479,11 +1485,32 @@ function renderExcelGrid(){
   body.innerHTML = "";
   const dailyCounts = dates.map(()=>0);
   state.staff.filter(p=>isSchedulableTipo(p.tipo)).forEach(person=>{
+    dates.forEach((date, di)=>{
+      const c = getPersonShiftForDate(person.id, date);
+      if(c){ const st = shiftType(c); if(!st || !st.isRest) dailyCounts[di]++; }
+    });
+  });
+  const fbar = document.getElementById("horarioFilterBar");
+  const fperson = horarioFilterId ? staffById(horarioFilterId) : null;
+  if(fperson){
+    fbar.style.display = "flex";
+    document.getElementById("horarioFilterText").textContent = "A mostrar apenas os turnos de " + fperson.nome + ". Clica no nome outra vez (ou em Mostrar todos) para voltar.";
+  } else {
+    horarioFilterId = null;
+    fbar.style.display = "none";
+  }
+  state.staff.filter(p=>isSchedulableTipo(p.tipo)).filter(p=> !horarioFilterId || p.id===horarioFilterId).forEach(person=>{
     const tr = document.createElement("tr");
     const tdName = document.createElement("td");
     tdName.className = "name-col";
     const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
     tdName.innerHTML = `<span class="name-cell-inner"><span class="dot ${dotClass}"></span>${person.nome}</span>`;
+    tdName.style.cursor = "pointer";
+    tdName.title = horarioFilterId===person.id ? "Clica para voltar a ver toda a equipa" : "Clica para ver só os turnos de " + person.nome;
+    tdName.addEventListener("click", ()=>{
+      horarioFilterId = horarioFilterId===person.id ? null : person.id;
+      renderExcelGrid();
+    });
     tr.appendChild(tdName);
     let monthHours = 0;
     dates.forEach((date, di)=>{
@@ -1496,7 +1523,7 @@ function renderExcelGrid(){
       const current = getPersonShiftForDate(person.id, date);
       if(current){
         const curSt = shiftType(current);
-        if(!curSt || !curSt.isRest){ dailyCounts[di]++; monthHours += shiftHours(current); }
+        if(!curSt || !curSt.isRest){ monthHours += shiftHours(current); }
       }
       if(!isGestor){
         const span = document.createElement("span");
@@ -1669,6 +1696,10 @@ document.getElementById("clearBtn").addEventListener("click", ()=>{
   renderExcelGrid(); scheduleSave();
 });
 document.getElementById("printBtn").addEventListener("click", ()=> window.print());
+document.getElementById("horarioFilterClear").addEventListener("click", ()=>{
+  horarioFilterId = null;
+  renderExcelGrid();
+});
 document.getElementById("prevMonth").addEventListener("click", ()=>{
   state.monthStart = addMonths(state.monthStart, -1);
   nurseDraft = null; nurseEditing = false;
