@@ -354,6 +354,7 @@
   <div id="section-horario" class="section" style="display:none;">
     <span class="back-link" data-back>← Voltar ao início</span>
     <div class="toolbar">
+      <button class="btn btn-primary" id="saveNowBtn" title="Guarda já todas as alterações na base de dados">💾 Gravar</button>
       <button class="btn btn-primary" id="genBtn" title="Só preenche os turnos que ainda estão vazios neste mês — não apaga o que já lá está">Preencher turnos em falta</button>
       <button class="btn btn-ghost" id="clearBtn" title="Apaga TODOS os turnos deste mês, incluindo os que foram colocados à mão">Limpar mês</button>
       <button class="btn btn-ghost" id="printBtn">Imprimir / Exportar PDF</button>
@@ -645,7 +646,9 @@ async function storageGet(){
 }
 let saveTimer = null;
 let lastSaveError = null;
+let savePending = false;
 function scheduleSave(){
+  savePending = true;
   const statusEl = document.getElementById("saveStatus");
   if(statusEl) statusEl.textContent = "A guardar...";
   clearTimeout(saveTimer);
@@ -660,6 +663,7 @@ async function doSave(){
       setTimeout(()=>{ if(statusEl.textContent==="Guardado ✓") statusEl.textContent=""; }, 1500);
     }
     lastSaveError = null;
+    savePending = false;
     document.getElementById("globalErrorBanner").style.display = "none";
   }catch(e){
     if(statusEl) statusEl.textContent = "Erro ao guardar";
@@ -671,6 +675,9 @@ async function doSave(){
   }
 }
 document.getElementById("retrySaveBtn").addEventListener("click", ()=> doSave());
+window.addEventListener("beforeunload", (e)=>{
+  if(savePending || lastSaveError){ e.preventDefault(); e.returnValue = ""; }
+});
 async function loadState(){
   try{
     const res = await storageGet();
@@ -1414,6 +1421,7 @@ function renderExcelGrid(){
   const isGestor = authRole === "gestor";
   document.getElementById("genBtn").style.display = isGestor ? "" : "none";
   document.getElementById("clearBtn").style.display = isGestor ? "" : "none";
+  document.getElementById("saveNowBtn").style.display = isGestor ? "" : "none";
   const monthStart = state.monthStart;
   const label = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
@@ -1681,6 +1689,10 @@ function autoGenerate(){
   renderExcelGrid();
   scheduleSave();
 }
+document.getElementById("saveNowBtn").addEventListener("click", ()=>{
+  clearTimeout(saveTimer);
+  doSave();
+});
 document.getElementById("genBtn").addEventListener("click", autoGenerate);
 document.getElementById("clearBtn").addEventListener("click", ()=>{
   const monthStart = state.monthStart;
