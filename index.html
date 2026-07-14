@@ -349,14 +349,16 @@
       <h3>Relatórios</h3>
       <p>Horas disponibilizadas e horas feitas por cada enfermeiro no mês em exibição.</p>
     </div>
+    <div class="home-card" id="logoutCard">
+      <span class="icon">🚪</span>
+      <h3>Sair</h3>
+      <p>Terminar sessão e voltar ao ecrã de entrada.</p>
+    </div>
   </div>
   <!-- SECTION: HORÁRIO -->
   <div id="section-horario" class="section" style="display:none;">
     <span class="back-link" data-back>← Voltar ao início</span>
     <div class="toolbar">
-      <button class="btn btn-primary" id="saveNowBtn" title="Guarda já todas as alterações na base de dados">💾 Gravar</button>
-      <button class="btn btn-primary" id="genBtn" title="Só preenche os turnos que ainda estão vazios neste mês — não apaga o que já lá está">Preencher turnos em falta</button>
-      <button class="btn btn-ghost" id="clearBtn" title="Apaga TODOS os turnos deste mês, incluindo os que foram colocados à mão">Limpar mês</button>
       <button class="btn btn-ghost" id="printBtn">Imprimir / Exportar PDF</button>
       <span class="save-status" id="saveStatus"></span>
     </div>
@@ -455,8 +457,7 @@
       <h2>Turnos</h2>
       <div id="shiftsList"></div>
       <button class="btn btn-ghost" style="margin-top:10px;" id="addShiftBtn">+ Adicionar turno</button>
-      <p class="note">Para turnos partidos (duas partes no mesmo dia, como o MT1), preenche também o 2º bloco de horas. Deixa o 2º bloco vazio se o turno for contínuo. A cor escolhida aqui é a que aparece na grelha do horário.
-      <br><strong>Regra especial do M1 em dias de semana:</strong> só entra em "Preencher turnos em falta" se esse dia já tiver um T atribuído. Se a fixa fizer o M, só é preciso o T1. Ao fim de semana, o M1 e o T1 aplicam sempre o nº de pessoas definido abaixo.</p>
+      <p class="note">Para turnos partidos (duas partes no mesmo dia, como o MT1), preenche também o 2º bloco de horas. Deixa o 2º bloco vazio se o turno for contínuo. A cor escolhida aqui é a que aparece na grelha do horário.</p>
     </div>
     <div class="panel" id="settingsPanel">
       <h2>Regras da escala</h2>
@@ -953,6 +954,7 @@ document.querySelectorAll(".home-card").forEach(card=>{
 document.querySelectorAll("[data-back]").forEach(el=>{
   el.addEventListener("click", ()=> showSection(null));
 });
+document.getElementById("logoutCard").addEventListener("click", logoutApp);
 function showSection(name){
   const viewer = staffById(authNurseId);
   if(name === "horario" && viewer && viewer.tipo==="guest" && (viewer.canViewTeamDisp || viewer.canViewReports)){
@@ -1462,9 +1464,6 @@ function renderLegend(){
 }
 function renderExcelGrid(){
   const isGestor = authRole === "gestor";
-  document.getElementById("genBtn").style.display = isGestor ? "" : "none";
-  document.getElementById("clearBtn").style.display = isGestor ? "" : "none";
-  document.getElementById("saveNowBtn").style.display = isGestor ? "" : "none";
   const monthStart = state.monthStart;
   const label = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
@@ -1732,24 +1731,6 @@ function autoGenerate(){
   renderExcelGrid();
   scheduleSave();
 }
-document.getElementById("saveNowBtn").addEventListener("click", ()=>{
-  clearTimeout(saveTimer);
-  doSave();
-});
-document.getElementById("genBtn").addEventListener("click", autoGenerate);
-document.getElementById("clearBtn").addEventListener("click", ()=>{
-  const monthStart = state.monthStart;
-  const nDays = daysInMonth(monthStart);
-  let skippedLocked = 0;
-  for(let day=1; day<=nDays; day++){
-    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
-    if(state.lockedDays[weekKey(date)]){ skippedLocked++; continue; }
-    const dayData = getDayShifts(date);
-    Object.keys(dayData).forEach(code=>{ dayData[code].length = 0; });
-  }
-  if(skippedLocked>0) alert(skippedLocked + " dia(s) bloqueado(s) não foram apagados. Desbloqueia-os primeiro se quiseres limpá-los também.");
-  renderExcelGrid(); scheduleSave();
-});
 document.getElementById("printBtn").addEventListener("click", ()=> window.print());
 document.getElementById("horarioFilterClear").addEventListener("click", ()=>{
   horarioFilterId = null;
@@ -2084,8 +2065,8 @@ loadState().then(()=>{
       sug:"Onde vejo o meu horário?",
       a:"Entra na app e abre \"Horário\". A grelha mostra o mês inteiro: nomes à esquerda, dias em cima. O teu turno em cada dia aparece com a cor respetiva. A coluna final mostra o total de horas do mês. Usa as setas no topo para mudar de mês." },
     { keys:["preencher","gerar","automatico","automático","em falta","distribuir"],
-      sug:"Como gero a escala automaticamente?",
-      a:"(Só gestão) No Horário, carrega em \"Preencher turnos em falta\". Preenche só as células vazias, respeitando as disponibilidades submetidas, o descanso mínimo, o máximo de turnos por semana e os dias seguidos. Não apaga o que já foi colocado à mão.\n\n\"Limpar mês\" apaga TODOS os turnos do mês (exceto semanas bloqueadas)." },
+      sug:"Como preencho a escala?",
+      a:"(Só gestão) No Horário, escolhe o turno de cada pessoa em cada dia diretamente na grelha. As alterações gravam-se automaticamente — aparece \"Guardado ✓\" no topo quando fica registado." },
     { keys:["vermelho","conflito","contorno","erro na grelha"],
       sug:"O que é o contorno vermelho?",
       a:"Um contorno vermelho numa célula indica conflito: descanso insuficiente entre turnos, sobreposição de horários, ou dias de trabalho seguidos a mais. As regras (descanso mínimo, máx. turnos/semana, máx. dias seguidos) definem-se em Configurações → Regras da escala." },
