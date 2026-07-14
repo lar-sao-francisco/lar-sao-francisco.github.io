@@ -895,9 +895,7 @@ function enterApp(){
   document.getElementById("configCard").style.display = authRole==="gestor" ? "" : "none";
   document.getElementById("reportCard").style.display = (authRole==="gestor" || (person && person.canViewReports)) ? "" : "none";
   document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
-  const soDisp = !!(person && person.tipo==="guest" && person.canViewTeamDisp);
-  const guestViewer = !!(person && person.tipo==="guest" && (person.canViewTeamDisp || person.canViewReports));
-  document.getElementById("horarioCard").style.display = guestViewer ? "none" : "";
+  document.getElementById("horarioCard").style.display = "";
   const person = staffById(authNurseId);
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
   document.getElementById("gestorBadge").style.display = authRole==="gestor" ? "" : "none";
@@ -908,7 +906,6 @@ function enterApp(){
   } else {
     document.getElementById("nurseBadge").style.display = "none";
   }
-  if(soDisp && !(person && person.canViewReports)) showSection("dispequipa");
 }
 function logoutApp(){
   horarioFilterId = null;
@@ -957,10 +954,6 @@ document.querySelectorAll("[data-back]").forEach(el=>{
 document.getElementById("logoutCard").addEventListener("click", logoutApp);
 function showSection(name){
   const viewer = staffById(authNurseId);
-  if(name === "horario" && viewer && viewer.tipo==="guest" && (viewer.canViewTeamDisp || viewer.canViewReports)){
-    alert("Acesso restrito.");
-    return;
-  }
   if(name === "dispequipa" && authRole !== "gestor" && !(viewer && viewer.canViewTeamDisp)){
     alert("Acesso restrito à gestão.");
     return;
