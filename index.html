@@ -349,11 +349,9 @@
       <h3>Relatórios</h3>
       <p>Horas disponibilizadas e horas feitas por cada enfermeiro no mês em exibição.</p>
     </div>
-    <div class="home-card" id="logoutCard">
-      <span class="icon">🚪</span>
-      <h3>Sair</h3>
-      <p>Terminar sessão e voltar ao ecrã de entrada.</p>
-    </div>
+  </div>
+  <div id="logoutSmallBar" class="sans" style="display:none; text-align:right; margin:-10px 0 20px;">
+    <span class="back-link" id="logoutSmallLink" style="font-size:12.5px;">🚪 Terminar sessão</span>
   </div>
   <!-- SECTION: HORÁRIO -->
   <div id="section-horario" class="section" style="display:none;">
@@ -892,6 +890,7 @@ function populateAppLoginSelect(){
 function enterApp(){
   document.getElementById("appLoginGate").style.display = "none";
   document.getElementById("homeMenu").style.display = "grid";
+  document.getElementById("logoutSmallBar").style.display = "";
   document.getElementById("configCard").style.display = authRole==="gestor" ? "" : "none";
   document.getElementById("reportCard").style.display = (authRole==="gestor" || (person && person.canViewReports)) ? "" : "none";
   document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
@@ -915,6 +914,7 @@ function logoutApp(){
   nurseDraft = null;
   nurseEditing = false;
   document.getElementById("homeMenu").style.display = "none";
+  document.getElementById("logoutSmallBar").style.display = "none";
   ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = "none";
   });
@@ -951,7 +951,7 @@ document.querySelectorAll(".home-card").forEach(card=>{
 document.querySelectorAll("[data-back]").forEach(el=>{
   el.addEventListener("click", ()=> showSection(null));
 });
-document.getElementById("logoutCard").addEventListener("click", logoutApp);
+document.getElementById("logoutSmallLink").addEventListener("click", logoutApp);
 function showSection(name){
   const viewer = staffById(authNurseId);
   if(name === "dispequipa" && authRole !== "gestor" && !(viewer && viewer.canViewTeamDisp)){
@@ -967,6 +967,7 @@ function showSection(name){
     return;
   }
   document.getElementById("homeMenu").style.display = name ? "none" : "grid";
+  document.getElementById("logoutSmallBar").style.display = name ? "none" : "";
   ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = (n===name) ? "" : "none";
   });
