@@ -324,7 +324,7 @@
   </div>
   <!-- HOME MENU -->
   <div id="homeMenu" class="home-menu" style="display:none;">
-    <div class="home-card" data-target="horario">
+    <div class="home-card" data-target="horario" id="horarioCard">
       <span class="icon">🗓️</span>
       <h3>Horário</h3>
       <p>Grelha do mês — enfermeiros à esquerda, dias em cima. Escolhe o turno de cada pessoa em cada dia.</p>
@@ -893,6 +893,8 @@ function enterApp(){
   document.getElementById("configCard").style.display = authRole==="gestor" ? "" : "none";
   document.getElementById("reportCard").style.display = authRole==="gestor" ? "" : "none";
   document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
+  const soDisp = !!(person && person.tipo==="guest" && person.canViewTeamDisp);
+  document.getElementById("horarioCard").style.display = soDisp ? "none" : "";
   const person = staffById(authNurseId);
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
   document.getElementById("gestorBadge").style.display = authRole==="gestor" ? "" : "none";
@@ -903,6 +905,7 @@ function enterApp(){
   } else {
     document.getElementById("nurseBadge").style.display = "none";
   }
+  if(soDisp) showSection("dispequipa");
 }
 function logoutApp(){
   horarioFilterId = null;
@@ -950,6 +953,10 @@ document.querySelectorAll("[data-back]").forEach(el=>{
 });
 function showSection(name){
   const viewer = staffById(authNurseId);
+  if(name === "horario" && viewer && viewer.tipo==="guest" && viewer.canViewTeamDisp){
+    alert("Acesso restrito.");
+    return;
+  }
   if(name === "dispequipa" && authRole !== "gestor" && !(viewer && viewer.canViewTeamDisp)){
     alert("Acesso restrito à gestão.");
     return;
