@@ -706,6 +706,7 @@ async function loadState(){
         if(p.pin === undefined) p.pin = "";
         if(p.isManager === undefined) p.isManager = false;
         if(p.canViewTeamDisp === undefined) p.canViewTeamDisp = false;
+        if(p.canViewReports === undefined) p.canViewReports = false;
         if(!p.tipo) p.tipo = "rv";
         if(p.tipo==="efetivo"){
           if(p.allowedWeekday.length && !p.allowedWeekday.includes("DC")) p.allowedWeekday.push("DC","DO");
@@ -891,10 +892,11 @@ function enterApp(){
   document.getElementById("appLoginGate").style.display = "none";
   document.getElementById("homeMenu").style.display = "grid";
   document.getElementById("configCard").style.display = authRole==="gestor" ? "" : "none";
-  document.getElementById("reportCard").style.display = authRole==="gestor" ? "" : "none";
+  document.getElementById("reportCard").style.display = (authRole==="gestor" || (person && person.canViewReports)) ? "" : "none";
   document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
   const soDisp = !!(person && person.tipo==="guest" && person.canViewTeamDisp);
-  document.getElementById("horarioCard").style.display = soDisp ? "none" : "";
+  const guestViewer = !!(person && person.tipo==="guest" && (person.canViewTeamDisp || person.canViewReports));
+  document.getElementById("horarioCard").style.display = guestViewer ? "none" : "";
   const person = staffById(authNurseId);
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
   document.getElementById("gestorBadge").style.display = authRole==="gestor" ? "" : "none";
@@ -905,7 +907,7 @@ function enterApp(){
   } else {
     document.getElementById("nurseBadge").style.display = "none";
   }
-  if(soDisp) showSection("dispequipa");
+  if(soDisp && !(person && person.canViewReports)) showSection("dispequipa");
 }
 function logoutApp(){
   horarioFilterId = null;
@@ -953,7 +955,7 @@ document.querySelectorAll("[data-back]").forEach(el=>{
 });
 function showSection(name){
   const viewer = staffById(authNurseId);
-  if(name === "horario" && viewer && viewer.tipo==="guest" && viewer.canViewTeamDisp){
+  if(name === "horario" && viewer && viewer.tipo==="guest" && (viewer.canViewTeamDisp || viewer.canViewReports)){
     alert("Acesso restrito.");
     return;
   }
@@ -961,7 +963,11 @@ function showSection(name){
     alert("Acesso restrito à gestão.");
     return;
   }
-  if((name === "config" || name === "relatorios") && authRole !== "gestor"){
+  if(name === "relatorios" && authRole !== "gestor" && !(viewer && viewer.canViewReports)){
+    alert("Acesso restrito à gestão.");
+    return;
+  }
+  if(name === "config" && authRole !== "gestor"){
     alert("Acesso restrito à gestão.");
     return;
   }
@@ -1056,6 +1062,17 @@ function renderStaff(){
     });
     viewDispLbl.appendChild(viewDispChk);
     viewDispLbl.appendChild(document.createTextNode("Vê disponibilidades (só ver/imprimir)"));
+    const viewRepLbl = document.createElement("label");
+    viewRepLbl.style.cssText = "display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);cursor:pointer;";
+    const viewRepChk = document.createElement("input");
+    viewRepChk.type = "checkbox";
+    viewRepChk.checked = !!person.canViewReports;
+    viewRepChk.addEventListener("change", e=>{
+      person.canViewReports = e.target.checked;
+      scheduleSave();
+    });
+    viewRepLbl.appendChild(viewRepChk);
+    viewRepLbl.appendChild(document.createTextNode("Vê relatórios (só ver/imprimir)"));
     const pinLbl = document.createElement("label");
     pinLbl.style.cssText = "display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);";
     pinLbl.appendChild(document.createTextNode("PIN:"));
@@ -1082,6 +1099,7 @@ function renderStaff(){
     top.appendChild(principalLbl);
     top.appendChild(managerLbl);
     top.appendChild(viewDispLbl);
+    top.appendChild(viewRepLbl);
     top.appendChild(pinLbl);
     top.appendChild(removeBtn);
     row.appendChild(top);
