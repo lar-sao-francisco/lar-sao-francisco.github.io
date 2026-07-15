@@ -497,7 +497,8 @@
         <button class="btn btn-ghost" id="restoreBtn">⬆️ Repor a partir de cópia</button>
         <input type="file" id="restoreFile" accept=".json,application/json" style="display:none;">
       </div>
-      <p class="note">Descarrega um ficheiro com todos os dados da app (equipa, turnos, horários, disponibilidades). Recomenda-se guardar uma cópia por semana num local seguro. <strong>"Repor" substitui todos os dados atuais</strong> pelos do ficheiro escolhido — usa só para recuperar de um problema.</p>
+      <div id="backupList" class="sans" style="margin-top:10px;"></div>
+      <p class="note">No último dia de cada mês é criada automaticamente uma cópia de segurança na base de dados (listada acima) — basta alguém abrir a app nesse dia ou nos 3 dias seguintes. Podes também descarregar uma cópia manual quando quiseres. <strong>"Repor" substitui todos os dados atuais</strong> pelos do ficheiro escolhido — usa só para recuperar de um problema.</p>
     </div>
   </div>
   <footer class="app-footer sans">
@@ -629,6 +630,7 @@ const SUPABASE_URL = "https://kzcdaxbqnfsuufnkdkfx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6Y2RheGJxbmZzdXVmbmtka2Z4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1OTc2ODYsImV4cCI6MjA5OTE3MzY4Nn0.1H7KwxxCP4m70L_RwJTiJNG3qtCoprKb8L-HGMstbB8";
 const STATE_KEY = "lar-enfermeiros-state";
 const REV_KEY = "lar-enfermeiros-rev";
+const OWNER_ID = "s7"; // Luis — conta fundadora, protegida
 let dataRev = 0;
 let loadFailed = false;
 function supabaseConfigured(){
@@ -732,6 +734,8 @@ function applyLoadedState(raw){
           if(p.allowedWeekend.length && !p.allowedWeekend.includes("Fe")) p.allowedWeekend.push("Fe");
         }
       });
+      const ownerP = (parsed.staff||[]).find(pp=>pp.id===OWNER_ID);
+      if(ownerP){ ownerP.isManager = true; if(ownerP.tipo!=="rv_gestao" && ownerP.tipo!=="gestao") ownerP.tipo = "rv_gestao"; }
       if(!parsed.schedules) parsed.schedules = {};
       if(!parsed.availabilityRequests) parsed.availabilityRequests = {};
       if(!parsed.availabilityMeta) parsed.availabilityMeta = {};
@@ -965,7 +969,7 @@ function enterApp(){
   document.getElementById("horarioCard").style.display = "";
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
   document.getElementById("gestorBadge").style.display = authRole==="gestor" ? "" : "none";
-  if(authRole==="gestor" && person) document.getElementById("gestorBadgeName").textContent = person.nome;
+  if(authRole==="gestor" && person) document.getElementById("gestorBadgeName").textContent = person.nome + (person.id===OWNER_ID ? " 👑" : "");
   if(authRole!=="gestor" && person){
     document.getElementById("nurseBadge").style.display = "";
     document.getElementById("nurseBadgeName").textContent = person.nome;
@@ -1049,6 +1053,8 @@ function renderStaff(){
   const list = document.getElementById("staffList");
   list.innerHTML = "";
   state.staff.forEach(person=>{
+    const isOwnerRow = person.id === OWNER_ID;
+    const soDono = authNurseId === OWNER_ID;
     const row = document.createElement("div");
     row.className = "staff-row";
     const top = document.createElement("div");
@@ -1057,6 +1063,12 @@ function renderStaff(){
     nameInput.type = "text";
     nameInput.value = person.nome;
     nameInput.addEventListener("input", e=>{ person.nome = e.target.value; scheduleSave(); });
+    if(isOwnerRow){
+      const crown = document.createElement("span");
+      crown.textContent = "👑";
+      crown.title = "Fundador — conta protegida; só o próprio a pode alterar";
+      top.appendChild(crown);
+    }
     const tipoSelect = document.createElement("select");
     [["efetivo","Efetivo"],["rv","Recibos Verdes"],["rv_gestao","Recibos Verdes / Gestão"],["gestao","Gestão (sem turnos)"],["guest","Guest (só visualização)"]].forEach(([t,label])=>{
       const opt = document.createElement("option");
@@ -1108,6 +1120,8 @@ function renderStaff(){
     const managerChk = document.createElement("input");
     managerChk.type = "checkbox";
     managerChk.checked = !!person.isManager;
+    managerChk.disabled = authNurseId !== OWNER_ID;
+    if(managerChk.disabled) managerLbl.title = "Só o fundador pode dar ou tirar acesso de gestão";
     managerChk.addEventListener("change", e=>{
       person.isManager = e.target.checked;
       renderStaff(); scheduleSave();
@@ -1151,6 +1165,7 @@ function renderStaff(){
     removeBtn.className = "remove-x";
     removeBtn.textContent = "✕";
     removeBtn.title = "Remover";
+    if(isOwnerRow) removeBtn.style.display = "none";
     removeBtn.addEventListener("click", ()=>{
       if(!confirm(`Remover ${person.nome} da equipa? Isto não apaga turnos já atribuídos em meses passados, mas a pessoa deixa de aparecer para novas atribuições.`)) return;
       state.staff = state.staff.filter(p=>p.id!==person.id);
@@ -1272,6 +1287,9 @@ function renderStaff(){
     allowRow.appendChild(mkGroup("Fim de semana","allowedWeekend"));
     if(!isSchedulableTipo(person.tipo)) allowRow.style.display = "none";
     row.appendChild(allowRow);
+    if(isOwnerRow && !soDono){
+      row.querySelectorAll("input, select, button").forEach(el=>{ el.disabled = true; });
+    }
     list.appendChild(row);
   });
 }
@@ -1378,6 +1396,8 @@ function renderConfigSection(){
   syncSettingsInputs();
   renderAvailabilityPanel();
   renderHolidays();
+  document.getElementById("restoreBtn").style.display = authNurseId===OWNER_ID ? "" : "none";
+  renderBackupList();
 }
 function renderHolidays(){
   const wrap = document.getElementById("holidaysList");
@@ -1460,6 +1480,84 @@ document.getElementById("restoreFile").addEventListener("change", (e)=>{
   };
   reader.readAsText(f);
 });
+async function ensureMonthlyBackup(){
+  try{
+    if(loadFailed) return;
+    const now = new Date();
+    const lastDay = daysInMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+    const jobs = [];
+    if(now.getDate() === lastDay) jobs.push(now.getFullYear() + "-" + pad2(now.getMonth()+1));
+    if(now.getDate() <= 3){
+      const prev = new Date(now.getFullYear(), now.getMonth()-1, 1);
+      jobs.push(prev.getFullYear() + "-" + pad2(prev.getMonth()+1));
+    }
+    for(const ym of jobs){
+      const k = "backup-" + ym;
+      const existing = await storageGet(k);
+      if(!existing) await storageSet(JSON.stringify(state), k);
+    }
+  }catch(e){ /* silencioso */ }
+}
+async function renderBackupList(){
+  const wrap = document.getElementById("backupList");
+  if(!wrap) return;
+  wrap.innerHTML = '<span class="blk-label">A procurar cópias automáticas...</span>';
+  try{
+    const res = await fetch(SUPABASE_URL + "/rest/v1/app_state?key=like.backup-%25&select=key&order=key.desc", {
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY }
+    });
+    if(!res.ok) throw new Error(res.status);
+    const rows = await res.json();
+    wrap.innerHTML = "";
+    if(!rows.length){
+      wrap.innerHTML = '<span class="blk-label">Ainda não existem cópias automáticas — a primeira é criada no último dia do mês.</span>';
+      return;
+    }
+    rows.forEach(r=>{
+      const ym = r.key.replace("backup-","");
+      const d = new Date(parseInt(ym.slice(0,4)), parseInt(ym.slice(5,7))-1, 1);
+      const nomeMes = d.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+      const line = document.createElement("div");
+      line.className = "exc-row";
+      const lbl = document.createElement("span");
+      lbl.className = "blk-label";
+      lbl.style.minWidth = "170px";
+      lbl.textContent = "Cópia automática — " + nomeMes;
+      line.appendChild(lbl);
+      const dl = document.createElement("button");
+      dl.className = "exc-add-btn";
+      dl.textContent = "Descarregar";
+      dl.addEventListener("click", async ()=>{
+        const row = await storageGet(r.key);
+        if(!row){ alert("Cópia não encontrada."); return; }
+        const blob = new Blob([row.value], {type:"application/json"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "escala-enfermagem-" + r.key + ".json";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+      line.appendChild(dl);
+      if(authNurseId === OWNER_ID){
+        const rst = document.createElement("button");
+        rst.className = "exc-add-btn";
+        rst.textContent = "Repor esta cópia";
+        rst.addEventListener("click", async ()=>{
+          if(!confirm("Repor a cópia de " + nomeMes + "? Substitui TODOS os dados atuais.")) return;
+          const row = await storageGet(r.key);
+          if(!row){ alert("Cópia não encontrada."); return; }
+          applyLoadedState(row.value);
+          scheduleSave();
+          renderConfigSection();
+        });
+        line.appendChild(rst);
+      }
+      wrap.appendChild(line);
+    });
+  }catch(e){
+    wrap.innerHTML = '<span class="blk-label">Não foi possível carregar a lista de cópias.</span>';
+  }
+}
 // ---------- MANAGER: availability requests review ----------
 function monthPrefix(monthStart){ return monthStart.getFullYear() + "-" + pad2(monthStart.getMonth()+1); }
 function renderAvailabilityPanel(){
@@ -2150,6 +2248,7 @@ loadState().then(()=>{
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
   populateAppLoginSelect();
+  ensureMonthlyBackup();
 });
 </script>
 
