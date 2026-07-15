@@ -1372,7 +1372,71 @@ function renderTeamAvailability(){
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
   document.getElementById("teamDispMonthLabel").textContent = label;
-  renderAvailabilityInto(document.getElementById("teamAvailabilityList"));
+  const wrap = document.getElementById("teamAvailabilityList");
+  wrap.innerHTML = "";
+  const rule = document.createElement("p");
+  rule.className = "note";
+  rule.style.cssText = "margin:0 0 6px; font-size:13px;";
+  rule.innerHTML = "<strong>Mínimo 10 disponibilidades + 2 ao fim de semana.</strong>";
+  wrap.appendChild(rule);
+  const rvStaff = state.staff.filter(p=>isRvLike(p.tipo));
+  if(rvStaff.length===0){
+    wrap.innerHTML += '<p class="note">Sem recibos verdes na equipa.</p>';
+    return;
+  }
+  const monthStart = state.monthStart;
+  const nDays = daysInMonth(monthStart);
+  const prefix = monthPrefix(monthStart);
+  const isMorning = code => { const st = shiftType(code); return !!(st && st.blocks.length && st.blocks[0][0] < 13); };
+  const isAfternoon = code => { const st = shiftType(code); return !!(st && st.blocks.some(b=>b[0] >= 13)); };
+  const mk = arr => arr.length ? arr.join(", ") : "—";
+  rvStaff.forEach(person=>{
+    const buckets = { uM:[], uT:[], sM:[], sT:[], dM:[], dT:[] };
+    let total = 0, weekend = 0;
+    for(let day=1; day<=nDays; day++){
+      const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+      const iso = weekKey(date);
+      const codes = submittedAvailableCodes(person.id, iso);
+      if(!codes || codes.length===0) continue;
+      const dow = dowIndex(date);
+      const grp = dow<=4 ? "u" : (dow===5 ? "s" : "d");
+      codes.forEach(code=>{
+        total++;
+        if(dow>=5) weekend++;
+        if(isMorning(code) && !buckets[grp+"M"].includes(day)) buckets[grp+"M"].push(day);
+        if(isAfternoon(code) && !buckets[grp+"T"].includes(day)) buckets[grp+"T"].push(day);
+      });
+    }
+    const savedAt = (state.availabilityMeta[person.id]||{})[prefix];
+    const head = document.createElement("div");
+    head.className = "sans";
+    head.style.cssText = "display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:16px;";
+    const okRule = total>=10 && weekend>=2;
+    let headHtml = '<strong style="font-size:14px; color:var(--sage-deep);">' + person.nome + '</strong>';
+    headHtml += '<span class="exc-chip ' + (okRule ? 'on' : 'off') + '">' + total + ' disponibilidades · ' + weekend + ' ao fim de semana</span>';
+    if(savedAt){
+      const d = new Date(savedAt);
+      headHtml += '<span class="blk-label">guardado em ' + d.toLocaleDateString("pt-PT",{day:"2-digit",month:"2-digit"}) + ' ' + d.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}) + '</span>';
+    } else {
+      headHtml += '<span class="blk-label">ainda não guardou este mês</span>';
+    }
+    head.innerHTML = headHtml;
+    wrap.appendChild(head);
+    const t = document.createElement("table");
+    t.className = "excel sans";
+    t.style.cssText = "width:100%; max-width:620px; margin:6px 0 2px;";
+    const cell = 'style="text-align:left; padding:5px 12px;"';
+    const gcell = 'style="text-align:left; padding:5px 12px; font-weight:700; vertical-align:top;"';
+    t.innerHTML = '<tbody>' +
+      '<tr><td rowspan="2" ' + gcell + '>Dias úteis</td><td ' + cell + '>Manhã</td><td ' + cell + '>' + mk(buckets.uM) + '</td></tr>' +
+      '<tr><td ' + cell + '>Tarde</td><td ' + cell + '>' + mk(buckets.uT) + '</td></tr>' +
+      '<tr><td rowspan="2" ' + gcell + '>Sábados</td><td ' + cell + '>Manhã</td><td ' + cell + '>' + mk(buckets.sM) + '</td></tr>' +
+      '<tr><td ' + cell + '>Tarde</td><td ' + cell + '>' + mk(buckets.sT) + '</td></tr>' +
+      '<tr><td rowspan="2" ' + gcell + '>Domingos</td><td ' + cell + '>Manhã</td><td ' + cell + '>' + mk(buckets.dM) + '</td></tr>' +
+      '<tr><td ' + cell + '>Tarde</td><td ' + cell + '>' + mk(buckets.dT) + '</td></tr>' +
+      '</tbody>';
+    wrap.appendChild(t);
+  });
 }
 function renderAvailabilityInto(wrap){
   wrap.innerHTML = "";
