@@ -888,6 +888,7 @@ function populateAppLoginSelect(){
   });
 }
 function enterApp(){
+  const person = staffById(authNurseId);
   document.getElementById("appLoginGate").style.display = "none";
   document.getElementById("homeMenu").style.display = "grid";
   document.getElementById("logoutSmallBar").style.display = "";
@@ -895,7 +896,6 @@ function enterApp(){
   document.getElementById("reportCard").style.display = (authRole==="gestor" || (person && person.canViewReports)) ? "" : "none";
   document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
   document.getElementById("horarioCard").style.display = "";
-  const person = staffById(authNurseId);
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
   document.getElementById("gestorBadge").style.display = authRole==="gestor" ? "" : "none";
   if(authRole==="gestor" && person) document.getElementById("gestorBadgeName").textContent = person.nome;
