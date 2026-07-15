@@ -490,6 +490,15 @@
       <div id="availabilityList"></div>
       <p class="note">Isto é o que cada recibo verde marcou como disponível na vista "Disponibilidades", para o mês em exibição. Já se aplica automaticamente à grelha do Horário — lá, cada célula só deixa escolher os turnos que a pessoa marcou (ou, se não marcou nada nesse dia, os turnos habituais dela).</p>
     </div>
+    <div class="panel" id="backupPanel">
+      <h2>Cópia de segurança</h2>
+      <div class="toolbar" style="margin:0;">
+        <button class="btn btn-ghost" id="backupBtn">⬇️ Descarregar cópia (JSON)</button>
+        <button class="btn btn-ghost" id="restoreBtn">⬆️ Repor a partir de cópia</button>
+        <input type="file" id="restoreFile" accept=".json,application/json" style="display:none;">
+      </div>
+      <p class="note">Descarrega um ficheiro com todos os dados da app (equipa, turnos, horários, disponibilidades). Recomenda-se guardar uma cópia por semana num local seguro. <strong>"Repor" substitui todos os dados atuais</strong> pelos do ficheiro escolhido — usa só para recuperar de um problema.</p>
+    </div>
   </div>
   <footer class="app-footer sans">
     <strong>FRATERNIDADE DA ORDEM FRANCISCANA SECULAR — Lar de São Francisco</strong>
@@ -1420,6 +1429,36 @@ document.getElementById("holidayAddBtn").addEventListener("click", ()=>{
   labelInput.value = "";
   renderHolidays();
   scheduleSave();
+});
+// ---------- COPIA DE SEGURANCA ----------
+document.getElementById("backupBtn").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "escala-enfermagem-backup-" + weekKey(new Date()) + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById("restoreBtn").addEventListener("click", ()=> document.getElementById("restoreFile").click());
+document.getElementById("restoreFile").addEventListener("change", (e)=>{
+  const f = e.target.files[0];
+  e.target.value = "";
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(!parsed || !Array.isArray(parsed.staff) || !Array.isArray(parsed.shiftTypes)) throw new Error("O ficheiro não parece ser uma cópia de segurança desta app.");
+      if(!confirm("Repor a cópia de segurança? Isto substitui TODOS os dados atuais (equipa, horários, disponibilidades) pelos do ficheiro.")) return;
+      applyLoadedState(reader.result);
+      scheduleSave();
+      renderConfigSection();
+      alert("Cópia reposta com sucesso. Confirma o \"Guardado ✓\" antes de fechar.");
+    }catch(err){
+      alert("Erro ao repor: " + (err && err.message ? err.message : String(err)));
+    }
+  };
+  reader.readAsText(f);
 });
 // ---------- MANAGER: availability requests review ----------
 function monthPrefix(monthStart){ return monthStart.getFullYear() + "-" + pad2(monthStart.getMonth()+1); }
