@@ -291,7 +291,7 @@
         <h1 id="titulo">Escala de Enfermagem</h1>
       </div>
     </div>
-    <div class="week-nav">
+    <div class="week-nav" id="weekNav" style="display:none;">
       <button id="prevMonth">← Mês anterior</button>
       <div class="week-label" id="monthLabel">—</div>
       <button id="nextMonth">Mês seguinte →</button>
@@ -349,8 +349,28 @@
       <h3>Relatórios</h3>
     </div>
   </div>
-  <div id="logoutSmallBar" class="sans" style="display:none; text-align:right; margin:-10px 0 20px;">
-    <span class="back-link" id="logoutSmallLink" style="font-size:12.5px;">🚪 Terminar sessão</span>
+  <div id="logoutSmallBar" class="sans" style="display:none; margin:-10px 0 20px;">
+    <div style="display:flex; justify-content:flex-end; gap:20px;">
+      <span class="back-link" id="showChangePinLink" style="font-size:12.5px;">🔑 Mudar o meu PIN</span>
+      <span class="back-link" id="logoutSmallLink" style="font-size:12.5px;">🚪 Terminar sessão</span>
+    </div>
+    <div id="changePinForm" style="display:none; margin:10px 0 0 auto; max-width:280px; text-align:left; background:var(--glass); border:1px solid var(--line); border-radius:14px; padding:16px;">
+      <div class="field" style="margin-bottom:8px;">
+        <label>PIN atual</label>
+        <input type="password" id="oldPinInput" maxlength="10">
+      </div>
+      <div class="field" style="margin-bottom:8px;">
+        <label>Novo PIN</label>
+        <input type="password" id="newPinInput" maxlength="10">
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Confirmar novo PIN</label>
+        <input type="password" id="newPinInput2" maxlength="10">
+      </div>
+      <button class="btn btn-primary" id="changePinBtn">Guardar novo PIN</button>
+      <p class="note" id="changePinError" style="color:var(--danger);"></p>
+      <p class="note" id="changePinSuccess" style="color:var(--sage-deep);"></p>
+    </div>
   </div>
   <!-- SECTION: HORÁRIO -->
   <div id="section-horario" class="section" style="display:none;">
@@ -395,26 +415,6 @@
         <span>Toca num turno para o marcar como disponível nesse dia. Toca outra vez para desmarcar.</span>
       </div>
       <button class="btn btn-primary" id="nurseGuardarBtn" style="margin-top:16px;">Guardar disponibilidade</button>
-      <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--line);" class="sans">
-        <span class="back-link" id="showChangePinLink">Mudar o meu PIN</span>
-        <div id="changePinForm" style="display:none; margin-top:10px; max-width:260px;">
-          <div class="field" style="margin-bottom:8px;">
-            <label>PIN atual</label>
-            <input type="password" id="oldPinInput" maxlength="10">
-          </div>
-          <div class="field" style="margin-bottom:8px;">
-            <label>Novo PIN</label>
-            <input type="password" id="newPinInput" maxlength="10">
-          </div>
-          <div class="field" style="margin-bottom:10px;">
-            <label>Confirmar novo PIN</label>
-            <input type="password" id="newPinInput2" maxlength="10">
-          </div>
-          <button class="btn btn-primary" id="changePinBtn">Guardar novo PIN</button>
-          <p class="note" id="changePinError" style="color:var(--danger);"></p>
-          <p class="note" id="changePinSuccess" style="color:var(--sage-deep);"></p>
-        </div>
-      </div>
     </div>
   </div>
   <!-- SECTION: DISPONIBILIDADES DA EQUIPA (gestão) -->
@@ -963,6 +963,7 @@ function enterApp(){
   document.getElementById("appLoginGate").style.display = "none";
   document.getElementById("homeMenu").style.display = "grid";
   document.getElementById("logoutSmallBar").style.display = "";
+  document.getElementById("weekNav").style.display = "";
   document.getElementById("configCard").style.display = authRole==="gestor" ? "" : "none";
   document.getElementById("reportCard").style.display = (authRole==="gestor" || (person && person.canViewReports)) ? "" : "none";
   document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
@@ -987,6 +988,7 @@ function logoutApp(){
   nurseEditing = false;
   document.getElementById("homeMenu").style.display = "none";
   document.getElementById("logoutSmallBar").style.display = "none";
+  document.getElementById("weekNav").style.display = "none";
   ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = "none";
   });
