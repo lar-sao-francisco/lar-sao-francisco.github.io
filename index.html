@@ -308,6 +308,10 @@
   <div id="nurseBadge" class="sans" style="display:none; font-size:12.5px; color:var(--sage-deep); margin-bottom:6px;">
     👤 <span id="nurseBadgeName"></span> — <span id="nurseBadgeLogoutLink" style="text-decoration:underline; cursor:pointer;">sair</span>
   </div>
+  <div id="notifBar" class="sans" style="display:none; background:#FFF8E6; border:1px solid #F0D48A; border-radius:12px; padding:10px 14px; margin-bottom:10px; font-size:13px; line-height:1.7;">
+    <div id="notifList"></div>
+    <button class="exc-add-btn" id="notifClearBtn" style="margin-top:8px;">Marcar como visto</button>
+  </div>
   <!-- LOGIN GATE: single entry point -->
   <div id="appLoginGate" class="panel">
     <h2>Entrar</h2>
@@ -801,6 +805,7 @@ async function refreshFromServer(){
     applyLoadedState(res.value);
     dataRev = cur;
     refreshVisibleSection();
+    renderOwnerNotifications();
     if(document.getElementById("appLoginGate").style.display !== "none") populateAppLoginSelect();
   }catch(e){ /* sem rede: tenta outra vez no próximo ciclo */ }
 }
@@ -971,6 +976,7 @@ function enterApp(){
   } else {
     document.getElementById("nurseBadge").style.display = "none";
   }
+  renderOwnerNotifications();
 }
 function logoutApp(){
   horarioFilterId = null;
@@ -986,6 +992,7 @@ function logoutApp(){
   });
   document.getElementById("gestorBadge").style.display = "none";
   document.getElementById("nurseBadge").style.display = "none";
+  document.getElementById("notifBar").style.display = "none";
   document.getElementById("appLoginPin").value = "";
   document.getElementById("appLoginError").textContent = "";
   populateAppLoginSelect();
@@ -1553,6 +1560,48 @@ async function renderBackupList(){
     wrap.innerHTML = '<span class="blk-label">Não foi possível carregar a lista de cópias.</span>';
   }
 }
+// ---------- NOTIFICACOES (apenas fundador) ----------
+function renderOwnerNotifications(){
+  const bar = document.getElementById("notifBar");
+  if(authNurseId !== OWNER_ID){ bar.style.display = "none"; return; }
+  let seen = {};
+  try{ seen = JSON.parse(localStorage.getItem("lar-notif-seen-" + OWNER_ID) || "{}"); }catch(e){}
+  const news = [];
+  Object.keys(state.availabilityMeta || {}).forEach(pid=>{
+    const person = staffById(pid);
+    if(!person || pid === OWNER_ID) return;
+    Object.keys(state.availabilityMeta[pid] || {}).forEach(ym=>{
+      const ts = state.availabilityMeta[pid][ym];
+      if(seen[pid + "|" + ym] !== ts) news.push({ nome: person.nome, ym: ym, ts: ts });
+    });
+  });
+  if(news.length === 0){ bar.style.display = "none"; return; }
+  news.sort((a,b)=> a.ts < b.ts ? 1 : -1);
+  const list = document.getElementById("notifList");
+  list.innerHTML = "";
+  news.slice(0, 12).forEach(n=>{
+    const d = new Date(n.ts);
+    const mes = new Date(parseInt(n.ym.slice(0,4)), parseInt(n.ym.slice(5,7))-1, 1).toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+    const div = document.createElement("div");
+    div.textContent = "🔔 " + n.nome + " guardou disponibilidades de " + mes + " — " + d.toLocaleDateString("pt-PT",{day:"2-digit",month:"2-digit"}) + " às " + d.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"});
+    list.appendChild(div);
+  });
+  if(news.length > 12){
+    const more = document.createElement("div");
+    more.className = "blk-label";
+    more.textContent = "... e mais " + (news.length - 12) + ".";
+    list.appendChild(more);
+  }
+  bar.style.display = "";
+}
+document.getElementById("notifClearBtn").addEventListener("click", ()=>{
+  const seen = {};
+  Object.keys(state.availabilityMeta || {}).forEach(pid=>{
+    Object.keys(state.availabilityMeta[pid] || {}).forEach(ym=>{ seen[pid + "|" + ym] = state.availabilityMeta[pid][ym]; });
+  });
+  try{ localStorage.setItem("lar-notif-seen-" + OWNER_ID, JSON.stringify(seen)); }catch(e){}
+  renderOwnerNotifications();
+});
 // ---------- MANAGER: availability requests review ----------
 function monthPrefix(monthStart){ return monthStart.getFullYear() + "-" + pad2(monthStart.getMonth()+1); }
 function renderAvailabilityPanel(){
