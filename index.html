@@ -312,6 +312,10 @@
     <div id="notifList"></div>
     <button class="exc-add-btn" id="notifClearBtn" style="margin-top:8px;">Marcar como visto</button>
   </div>
+  <div id="myStatsBar" class="sans" style="display:none; background:var(--glass); border:1px solid var(--line); border-radius:14px; padding:12px 16px; margin-bottom:12px; font-size:13px;">
+    <div style="font-weight:700; color:var(--sage-deep); margin-bottom:7px;">O teu mês — <span id="myStatsMonth"></span></div>
+    <div id="myStatsContent" style="display:flex; gap:18px; flex-wrap:wrap;"></div>
+  </div>
   <!-- LOGIN GATE: single entry point -->
   <div id="appLoginGate" class="panel">
     <h2>Entrar</h2>
@@ -978,6 +982,7 @@ function enterApp(){
     document.getElementById("nurseBadge").style.display = "none";
   }
   renderOwnerNotifications();
+  renderMyStats();
 }
 function logoutApp(){
   horarioFilterId = null;
@@ -995,6 +1000,7 @@ function logoutApp(){
   document.getElementById("gestorBadge").style.display = "none";
   document.getElementById("nurseBadge").style.display = "none";
   document.getElementById("notifBar").style.display = "none";
+  document.getElementById("myStatsBar").style.display = "none";
   document.getElementById("appLoginPin").value = "";
   document.getElementById("appLoginError").textContent = "";
   populateAppLoginSelect();
@@ -1043,6 +1049,7 @@ function showSection(name){
   }
   document.getElementById("homeMenu").style.display = name ? "none" : "grid";
   document.getElementById("logoutSmallBar").style.display = name ? "none" : "";
+  if(name){ document.getElementById("myStatsBar").style.display = "none"; } else { renderMyStats(); }
   ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = (n===name) ? "" : "none";
   });
@@ -1562,6 +1569,40 @@ async function renderBackupList(){
     wrap.innerHTML = '<span class="blk-label">Não foi possível carregar a lista de cópias.</span>';
   }
 }
+// ---------- ESTATISTICAS PESSOAIS (recibos verdes) ----------
+function renderMyStats(){
+  const bar = document.getElementById("myStatsBar");
+  const person = staffById(authNurseId);
+  if(!person || !isRvLike(person.tipo)){ bar.style.display = "none"; return; }
+  const monthStart = state.monthStart;
+  const nDays = daysInMonth(monthStart);
+  let disp=0, feitas=0, turnos=0, fds=0;
+  const reqs = state.availabilityRequests[person.id] || {};
+  for(let day=1; day<=nDays; day++){
+    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+    const iso = weekKey(date);
+    if(reqs[iso]) Object.keys(reqs[iso]).forEach(c=>{ if(reqs[iso][c]) disp += shiftHours(c); });
+    const code = getPersonShiftForDate(person.id, date);
+    if(code){
+      const st = shiftType(code);
+      if(!st || !st.isRest){
+        const h = shiftHours(code);
+        feitas += h; turnos++;
+        if(isWeekendDay(date)) fds += h;
+      }
+    }
+  }
+  const apr = disp > 0 ? Math.round(feitas/disp*100) + "%" : "—";
+  document.getElementById("myStatsMonth").textContent = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+  const mk = (v, lbl) => '<span><strong style="color:var(--sage-deep); font-size:15px;">' + v + '</strong> ' + lbl + '</span>';
+  document.getElementById("myStatsContent").innerHTML =
+    mk(disp + "h", "disponibilizadas") +
+    mk(feitas + "h", "feitas") +
+    mk(turnos, "turnos") +
+    mk(fds + "h", "fim de semana") +
+    mk(apr, "aproveitamento");
+  bar.style.display = "";
+}
 // ---------- NOTIFICACOES (apenas fundador) ----------
 function renderOwnerNotifications(){
   const bar = document.getElementById("notifBar");
@@ -2052,6 +2093,7 @@ document.getElementById("nextMonth").addEventListener("click", ()=>{
   scheduleSave();
 });
 function refreshVisibleSection(){
+  if(document.getElementById("homeMenu").style.display !== "none") renderMyStats();
   if(document.getElementById("section-horario").style.display !== "none") renderExcelGrid();
   if(document.getElementById("section-disponibilidade").style.display !== "none") renderNurseView();
   if(document.getElementById("section-config").style.display !== "none") renderAvailabilityPanel();
