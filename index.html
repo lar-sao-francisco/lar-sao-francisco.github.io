@@ -547,6 +547,7 @@ let state = {
   lockedDays: {}, // { "YYYY-MM-DD": true }
   customHolidays: {}, // manager-added extra holidays: { "YYYY-MM-DD": "Nome" }
   removedHolidays: {}, // auto-calculated holidays the manager chose to hide: { "YYYY-MM-DD": true }
+  notifSeen: {},
   tzMigrated: true
 };
 let nursePersonId = null;
@@ -745,6 +746,7 @@ function applyLoadedState(raw){
       if(!parsed.lockedDays) parsed.lockedDays = {};
       if(!parsed.customHolidays) parsed.customHolidays = {};
       if(!parsed.removedHolidays) parsed.removedHolidays = {};
+      if(!parsed.notifSeen) parsed.notifSeen = {};
       if(parsed.holidays){
         Object.keys(parsed.holidays).forEach(iso=>{
           const year = parseInt(iso.slice(0,4));
@@ -1607,8 +1609,7 @@ function renderMyStats(){
 function renderOwnerNotifications(){
   const bar = document.getElementById("notifBar");
   if(authNurseId !== OWNER_ID){ bar.style.display = "none"; return; }
-  let seen = {};
-  try{ seen = JSON.parse(localStorage.getItem("lar-notif-seen-" + OWNER_ID) || "{}"); }catch(e){}
+  const seen = state.notifSeen || {};
   const news = [];
   Object.keys(state.availabilityMeta || {}).forEach(pid=>{
     const person = staffById(pid);
@@ -1642,7 +1643,8 @@ document.getElementById("notifClearBtn").addEventListener("click", ()=>{
   Object.keys(state.availabilityMeta || {}).forEach(pid=>{
     Object.keys(state.availabilityMeta[pid] || {}).forEach(ym=>{ seen[pid + "|" + ym] = state.availabilityMeta[pid][ym]; });
   });
-  try{ localStorage.setItem("lar-notif-seen-" + OWNER_ID, JSON.stringify(seen)); }catch(e){}
+  state.notifSeen = seen;
+  scheduleSave();
   renderOwnerNotifications();
 });
 // ---------- MANAGER: availability requests review ----------
