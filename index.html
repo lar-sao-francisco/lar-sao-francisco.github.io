@@ -352,10 +352,6 @@
       <span class="icon">📊</span>
       <h3>Relatórios</h3>
     </div>
-    <div class="home-card" data-target="contabilidade" id="contabCard">
-      <span class="icon">💶</span>
-      <h3>Contabilidade</h3>
-    </div>
   </div>
   <div id="logoutSmallBar" class="sans" style="display:none; margin:-10px 0 20px;">
     <div style="display:flex; justify-content:flex-end; gap:20px;">
@@ -441,21 +437,15 @@
   <div id="section-relatorios" class="section" style="display:none;">
     <span class="back-link" data-back>← Voltar ao início</span>
     <div class="toolbar">
-      <button class="btn btn-ghost" id="printReportBtn">Imprimir / Exportar PDF</button>
+      <button class="btn btn-ghost" id="printReportBtn">Imprimir relatório do mês</button>
+      <button class="btn btn-ghost" id="printContabBtn">Imprimir contabilidade</button>
     </div>
-    <div class="panel">
+    <div class="panel" id="reportPanel">
       <h2>Relatório do mês — <span id="reportMonthLabel"></span></h2>
       <div class="grid-scroll" id="reportTableWrap"></div>
       <p class="note">"Horas disponibilizadas" soma as horas de todos os turnos que a pessoa marcou como disponível na vista Disponibilidades (aplica-se aos recibos verdes). "Horas feitas" soma as horas dos turnos atribuídos na grelha do Horário deste mês — os descansos (DC/DO) não contam. "Aproveitamento" = horas feitas ÷ horas disponibilizadas.</p>
     </div>
-  </div>
-  <!-- SECTION: CONTABILIDADE -->
-  <div id="section-contabilidade" class="section" style="display:none;">
-    <span class="back-link" data-back>← Voltar ao início</span>
-    <div class="toolbar">
-      <button class="btn btn-ghost" id="printContabBtn">Imprimir / Exportar PDF</button>
-    </div>
-    <div class="panel">
+    <div class="panel" id="contabPanel">
       <h2>Contabilidade</h2>
       <div class="exc-row sans" style="margin-bottom:12px;">
         <span class="blk-label">De:</span>
@@ -465,7 +455,7 @@
         <button class="exc-add-btn" id="contabResetBtn">Período 21 → 20 deste mês</button>
       </div>
       <div class="grid-scroll" id="contabTableWrap"></div>
-      <p class="note">As horas vêm dos turnos atribuídos na grelha do Horário dentro do período escolhido (descansos DC/DO e Férias não contam). "Útil" = segunda a sexta; fim de semana = sábado e domingo (feriados em dia de semana contam como útil).</p>
+      <p class="note">As horas vêm dos turnos atribuídos na grelha do Horário dentro do período escolhido (descansos DC/DO e Férias não contam). "Útil" = segunda a sexta; fim de semana = sábado e domingo (feriados em dia de semana contam como útil). Clica num nome para ver só essa pessoa.</p>
     </div>
   </div>
   <!-- SECTION: CONFIGURAÇÕES -->
@@ -999,8 +989,7 @@ function enterApp(){
   document.getElementById("logoutSmallBar").style.display = "";
   document.getElementById("weekNav").style.display = "";
   document.getElementById("configCard").style.display = authRole==="gestor" ? "" : "none";
-  document.getElementById("reportCard").style.display = (authRole==="gestor" || (person && person.canViewReports)) ? "" : "none";
-  document.getElementById("contabCard").style.display = (authRole==="gestor" || (person && person.canViewContab)) ? "" : "none";
+  document.getElementById("reportCard").style.display = (authRole==="gestor" || (person && (person.canViewReports || person.canViewContab))) ? "" : "none";
   document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
   document.getElementById("horarioCard").style.display = "";
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
@@ -1026,7 +1015,7 @@ function logoutApp(){
   document.getElementById("homeMenu").style.display = "none";
   document.getElementById("logoutSmallBar").style.display = "none";
   document.getElementById("weekNav").style.display = "none";
-  ["horario","disponibilidade","config","relatorios","dispequipa","contabilidade"].forEach(n=>{
+  ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = "none";
   });
   document.getElementById("gestorBadge").style.display = "none";
@@ -1071,11 +1060,7 @@ function showSection(name){
     alert("Acesso restrito à gestão.");
     return;
   }
-  if(name === "relatorios" && authRole !== "gestor" && !(viewer && viewer.canViewReports)){
-    alert("Acesso restrito à gestão.");
-    return;
-  }
-  if(name === "contabilidade" && authRole !== "gestor" && !(viewer && viewer.canViewContab)){
+  if(name === "relatorios" && authRole !== "gestor" && !(viewer && (viewer.canViewReports || viewer.canViewContab))){
     alert("Acesso restrito à gestão.");
     return;
   }
@@ -1086,15 +1071,23 @@ function showSection(name){
   document.getElementById("homeMenu").style.display = name ? "none" : "grid";
   document.getElementById("logoutSmallBar").style.display = name ? "none" : "";
   if(name){ document.getElementById("myStatsBar").style.display = "none"; } else { renderMyStats(); }
-  ["horario","disponibilidade","config","relatorios","dispequipa","contabilidade"].forEach(n=>{
+  ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = (n===name) ? "" : "none";
   });
   if(name==="horario") renderExcelGrid();
   if(name==="disponibilidade") renderNurseView();
   if(name==="config") renderConfigSection();
-  if(name==="relatorios") renderRelatorios();
+  if(name==="relatorios"){
+    const podeRel = authRole==="gestor" || (viewer && viewer.canViewReports);
+    const podeCtb = authRole==="gestor" || (viewer && viewer.canViewContab);
+    document.getElementById("reportPanel").style.display = podeRel ? "" : "none";
+    document.getElementById("contabPanel").style.display = podeCtb ? "" : "none";
+    document.getElementById("printReportBtn").style.display = podeRel ? "" : "none";
+    document.getElementById("printContabBtn").style.display = podeCtb ? "" : "none";
+    if(podeRel) renderRelatorios();
+    if(podeCtb) renderContabilidade();
+  }
   if(name==="dispequipa") renderTeamAvailability();
-  if(name==="contabilidade") renderContabilidade();
 }
 // ---------- RENDER: STAFF (Configurações) ----------
 function renderStaff(){
@@ -1619,7 +1612,7 @@ function renderContabilidade(){
 document.getElementById("contabStart").addEventListener("change", renderContabilidade);
 document.getElementById("contabEnd").addEventListener("change", renderContabilidade);
 document.getElementById("contabResetBtn").addEventListener("click", ()=>{ contabPrefill(true); renderContabilidade(); });
-document.getElementById("printContabBtn").addEventListener("click", ()=> window.print());
+document.getElementById("printContabBtn").addEventListener("click", ()=> printOnly("reportPanel"));
 // ---------- COPIA DE SEGURANCA ----------
 document.getElementById("backupBtn").addEventListener("click", ()=>{
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
@@ -2258,9 +2251,11 @@ function refreshVisibleSection(){
   if(document.getElementById("section-horario").style.display !== "none") renderExcelGrid();
   if(document.getElementById("section-disponibilidade").style.display !== "none") renderNurseView();
   if(document.getElementById("section-config").style.display !== "none") renderAvailabilityPanel();
-  if(document.getElementById("section-relatorios").style.display !== "none") renderRelatorios();
+  if(document.getElementById("section-relatorios").style.display !== "none"){
+    if(document.getElementById("reportPanel").style.display !== "none") renderRelatorios();
+    if(document.getElementById("contabPanel").style.display !== "none") renderContabilidade();
+  }
   if(document.getElementById("section-dispequipa").style.display !== "none") renderTeamAvailability();
-  if(document.getElementById("section-contabilidade").style.display !== "none") renderContabilidade();
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
 }
@@ -2492,7 +2487,14 @@ function renderRelatorios(){
   table.appendChild(tfoot);
   wrap.appendChild(table);
 }
-document.getElementById("printReportBtn").addEventListener("click", ()=> window.print());
+function printOnly(hideId){
+  const el = document.getElementById(hideId);
+  const prev = el.style.display;
+  el.style.display = "none";
+  window.print();
+  el.style.display = prev;
+}
+document.getElementById("printReportBtn").addEventListener("click", ()=> printOnly("contabPanel"));
 document.getElementById("printTeamDispBtn").addEventListener("click", ()=> window.print());
 loadState().then(()=>{
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
