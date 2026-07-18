@@ -580,6 +580,7 @@ let authNurseId = null;   // id of the logged-in person
 let nurseDraft = null;    // in-progress edits before "Guardar"
 let nurseEditing = false; // true while actively editing (after clicking "Alterar", or first time ever)
 let horarioFilterId = null; // quando definido, o horário mostra só esta pessoa
+let contabFilterId = null; // quando definido, a contabilidade mostra só esta pessoa
 // ---------- DATE HELPERS ----------
 function startOfWeek(d){
   const date = new Date(d);
@@ -1015,6 +1016,7 @@ function enterApp(){
 }
 function logoutApp(){
   horarioFilterId = null;
+  contabFilterId = null;
   authRole = null;
   authNurseId = null;
   nursePersonId = null;
@@ -1523,13 +1525,29 @@ function renderContabilidade(){
   const wrap = document.getElementById("contabTableWrap");
   wrap.innerHTML = "";
   if(!(start <= end)){ wrap.innerHTML = '<p class="note">Período inválido — a data de início tem de ser anterior à de fim.</p>'; return; }
+  const fp = contabFilterId ? staffById(contabFilterId) : null;
+  if(contabFilterId && !fp) contabFilterId = null;
+  if(fp){
+    const fbar = document.createElement("div");
+    fbar.className = "exc-row sans";
+    fbar.style.cssText = "background:var(--weekend-bg); border-radius:10px; padding:8px 12px; margin-bottom:8px;";
+    const ft = document.createElement("span");
+    ft.className = "blk-label";
+    ft.textContent = "A mostrar apenas " + fp.nome + ". Clica no nome outra vez (ou aqui) para voltar.";
+    const fb = document.createElement("button");
+    fb.className = "exc-add-btn";
+    fb.textContent = "Mostrar todos";
+    fb.addEventListener("click", ()=>{ contabFilterId = null; renderContabilidade(); });
+    fbar.appendChild(ft); fbar.appendChild(fb);
+    wrap.appendChild(fbar);
+  }
   const table = document.createElement("table");
   table.className = "excel sans";
   table.style.width = "100%";
   table.innerHTML = '<thead><tr><th class="name-col">Pessoa</th><th>Horas úteis</th><th>Horas fim de semana</th><th>Total de horas</th><th>Nº turnos</th></tr></thead>';
   const tbody = document.createElement("tbody");
   let totU=0, totF=0, totT=0;
-  state.staff.filter(pp=>isSchedulableTipo(pp.tipo)).forEach(person=>{
+  state.staff.filter(pp=>isSchedulableTipo(pp.tipo)).filter(pp=> !contabFilterId || pp.id===contabFilterId).forEach(person=>{
     let hU=0, hF=0, turnos=0;
     for(let d = new Date(start); d <= end; d = addDays(d, 1)){
       const code = getPersonShiftForDate(person.id, d);
@@ -1549,6 +1567,13 @@ function renderContabilidade(){
       '<td ' + cell + '>' + hF + 'h</td>' +
       '<td ' + cell + ' style="font-weight:700;">' + (hU + hF) + 'h</td>' +
       '<td ' + cell + '>' + turnos + '</td>';
+    const nc = tr.querySelector(".name-col");
+    nc.style.cursor = "pointer";
+    nc.title = contabFilterId===person.id ? "Clica para voltar a ver toda a equipa" : "Clica para ver só " + person.nome;
+    nc.addEventListener("click", ()=>{
+      contabFilterId = contabFilterId===person.id ? null : person.id;
+      renderContabilidade();
+    });
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
