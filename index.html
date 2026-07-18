@@ -756,6 +756,7 @@ function applyLoadedState(raw){
         if(p.canViewTeamDisp === undefined) p.canViewTeamDisp = false;
         if(p.canViewReports === undefined) p.canViewReports = false;
         if(p.canViewContab === undefined) p.canViewContab = false;
+        if(!Array.isArray(p.editHorarioIds)) p.editHorarioIds = [];
         if(!p.tipo) p.tipo = "rv";
         if(p.tipo==="efetivo"){
           if(p.allowedWeekday.length && !p.allowedWeekday.includes("DC")) p.allowedWeekday.push("DC","DO");
@@ -1346,6 +1347,30 @@ function renderStaff(){
     allowRow.appendChild(mkGroup("Fim de semana","allowedWeekend"));
     if(!isSchedulableTipo(person.tipo)) allowRow.style.display = "none";
     row.appendChild(allowRow);
+    const editHorRow = document.createElement("div");
+    editHorRow.className = "avail-days allow-row";
+    const ehLabel = document.createElement("span");
+    ehLabel.className = "blk-label";
+    ehLabel.textContent = "Pode alterar o horário de:";
+    editHorRow.appendChild(ehLabel);
+    state.staff.filter(x=>isSchedulableTipo(x.tipo)).forEach(x=>{
+      const l = document.createElement("label");
+      l.style.cssText = "display:inline-flex;flex-direction:row;align-items:center;gap:3px;font-size:11px;color:var(--ink-soft);cursor:pointer;";
+      const c = document.createElement("input");
+      c.type = "checkbox";
+      c.checked = (person.editHorarioIds||[]).includes(x.id);
+      c.addEventListener("change", ()=>{
+        person.editHorarioIds = person.editHorarioIds || [];
+        if(c.checked){ if(!person.editHorarioIds.includes(x.id)) person.editHorarioIds.push(x.id); }
+        else person.editHorarioIds = person.editHorarioIds.filter(i=>i!==x.id);
+        scheduleSave();
+      });
+      l.appendChild(c);
+      l.appendChild(document.createTextNode(x.nome));
+      editHorRow.appendChild(l);
+    });
+    if(person.tipo !== "guest") editHorRow.style.display = "none";
+    row.appendChild(editHorRow);
     if(isOwnerRow && !soDono){
       row.querySelectorAll("input, select, button").forEach(el=>{ el.disabled = true; });
     }
@@ -1941,6 +1966,7 @@ function renderExcelGrid(){
   const keepLeft = gridScroller ? gridScroller.scrollLeft : 0;
   const keepTop = gridScroller ? gridScroller.scrollTop : 0;
   const isGestor = authRole === "gestor";
+  const gridViewer = staffById(authNurseId);
   const monthStart = state.monthStart;
   const label = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
@@ -2039,6 +2065,7 @@ function renderExcelGrid(){
       renderExcelGrid();
     });
     tr.appendChild(tdName);
+    const canEditRow = isGestor || (gridViewer && Array.isArray(gridViewer.editHorarioIds) && gridViewer.editHorarioIds.includes(person.id));
     let monthHours = 0;
     dates.forEach((date, di)=>{
       const td = document.createElement("td");
@@ -2052,7 +2079,7 @@ function renderExcelGrid(){
         const curSt = shiftType(current);
         if(!curSt || !curSt.isRest){ monthHours += shiftHours(current); }
       }
-      if(!isGestor){
+      if(!canEditRow){
         const span = document.createElement("span");
         span.className = "sans";
         span.style.cssText = "display:inline-block; min-width:40px; padding:3px 6px; border-radius:5px; font-size:11.5px; font-weight:700; text-align:center;";
