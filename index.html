@@ -352,6 +352,10 @@
       <span class="icon">📊</span>
       <h3>Relatórios</h3>
     </div>
+    <div class="home-card" data-target="contabilidade" id="contabCard">
+      <span class="icon">💶</span>
+      <h3>Contabilidade</h3>
+    </div>
   </div>
   <div id="logoutSmallBar" class="sans" style="display:none; margin:-10px 0 20px;">
     <div style="display:flex; justify-content:flex-end; gap:20px;">
@@ -443,6 +447,25 @@
       <h2>Relatório do mês — <span id="reportMonthLabel"></span></h2>
       <div class="grid-scroll" id="reportTableWrap"></div>
       <p class="note">"Horas disponibilizadas" soma as horas de todos os turnos que a pessoa marcou como disponível na vista Disponibilidades (aplica-se aos recibos verdes). "Horas feitas" soma as horas dos turnos atribuídos na grelha do Horário deste mês — os descansos (DC/DO) não contam. "Aproveitamento" = horas feitas ÷ horas disponibilizadas.</p>
+    </div>
+  </div>
+  <!-- SECTION: CONTABILIDADE -->
+  <div id="section-contabilidade" class="section" style="display:none;">
+    <span class="back-link" data-back>← Voltar ao início</span>
+    <div class="toolbar">
+      <button class="btn btn-ghost" id="printContabBtn">Imprimir / Exportar PDF</button>
+    </div>
+    <div class="panel">
+      <h2>Contabilidade</h2>
+      <div class="exc-row sans" style="margin-bottom:12px;">
+        <span class="blk-label">De:</span>
+        <input type="date" id="contabStart">
+        <span class="blk-label">até:</span>
+        <input type="date" id="contabEnd">
+        <button class="exc-add-btn" id="contabResetBtn">Período 21 → 20 deste mês</button>
+      </div>
+      <div class="grid-scroll" id="contabTableWrap"></div>
+      <p class="note">As horas vêm dos turnos atribuídos na grelha do Horário dentro do período escolhido (descansos DC/DO e Férias não contam). "Útil" = segunda a sexta; fim de semana = sábado e domingo (feriados em dia de semana contam como útil).</p>
     </div>
   </div>
   <!-- SECTION: CONFIGURAÇÕES -->
@@ -548,6 +571,7 @@ let state = {
   customHolidays: {}, // manager-added extra holidays: { "YYYY-MM-DD": "Nome" }
   removedHolidays: {}, // auto-calculated holidays the manager chose to hide: { "YYYY-MM-DD": true }
   notifSeen: {},
+  payRates: { efetivoMensal:1400, rvHora:15, rvFds:18, gestorHora:22, gestorFds:25 },
   tzMigrated: true
 };
 let nursePersonId = null;
@@ -747,6 +771,7 @@ function applyLoadedState(raw){
       if(!parsed.customHolidays) parsed.customHolidays = {};
       if(!parsed.removedHolidays) parsed.removedHolidays = {};
       if(!parsed.notifSeen) parsed.notifSeen = {};
+      if(!parsed.payRates) parsed.payRates = { efetivoMensal:1400, rvHora:15, rvFds:18, gestorHora:22, gestorFds:25 };
       if(parsed.holidays){
         Object.keys(parsed.holidays).forEach(iso=>{
           const year = parseInt(iso.slice(0,4));
@@ -972,6 +997,7 @@ function enterApp(){
   document.getElementById("weekNav").style.display = "";
   document.getElementById("configCard").style.display = authRole==="gestor" ? "" : "none";
   document.getElementById("reportCard").style.display = (authRole==="gestor" || (person && person.canViewReports)) ? "" : "none";
+  document.getElementById("contabCard").style.display = authRole==="gestor" ? "" : "none";
   document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
   document.getElementById("horarioCard").style.display = "";
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
@@ -996,7 +1022,7 @@ function logoutApp(){
   document.getElementById("homeMenu").style.display = "none";
   document.getElementById("logoutSmallBar").style.display = "none";
   document.getElementById("weekNav").style.display = "none";
-  ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
+  ["horario","disponibilidade","config","relatorios","dispequipa","contabilidade"].forEach(n=>{
     document.getElementById("section-"+n).style.display = "none";
   });
   document.getElementById("gestorBadge").style.display = "none";
@@ -1045,14 +1071,14 @@ function showSection(name){
     alert("Acesso restrito à gestão.");
     return;
   }
-  if(name === "config" && authRole !== "gestor"){
+  if((name === "config" || name === "contabilidade") && authRole !== "gestor"){
     alert("Acesso restrito à gestão.");
     return;
   }
   document.getElementById("homeMenu").style.display = name ? "none" : "grid";
   document.getElementById("logoutSmallBar").style.display = name ? "none" : "";
   if(name){ document.getElementById("myStatsBar").style.display = "none"; } else { renderMyStats(); }
-  ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
+  ["horario","disponibilidade","config","relatorios","dispequipa","contabilidade"].forEach(n=>{
     document.getElementById("section-"+n).style.display = (n===name) ? "" : "none";
   });
   if(name==="horario") renderExcelGrid();
@@ -1060,6 +1086,7 @@ function showSection(name){
   if(name==="config") renderConfigSection();
   if(name==="relatorios") renderRelatorios();
   if(name==="dispequipa") renderTeamAvailability();
+  if(name==="contabilidade") renderContabilidade();
 }
 // ---------- RENDER: STAFF (Configurações) ----------
 function renderStaff(){
@@ -1463,6 +1490,69 @@ document.getElementById("holidayAddBtn").addEventListener("click", ()=>{
   renderHolidays();
   scheduleSave();
 });
+// ---------- CONTABILIDADE ----------
+function contabPrefill(force){
+  const si = document.getElementById("contabStart"), ei = document.getElementById("contabEnd");
+  if(force || !si.value || !ei.value){
+    const m = state.monthStart;
+    si.value = weekKey(new Date(m.getFullYear(), m.getMonth()-1, 21));
+    ei.value = weekKey(new Date(m.getFullYear(), m.getMonth(), 20));
+  }
+}
+function renderContabilidade(){
+  contabPrefill(false);
+  const start = new Date(document.getElementById("contabStart").value + "T00:00:00");
+  const end = new Date(document.getElementById("contabEnd").value + "T00:00:00");
+  const wrap = document.getElementById("contabTableWrap");
+  wrap.innerHTML = "";
+  if(!(start <= end)){ wrap.innerHTML = '<p class="note">Período inválido — a data de início tem de ser anterior à de fim.</p>'; return; }
+  const table = document.createElement("table");
+  table.className = "excel sans";
+  table.style.width = "100%";
+  table.innerHTML = '<thead><tr><th class="name-col">Pessoa</th><th>Horas úteis</th><th>Horas fim de semana</th><th>Total de horas</th><th>Nº turnos</th></tr></thead>';
+  const tbody = document.createElement("tbody");
+  let totU=0, totF=0, totT=0;
+  state.staff.filter(pp=>isSchedulableTipo(pp.tipo)).forEach(person=>{
+    let hU=0, hF=0, turnos=0;
+    for(let d = new Date(start); d <= end; d = addDays(d, 1)){
+      const code = getPersonShiftForDate(person.id, d);
+      if(!code) continue;
+      const st = shiftType(code);
+      if(st && st.isRest) continue;
+      const h = shiftHours(code);
+      turnos++;
+      if(isWeekendDay(d)) hF += h; else hU += h;
+    }
+    totU += hU; totF += hF; totT += turnos;
+    const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
+    const cell = 'style="padding:6px 10px;"';
+    const tr = document.createElement("tr");
+    tr.innerHTML = '<td class="name-col"><span class="name-cell-inner"><span class="dot ' + dotClass + '"></span>' + esc(person.nome) + '</span></td>' +
+      '<td ' + cell + '>' + hU + 'h</td>' +
+      '<td ' + cell + '>' + hF + 'h</td>' +
+      '<td ' + cell + ' style="font-weight:700;">' + (hU + hF) + 'h</td>' +
+      '<td ' + cell + '>' + turnos + '</td>';
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  const tfoot = document.createElement("tfoot");
+  tfoot.innerHTML = '<tr><td class="name-col" style="font-weight:700;">Total</td>' +
+    '<td style="font-weight:700;">' + totU + 'h</td>' +
+    '<td style="font-weight:700;">' + totF + 'h</td>' +
+    '<td style="font-weight:700;">' + (totU + totF) + 'h</td>' +
+    '<td style="font-weight:700;">' + totT + '</td></tr>';
+  table.appendChild(tfoot);
+  const periodo = document.createElement("p");
+  periodo.className = "note";
+  periodo.style.marginTop = "0";
+  periodo.textContent = "Período: " + fmtDate(start) + " a " + fmtDate(end) + " (inclusive).";
+  wrap.appendChild(periodo);
+  wrap.appendChild(table);
+}
+document.getElementById("contabStart").addEventListener("change", renderContabilidade);
+document.getElementById("contabEnd").addEventListener("change", renderContabilidade);
+document.getElementById("contabResetBtn").addEventListener("click", ()=>{ contabPrefill(true); renderContabilidade(); });
+document.getElementById("printContabBtn").addEventListener("click", ()=> window.print());
 // ---------- COPIA DE SEGURANCA ----------
 document.getElementById("backupBtn").addEventListener("click", ()=>{
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
@@ -2101,6 +2191,7 @@ function refreshVisibleSection(){
   if(document.getElementById("section-config").style.display !== "none") renderAvailabilityPanel();
   if(document.getElementById("section-relatorios").style.display !== "none") renderRelatorios();
   if(document.getElementById("section-dispequipa").style.display !== "none") renderTeamAvailability();
+  if(document.getElementById("section-contabilidade").style.display !== "none") renderContabilidade();
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
 }
