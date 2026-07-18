@@ -754,6 +754,7 @@ function applyLoadedState(raw){
         if(p.isManager === undefined) p.isManager = false;
         if(p.canViewTeamDisp === undefined) p.canViewTeamDisp = false;
         if(p.canViewReports === undefined) p.canViewReports = false;
+        if(p.canViewContab === undefined) p.canViewContab = false;
         if(!p.tipo) p.tipo = "rv";
         if(p.tipo==="efetivo"){
           if(p.allowedWeekday.length && !p.allowedWeekday.includes("DC")) p.allowedWeekday.push("DC","DO");
@@ -997,7 +998,7 @@ function enterApp(){
   document.getElementById("weekNav").style.display = "";
   document.getElementById("configCard").style.display = authRole==="gestor" ? "" : "none";
   document.getElementById("reportCard").style.display = (authRole==="gestor" || (person && person.canViewReports)) ? "" : "none";
-  document.getElementById("contabCard").style.display = authRole==="gestor" ? "" : "none";
+  document.getElementById("contabCard").style.display = (authRole==="gestor" || (person && person.canViewContab)) ? "" : "none";
   document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
   document.getElementById("horarioCard").style.display = "";
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
@@ -1071,7 +1072,11 @@ function showSection(name){
     alert("Acesso restrito à gestão.");
     return;
   }
-  if((name === "config" || name === "contabilidade") && authRole !== "gestor"){
+  if(name === "contabilidade" && authRole !== "gestor" && !(viewer && viewer.canViewContab)){
+    alert("Acesso restrito à gestão.");
+    return;
+  }
+  if(name === "config" && authRole !== "gestor"){
     alert("Acesso restrito à gestão.");
     return;
   }
@@ -1190,6 +1195,17 @@ function renderStaff(){
     });
     viewRepLbl.appendChild(viewRepChk);
     viewRepLbl.appendChild(document.createTextNode("Vê relatórios (só ver/imprimir)"));
+    const viewCtbLbl = document.createElement("label");
+    viewCtbLbl.style.cssText = "display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);cursor:pointer;";
+    const viewCtbChk = document.createElement("input");
+    viewCtbChk.type = "checkbox";
+    viewCtbChk.checked = !!person.canViewContab;
+    viewCtbChk.addEventListener("change", e=>{
+      person.canViewContab = e.target.checked;
+      scheduleSave();
+    });
+    viewCtbLbl.appendChild(viewCtbChk);
+    viewCtbLbl.appendChild(document.createTextNode("Vê contabilidade (só ver/imprimir)"));
     const pinLbl = document.createElement("label");
     pinLbl.style.cssText = "display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);";
     pinLbl.appendChild(document.createTextNode("PIN:"));
@@ -1218,6 +1234,7 @@ function renderStaff(){
     top.appendChild(managerLbl);
     top.appendChild(viewDispLbl);
     top.appendChild(viewRepLbl);
+    top.appendChild(viewCtbLbl);
     top.appendChild(pinLbl);
     top.appendChild(removeBtn);
     row.appendChild(top);
