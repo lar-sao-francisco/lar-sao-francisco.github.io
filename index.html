@@ -1613,6 +1613,26 @@ function renderContabilidade(){
   periodo.textContent = "Período: " + fmtDate(start) + " a " + fmtDate(end) + " (inclusive).";
   wrap.appendChild(periodo);
   wrap.appendChild(table);
+  if(authNurseId === OWNER_ID && state.payRates){
+    let ohU=0, ohF=0;
+    for(let d = new Date(start); d <= end; d = addDays(d, 1)){
+      const code = getPersonShiftForDate(OWNER_ID, d);
+      if(!code) continue;
+      const st = shiftType(code);
+      if(st && st.isRest) continue;
+      const h = shiftHours(code);
+      if(isWeekendDay(d)) ohF += h; else ohU += h;
+    }
+    const rH = state.payRates.gestorHora || 0;
+    const rF = state.payRates.gestorFds || 0;
+    const val = ohU * rH + ohF * rF;
+    const fmt2 = v => v.toFixed(2).replace(".", ",") + " €";
+    const est = document.createElement("p");
+    est.className = "note";
+    est.style.cssText = "background:var(--weekend-bg); border-radius:10px; padding:10px 14px; font-size:13px;";
+    est.innerHTML = "<strong>A tua estimativa (só tu vês isto):</strong> " + ohU + "h úteis × " + fmt2(rH) + " + " + ohF + "h fim de semana × " + fmt2(rF) + " = <strong>" + fmt2(val) + "</strong>";
+    wrap.appendChild(est);
+  }
 }
 document.getElementById("contabStart").addEventListener("change", renderContabilidade);
 document.getElementById("contabEnd").addEventListener("change", renderContabilidade);
@@ -1752,12 +1772,17 @@ function renderMyStats(){
   const apr = disp > 0 ? Math.round(feitas/disp*100) + "%" : "—";
   document.getElementById("myStatsMonth").textContent = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   const mk = (v, lbl) => '<span><strong style="color:var(--sage-deep); font-size:15px;">' + v + '</strong> ' + lbl + '</span>';
+  let extra = "";
+  if(authNurseId === OWNER_ID && state.payRates){
+    const val = (feitas - fds) * (state.payRates.gestorHora || 0) + fds * (state.payRates.gestorFds || 0);
+    extra = mk(val.toFixed(2).replace(".", ",") + " €", "estimativa do mês");
+  }
   document.getElementById("myStatsContent").innerHTML =
     mk(disp + "h", "disponibilizadas") +
     mk(feitas + "h", "feitas") +
     mk(turnos, "turnos") +
     mk(fds + "h", "fim de semana") +
-    mk(apr, "aproveitamento");
+    mk(apr, "aproveitamento") + extra;
   bar.style.display = "";
 }
 // ---------- NOTIFICACOES (apenas fundador) ----------
