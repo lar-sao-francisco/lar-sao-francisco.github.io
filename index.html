@@ -408,6 +408,10 @@
     </div>
     <div class="panel" id="nurseCalendarWrap" style="display:none;">
       <h2 id="nurseCalendarTitle">Marcar disponibilidade</h2>
+      <div id="ownerDispPicker" class="sans" style="display:none; margin:0 0 12px; display:none; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span class="blk-label">Marcar/alterar disponibilidade de:</span>
+        <select id="ownerDispSelect" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);"></select>
+      </div>
       <p class="note">Se não tocares em nenhum turno num dia, a gestão assume que não tens essa informação.</p>
       <div class="sans" id="nurseSaveStatusBar" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:10px 0 16px; padding:10px 14px; background:var(--weekend-bg); border-radius:10px; font-size:13px;">
         <span id="nurseSaveStatusText"></span>
@@ -905,6 +909,7 @@ function buildOptionsForCell(person, date, currentCode){
       const isCurrent = st.code === currentCode;
       if(submitted.includes(st.code) || isCurrent) opts.push(st.code);
     });
+    if(submitted.includes("M1") && submitted.includes("T1") && !opts.includes("MT1") && shiftType("MT1")) opts.push("MT1");
   } else if(isRvLike(person.tipo)){
     if(currentCode) opts.push(currentCode);
   } else {
@@ -2292,7 +2297,25 @@ function renderNurseView(){
   if(person && isRvLike(person.tipo)){
     document.getElementById("nurseGestorNotice").style.display = "none";
     document.getElementById("nurseCalendarWrap").style.display = "";
-    document.getElementById("nurseCalendarTitle").textContent = "Marcar disponibilidade — " + person.nome;
+    const picker = document.getElementById("ownerDispPicker");
+    if(authNurseId === OWNER_ID){
+      picker.style.display = "flex";
+      const sel = document.getElementById("ownerDispSelect");
+      sel.innerHTML = "";
+      state.staff.filter(x=>isRvLike(x.tipo)).forEach(x=>{
+        const o = document.createElement("option");
+        o.value = x.id;
+        o.textContent = x.id === OWNER_ID ? x.nome + " (eu)" : x.nome;
+        sel.appendChild(o);
+      });
+      if(!nursePersonId || !staffById(nursePersonId)) nursePersonId = OWNER_ID;
+      sel.value = nursePersonId;
+    } else {
+      picker.style.display = "none";
+      nursePersonId = authNurseId;
+    }
+    const alvo = staffById(nursePersonId) || person;
+    document.getElementById("nurseCalendarTitle").textContent = "Marcar disponibilidade — " + alvo.nome;
     renderNurseCalendar();
     return;
   }
@@ -2402,6 +2425,12 @@ function renderNurseCalendar(){
 function withinEditWindow(savedAtIso){
   return true; // sem prazo: as disponibilidades podem ser alteradas a qualquer momento
 }
+document.getElementById("ownerDispSelect").addEventListener("change", e=>{
+  nursePersonId = e.target.value;
+  nurseDraft = null;
+  nurseEditing = false;
+  renderNurseView();
+});
 document.getElementById("nurseAlterarBtn").addEventListener("click", ()=>{
   nurseDraft = JSON.parse(JSON.stringify(state.availabilityRequests[nursePersonId] || {}));
   nurseEditing = true;
