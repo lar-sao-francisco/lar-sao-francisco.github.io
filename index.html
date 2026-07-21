@@ -5,221 +5,274 @@
 <title>Lar de São Francisco — Escala de Enfermagem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #F4FAF8;
+    color-scheme: light;
+    --bg: #F2FAF7;
     --panel: #FFFFFF;
-    --ink: #16241E;
+    --ink: #10241C;
     --ink-soft: #5E7168;
     --sage: #0EA66B;
     --sage-deep: #067A4F;
-    --clay: #0891B2;
-    --line: #DCEEE6;
+    --clay: #6366F1;
+    --line: #D9EDE3;
     --efetivo: #067A4F;
     --rv: #0891B2;
-    --danger: #E5484D;
-    --rest-bad: #FDECEC;
-    --weekend-bg: #EAF7F1;
+    --danger: #F43F5E;
+    --rest-bad: #FFE9EE;
+    --weekend-bg: #E8F6EE;
+    --glass: rgba(255,255,255,0.92);
+    --glow: 0 8px 26px rgba(6,122,79,0.09);
   }
   *{box-sizing:border-box;}
-  body{ margin:0; background:var(--bg); color:var(--ink); font-family:"Plus Jakarta Sans","Manrope",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
-  .sans{ font-family: "Plus Jakarta Sans","Manrope",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
-  .wrap{ max-width:1320px; margin:0 auto; padding:28px 20px 60px; }
-  header{ display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:6px;}
-  .brand{ display:flex; align-items:center; gap:14px; }
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; color:var(--ink);
+    font-family:"Plus Jakarta Sans","Manrope",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1100px 700px at 88% -12%, rgba(14,166,107,0.16), transparent 60%),
+      radial-gradient(900px 650px at -8% 32%, rgba(52,211,153,0.10), transparent 55%),
+      radial-gradient(1000px 600px at 55% 115%, rgba(6,122,79,0.12), transparent 60%),
+      var(--bg);
+    min-height:100vh;
+  }
+  body::before, body::after{
+    content:""; position:fixed; border-radius:50%; z-index:-1; pointer-events:none;
+  }
+  body::before{
+    width:540px; height:540px; top:-180px; right:-140px;
+    background:radial-gradient(circle at 30% 30%, rgba(14,166,107,0.20), transparent 65%);
+    
+  }
+  body::after{
+    width:460px; height:460px; bottom:-160px; left:-140px;
+    background:radial-gradient(circle at 60% 40%, rgba(52,211,153,0.14), transparent 65%);
+    
+  }
+  @keyframes blobFloat{
+    from{ transform:translate(0,0) scale(1); }
+    to{ transform:translate(-70px,50px) scale(1.18); }
+  }
+  @keyframes fadeUp{
+    from{ opacity:0; transform:translateY(14px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  @keyframes markPulse{
+    0%,100%{ box-shadow:0 6px 20px rgba(14,166,107,0.35); }
+    50%{ box-shadow:0 8px 34px rgba(14,166,107,0.60); }
+  }
+  .sans{ font-family:"Plus Jakarta Sans","Manrope",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap{ max-width:1320px; margin:0 auto; padding:30px 22px 60px; }
+  header{ display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:6px; animation:fadeUp .45s ease both;}
+  .brand{ display:flex; align-items:center; gap:15px; }
   .brand-mark{
-    width:46px; height:46px; border-radius:14px; flex:none;
-    background:linear-gradient(135deg, var(--sage) 0%, var(--sage-deep) 100%);
+    width:50px; height:50px; border-radius:16px; flex:none;
+    background:linear-gradient(135deg, #34D399 0%, #0EA66B 55%, #067A4F 100%);
     display:flex; align-items:center; justify-content:center;
-    box-shadow:0 6px 16px rgba(6,122,79,0.25);
+    box-shadow:0 6px 22px rgba(14,166,107,0.40);
   }
-  .brand-mark svg{ width:24px; height:24px; }
-  h1{ font-size:26px; margin:0; letter-spacing:0.2px; color:var(--sage-deep); font-weight:800;}
-  .eyebrow{ font-family:sans-serif; text-transform:uppercase; letter-spacing:1.5px; font-size:11px; color:var(--ink-soft); margin:0 0 4px; font-weight:600;}
+  .brand-mark svg{ width:26px; height:26px; }
+  h1{
+    font-family:"Space Grotesk","Plus Jakarta Sans",sans-serif;
+    font-size:28px; margin:0; letter-spacing:0.3px; font-weight:700;
+    background:linear-gradient(90deg, #067A4F 0%, #0EA66B 65%, #34D399 125%);
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent; -webkit-text-fill-color:transparent;
+  }
+  .eyebrow{ font-family:sans-serif; text-transform:uppercase; letter-spacing:2px; font-size:11px; color:var(--ink-soft); margin:0 0 4px; font-weight:700;}
   .week-nav{ display:flex; align-items:center; gap:12px; font-family:sans-serif;}
-  .week-nav button{ border:1px solid var(--line); background:var(--panel); border-radius:10px; padding:8px 14px; cursor:pointer; font-size:14px; color:var(--ink); box-shadow:0 1px 2px rgba(6,122,79,0.06);}
-  .week-nav button:hover{ background:var(--weekend-bg); border-color:var(--sage);}
-  .week-label{ font-size:19px; color:var(--sage-deep); font-weight:800; min-width:190px; text-align:center; text-transform:capitalize;}
+  .week-nav button{
+    border:1px solid rgba(255,255,255,0.7); background:var(--glass); 
+    border-radius:13px; padding:9px 16px; cursor:pointer; font-size:14px; color:var(--ink); font-weight:600;
+    box-shadow:0 3px 12px rgba(6,122,79,0.10); transition:transform .18s, box-shadow .2s, border-color .2s, color .2s;
+  }
+  .week-nav button:hover{ border-color:var(--sage); color:var(--sage-deep); transform:translateY(-2px); box-shadow:0 10px 24px rgba(14,166,107,0.22);}
+  .week-nav button:active{ transform:scale(0.96); }
+  .week-label{
+    font-family:"Space Grotesk",sans-serif; font-size:19px; color:var(--sage-deep); font-weight:700;
+    min-width:190px; text-align:center; text-transform:capitalize;
+  }
   /* home menu */
-  .home-menu{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:22px 0; }
+  .home-menu{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin:26px 0; animation:fadeUp .45s ease both; }
+  @media (max-width:980px){ .home-menu{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:620px){ .home-menu{ grid-template-columns:1fr; } }
   .home-card{
-    background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:24px;
-    cursor:pointer; font-family:sans-serif; text-align:left; transition:border-color .15s, transform .15s, box-shadow .15s;
-    box-shadow:0 2px 10px rgba(6,122,79,0.06);
+    background:var(--glass); 
+    border:1px solid rgba(255,255,255,0.65); border-radius:22px; padding:26px;
+    cursor:pointer; font-family:sans-serif; text-align:left; position:relative; overflow:hidden;
+    transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+    box-shadow:0 4px 18px rgba(6,122,79,0.09);
   }
-  .home-card:hover{ border-color:var(--sage); transform:translateY(-3px); box-shadow:0 10px 24px rgba(6,122,79,0.14); }
+  .home-card::before{
+    content:""; position:absolute; inset:0; opacity:0; transition:opacity .25s ease;
+    background:linear-gradient(135deg, rgba(14,166,107,0.12), transparent 50%);
+    pointer-events:none;
+  }
+  .home-card:hover{ transform:translateY(-6px); box-shadow:0 20px 44px rgba(14,166,107,0.24); border-color:rgba(14,166,107,0.45); }
+  .home-card:hover::before{ opacity:1; }
+  .home-card:active{ transform:translateY(-2px) scale(0.99); }
   .home-card .icon{
-    font-size:22px; margin-bottom:10px; display:flex; align-items:center; justify-content:center;
-    width:44px; height:44px; border-radius:12px; background:var(--weekend-bg);
+    font-size:24px; margin-bottom:12px; display:flex; align-items:center; justify-content:center;
+    width:52px; height:52px; border-radius:16px;
+    background:linear-gradient(135deg, rgba(14,166,107,0.16), rgba(52,211,153,0.12));
+    box-shadow:inset 0 0 0 1px rgba(14,166,107,0.20);
   }
-  .home-card h3{ margin:0 0 6px; font-size:16px; color:var(--sage-deep); font-weight:800; }
-  .home-card p{ margin:0; font-size:12.5px; color:var(--ink-soft); line-height:1.4; }
+  .home-card h3{ margin:0 0 6px; font-size:16.5px; color:var(--sage-deep); font-weight:700; font-family:"Space Grotesk",sans-serif; letter-spacing:0.2px;}
+  .home-card p{ margin:0; font-size:12.5px; color:var(--ink-soft); line-height:1.5; }
   .tabs{ display:flex; gap:8px; margin:20px 0 4px; font-family:sans-serif; flex-wrap:wrap; }
-  .tab-btn{ border:1px solid var(--line); background:var(--panel); color:var(--ink-soft); padding:9px 16px; border-radius:10px; font-size:14px; cursor:pointer; font-weight:700; }
+  .tab-btn{ border:1px solid var(--line); background:var(--glass); color:var(--ink-soft); padding:9px 16px; border-radius:12px; font-size:14px; cursor:pointer; font-weight:700; }
   .tab-btn.active{ background:linear-gradient(135deg, var(--sage), var(--sage-deep)); color:white; border-color:var(--sage-deep); }
-  .back-link{ font-family:sans-serif; font-size:13px; color:var(--sage-deep); cursor:pointer; text-decoration:underline; margin-bottom:14px; display:inline-block; font-weight:600; }
+  .back-link{ font-family:sans-serif; font-size:13px; color:var(--sage-deep); cursor:pointer; text-decoration:none; border-bottom:1px dashed var(--sage); margin-bottom:14px; display:inline-block; font-weight:700; transition:color .2s, border-color .2s;}
+  .back-link:hover{ color:var(--sage); }
   .toolbar{ display:flex; gap:10px; flex-wrap:wrap; margin:18px 0; font-family:sans-serif; align-items:center;}
-  .btn{ border:none; border-radius:11px; padding:11px 18px; font-size:14.5px; cursor:pointer; font-weight:700; }
-  .btn-primary{ background:linear-gradient(135deg, var(--sage) 0%, var(--sage-deep) 100%); color:white; box-shadow:0 4px 12px rgba(6,122,79,0.25);}
-  .btn-primary:hover{ filter:brightness(1.06); }
-  .btn-ghost{ background:var(--panel); color:var(--ink); border:1px solid var(--line);}
-  .btn-ghost:hover{ background:var(--weekend-bg); border-color:var(--sage); }
-  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:22px 24px; margin-bottom:22px; box-shadow:0 2px 10px rgba(6,122,79,0.05);}
-  .panel h2{ font-size:16px; margin:0 0 14px; color:var(--sage-deep); font-family:sans-serif; letter-spacing:0.2px; font-weight:800;}
+  .btn{
+    border:none; border-radius:14px; padding:12px 20px; font-size:14.5px; cursor:pointer; font-weight:700; font-family:inherit;
+    transition:transform .18s ease, box-shadow .22s ease, filter .2s ease;
+  }
+  .btn:active{ transform:scale(0.96); }
+  .btn-primary{
+    background:linear-gradient(135deg, #34D399 0%, #0EA66B 55%, #067A4F 100%);
+    color:white; box-shadow:0 8px 22px rgba(14,166,107,0.38);
+  }
+  .btn-primary:hover{ transform:translateY(-2px); box-shadow:0 14px 32px rgba(14,166,107,0.45); }
+  .btn-ghost{
+    background:rgba(255,255,255,0.82); color:var(--ink); border:1px solid var(--line);
+    
+  }
+  .btn-ghost:hover{ border-color:var(--sage); color:var(--sage-deep); transform:translateY(-2px); box-shadow:0 10px 24px rgba(14,166,107,0.16); }
+  .panel{
+    background:var(--glass); 
+    border:1px solid rgba(255,255,255,0.65); border-radius:22px; padding:24px 26px; margin-bottom:22px;
+    box-shadow:var(--glow); animation:fadeUp .45s ease both;
+  }
+  .panel h2{
+    font-size:16px; margin:0 0 14px; color:var(--sage-deep); font-family:"Space Grotesk",sans-serif;
+    letter-spacing:0.4px; font-weight:700;
+  }
+  .section{ animation:fadeUp .4s ease both; }
+  #appLoginGate{ max-width:470px; margin:44px auto; padding:34px 36px; }
+  input, select, textarea{ font-family:inherit; }
+  input:focus, select:focus, textarea:focus{
+    outline:none; border-color:var(--sage);
+    box-shadow:0 0 0 3px rgba(14,166,107,0.20);
+    transition:box-shadow .18s ease;
+  }
   /* ---- Excel-style grid ---- */
-  .grid-scroll{ max-height:72vh; overflow:auto; border:1px solid var(--line); border-radius:10px; }
+  .grid-scroll{ max-height:72vh; overflow:auto; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,0.85); }
   table.excel{ border-collapse:separate; border-spacing:0; font-family:sans-serif; font-size:12px; }
   table.excel th, table.excel td{ border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:3px 4px; text-align:center; }
-  table.excel thead th{ position:sticky; top:0; background:var(--panel); z-index:2; font-weight:700; color:var(--ink-soft); padding:6px 4px; }
+  table.excel thead th{ position:sticky; top:0; background:#FFFFFF; z-index:2; font-weight:700; color:var(--ink-soft); padding:6px 4px; }
   table.excel thead tr:nth-child(2) th{ top:34px; }
   table.excel thead th.weekend-col{ background:var(--weekend-bg); }
   table.excel td.weekend-col{ background:var(--weekend-bg); }
+  table.excel tbody tr:hover td:not(.name-col){ background:rgba(14,166,107,0.07); }
   table.excel th.name-col, table.excel td.name-col{
-    position:sticky; left:0; background:var(--panel); z-index:3; text-align:left;
+    position:sticky; left:0; background:#FFFFFF; z-index:3; text-align:left;
     min-width:150px; max-width:150px; font-weight:700; padding:6px 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   table.excel thead th.name-col{ z-index:4; }
-  table.excel tfoot td{ position:sticky; bottom:0; background:var(--selected-bg, #EEF4F0); font-family:sans-serif; z-index:2; }
-  table.excel tfoot td.name-col{ z-index:5; }
+  table.excel tfoot td{ position:sticky; bottom:0; background:#EAF6EF; font-family:sans-serif; z-index:2; }
+  table.excel tfoot td.name-col{ z-index:5; background:#EAF6EF; }
   .day-head{ display:flex; flex-direction:column; align-items:center; line-height:1.15; min-width:46px; position:relative; }
   .day-head .dow{ font-size:9.5px; text-transform:uppercase; color:var(--ink-soft); font-weight:400; }
   .day-head .num{ font-size:13px; font-weight:800; }
   .day-lock{ font-size:10px; margin-top:2px; opacity:0.85; }
-  .week-lock{ font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:7px; }
+  .week-lock{ font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:8px; transition:background .2s;}
   .week-lock:hover{ background:var(--weekend-bg); }
-  table.excel thead tr:first-child th{ border-bottom:2px solid var(--line); padding-top:8px; padding-bottom:8px; }
-  table.excel td.locked-col, table.excel th.locked-col{ background:#FFF7E6; }
-  table.excel td.holiday-col, table.excel th.holiday-col{ background:#FCE7F3; }
+  table.excel thead tr:first-child th{ border-bottom:2px solid rgba(14,166,107,0.28); padding-top:8px; padding-bottom:8px; }
+  table.excel td.locked-col, table.excel th.locked-col{ background:#FFF6E3; }
+  table.excel td.holiday-col, table.excel th.holiday-col{ background:#FDEBF5; }
   .holiday-flag{ font-size:10px; margin-top:2px; }
   select.cell-select{
-    width:52px; font-family:sans-serif; font-size:11.5px; padding:3px 2px; border-radius:5px;
+    width:52px; font-family:sans-serif; font-size:11.5px; padding:3px 2px; border-radius:8px;
     border:1px solid var(--line); background:var(--panel); color:var(--ink); text-align:center; text-align-last:center;
+    transition:box-shadow .15s ease, transform .15s ease; cursor:pointer;
   }
+  select.cell-select:hover{ box-shadow:0 2px 10px rgba(14,166,107,0.25); }
   select.cell-select.conflict{ outline:2px solid var(--danger); outline-offset:-1px; }
   .name-cell-inner{ display:flex; align-items:center; gap:6px; }
   .dot{ width:8px; height:8px; border-radius:50%; flex:none;}
-  .dot.efetivo{ background:var(--efetivo);}
-  .dot.rv{ background:var(--rv);}
-  /* nurse view calendar (unchanged) */
+  .dot.efetivo{ background:var(--efetivo); box-shadow:0 0 6px rgba(6,122,79,0.55);}
+  .dot.rv{ background:var(--rv); box-shadow:0 0 6px rgba(52,211,153,0.5);}
+  /* nurse view calendar */
   .calendar-head{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; margin-bottom:8px; font-family:sans-serif; }
-  .calendar-head div{ text-align:center; font-size:12px; text-transform:uppercase; letter-spacing:0.8px; color:var(--ink-soft); font-weight:700; padding-bottom:4px; }
+  .calendar-head div{ text-align:center; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--ink-soft); font-weight:700; padding-bottom:4px; }
   .calendar{ display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
   .day-cell-cal{
-    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:9px;
-    min-height:100px; cursor:pointer; transition: box-shadow .15s, border-color .15s; display:flex; flex-direction:column;
+    background:rgba(255,255,255,0.85); border:1px solid var(--line); border-radius:16px; padding:10px;
+    min-height:100px; cursor:pointer; transition:box-shadow .2s ease, border-color .2s ease, transform .2s ease;
+    display:flex; flex-direction:column;
   }
-  .day-cell-cal:hover{ border-color:var(--sage); }
+  .day-cell-cal:hover{ border-color:var(--sage); transform:translateY(-2px); box-shadow:0 10px 22px rgba(14,166,107,0.16); }
   .day-cell-cal.other-month{ opacity:0.32; }
   .day-cell-cal.weekend{ background:var(--weekend-bg); }
   .day-num{ font-family:sans-serif; font-weight:800; font-size:15px; margin-bottom:7px; color:var(--ink); }
   .day-num .dow{ font-weight:400; font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; display:block; }
   .cal-chip{ font-family:sans-serif; font-size:11px; font-weight:600; padding:3px 6px; border-radius:6px; color:white; }
-  .staff-row{ padding:10px 0; border-bottom:1px solid var(--line); font-family:sans-serif;}
+  .staff-row{ padding:12px 0; border-bottom:1px solid var(--line); font-family:sans-serif;}
   .staff-row:last-child{ border-bottom:none;}
   .staff-row-top{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;}
-  .staff-row-top input[type=text]{ flex:1; min-width:140px; padding:7px 10px; border:1px solid var(--line); border-radius:7px; font-family:sans-serif; font-size:14px;}
-  .staff-row-top select{ padding:7px 8px; border:1px solid var(--line); border-radius:7px; font-family:sans-serif; font-size:13px;}
+  .staff-row-top input[type=text]{ flex:1; min-width:140px; padding:8px 11px; border:1px solid var(--line); border-radius:10px; font-family:sans-serif; font-size:14px; background:rgba(255,255,255,0.9);}
+  .staff-row-top select{ padding:8px 9px; border:1px solid var(--line); border-radius:10px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);}
   .avail-days{ display:flex; gap:4px; flex-wrap:wrap; align-items:center;}
   .avail-days label{ font-size:11px; color:var(--ink-soft); display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer;}
-  .remove-x{ background:none; border:none; color:var(--danger); cursor:pointer; font-size:16px; line-height:1;}
+  .remove-x{ background:none; border:none; color:var(--danger); cursor:pointer; font-size:16px; line-height:1; transition:transform .15s;}
+  .remove-x:hover{ transform:scale(1.25); }
   .blk-label{ font-size:11px; color:var(--ink-soft); }
   .exc-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:6px 0; }
-  .exc-row input[type=date]{ padding:5px 7px; border:1px solid var(--line); border-radius:6px; font-family:sans-serif; font-size:12.5px;}
-  .exc-row select{ padding:5px 6px; border:1px solid var(--line); border-radius:6px; font-family:sans-serif; font-size:12.5px;}
-  .exc-add-btn{ padding:5px 10px; border-radius:6px; border:1px solid var(--line); background:var(--bg); font-family:sans-serif; font-size:12.5px; cursor:pointer;}
-  .exc-chip{ display:inline-flex; align-items:center; gap:5px; border-radius:14px; padding:3px 8px; font-size:11.5px; font-family:sans-serif; }
-  .exc-chip.on{ background:#E7F0EA; color:var(--sage-deep); }
+  .exc-row input[type=date]{ padding:6px 8px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:12.5px; background:rgba(255,255,255,0.9);}
+  .exc-row select{ padding:6px 7px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:12.5px; background:rgba(255,255,255,0.9);}
+  .exc-add-btn{ padding:6px 11px; border-radius:9px; border:1px solid var(--line); background:rgba(255,255,255,0.9); font-family:sans-serif; font-size:12.5px; cursor:pointer; transition:border-color .2s, color .2s, transform .15s;}
+  .exc-add-btn:hover{ border-color:var(--sage); color:var(--sage-deep); transform:translateY(-1px);}
+  .exc-chip{ display:inline-flex; align-items:center; gap:5px; border-radius:16px; padding:4px 10px; font-size:11.5px; font-family:sans-serif; }
+  .exc-chip.on{ background:#E3F4EA; color:var(--sage-deep); }
   .exc-chip.off{ background:var(--rest-bad); color:var(--danger); }
-  .exc-chip.ferias{ background:#FCE7F3; color:#9D174D; }
+  .exc-chip.ferias{ background:#FDEBF5; color:#9D174D; }
   .exc-chip button{ border:none; background:none; cursor:pointer; color:inherit; font-size:12px; }
-  .dd-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); flex-wrap:wrap; font-family:sans-serif;}
+  .dd-row{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); flex-wrap:wrap; font-family:sans-serif;}
   .dd-shift-label{ min-width:160px; font-weight:700; font-size:13.5px; }
   .allow-row{ margin-top:4px; }
   .allow-group{ display:inline-flex; align-items:center; gap:4px; margin-right:14px; }
   .allow-group label{ display:inline-flex; align-items:center; gap:2px; font-size:11px; color:var(--ink-soft); cursor:pointer;}
-  .shift-row{ display:flex; align-items:center; gap:8px; padding:9px 0; border-bottom:1px solid var(--line); font-family:sans-serif; flex-wrap:wrap;}
+  .shift-row{ display:flex; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid var(--line); font-family:sans-serif; flex-wrap:wrap;}
   .shift-row:last-child{ border-bottom:none;}
-  .shift-row input[type=text]{ width:110px; padding:6px 9px; border:1px solid var(--line); border-radius:7px; font-family:sans-serif; font-size:14px;}
-  .shift-row input[type=time]{ padding:6px 7px; border:1px solid var(--line); border-radius:7px; font-family:sans-serif; font-size:13px; width:92px;}
-  .shift-row input[type=number]{ width:56px; padding:6px 7px; border:1px solid var(--line); border-radius:7px; font-family:sans-serif; font-size:13px;}
-  .shift-row input[type=color]{ width:34px; height:30px; padding:2px; border:1px solid var(--line); border-radius:7px; cursor:pointer; background:none;}
+  .shift-row input[type=text]{ width:110px; padding:7px 10px; border:1px solid var(--line); border-radius:10px; font-family:sans-serif; font-size:14px; background:rgba(255,255,255,0.9);}
+  .shift-row input[type=time]{ padding:7px 8px; border:1px solid var(--line); border-radius:10px; font-family:sans-serif; font-size:13px; width:96px; background:rgba(255,255,255,0.9);}
+  .shift-row input[type=number]{ width:58px; padding:7px 8px; border:1px solid var(--line); border-radius:10px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);}
+  .shift-row input[type=color]{ width:36px; height:32px; padding:2px; border:1px solid var(--line); border-radius:10px; cursor:pointer; background:none;}
   .shift-row .sep{ color:var(--ink-soft); }
   .settings-grid{ display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:16px; font-family:sans-serif;}
-  .field label{ display:block; font-size:12px; color:var(--ink-soft); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.5px;}
-  .field input, .field select{ width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:7px; font-family:sans-serif; font-size:14px;}
+  .field label{ display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px; font-weight:600;}
+  .field input, .field select{ width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:11px; font-family:sans-serif; font-size:14px; background:rgba(255,255,255,0.9); transition:border-color .2s;}
   .legend{ display:flex; gap:16px; font-family:sans-serif; font-size:12.5px; color:var(--ink-soft); margin-top:14px; flex-wrap:wrap; align-items:center;}
   .legend span{ display:inline-flex; align-items:center; gap:6px;}
-  .swatch{ width:11px; height:11px; border-radius:3px; display:inline-block; flex:none; }
-  .note{ font-family:sans-serif; font-size:12.5px; color:var(--ink-soft); margin-top:10px; line-height:1.5;}
+  .swatch{ width:11px; height:11px; border-radius:4px; display:inline-block; flex:none; }
+  .note{ font-family:sans-serif; font-size:12.5px; color:var(--ink-soft); margin-top:10px; line-height:1.55;}
   .save-status{ font-family:sans-serif; font-size:12px; color:var(--ink-soft); }
   .app-footer{
-    margin-top:30px; padding-top:18px; border-top:1px solid var(--line);
+    margin-top:32px; padding-top:18px; border-top:1px solid rgba(6,122,79,0.15);
     display:flex; flex-direction:column; gap:3px; font-size:11px; color:var(--ink-soft); line-height:1.5;
   }
   .app-footer strong{ color:var(--sage-deep); font-size:11.5px; }
   @media print{
-    /* Margens reduzidas para maximizar a largura útil — cada mm conta quando há 28-31 colunas de dias */
-    @page{ size: A4 landscape; margin: 6mm; }
-    html, body{ background:white; width:auto; height:auto; }
-    .toolbar, .panel.no-print, .home-menu, .tabs, .back-link, #globalErrorBanner, #gestorBadge, #nurseBadge, .app-footer{ display:none !important; }
-    .wrap{ max-width:none !important; width:100% !important; padding:0 !important; margin:0 !important; }
-    header{ margin-bottom:4px; }
-    h1{ font-size:16px; }
-    .eyebrow{ font-size:9px; }
-    p.note{ font-size:9px; margin:0 0 4px !important; }
-    .week-nav{ display:none !important; }
-    .panel{ border:none; padding:0; margin:0; box-shadow:none; }
-    .panel h2{ font-size:12px; margin:0 0 4px; }
-
-    /* A causa mais comum de "faltam dias" ao imprimir: a tabela (nome + até 31 colunas) fica
-       mais larga do que a página e o browser corta tudo o que passa da margem direita, sem avisar.
-       table-layout:fixed obriga a soma das colunas a caber exatamente na largura da página. */
-    .grid-scroll{ max-height:none !important; overflow:visible !important; border:none; }
-    table.excel{
-      width:100% !important;
-      table-layout:fixed !important;
-      border-collapse:collapse !important;
-      font-size:7.3px;
-    }
-    table.excel th, table.excel td{
-      border:0.5px solid #ccc;
-      padding:1px 1px;
-      overflow:hidden;
-    }
-    /* "não se lê bem": elementos com position:sticky (cabeçalho, coluna de nomes) por vezes
-       imprimem sobrepostos ou deslocados consoante o browser — na impressão isso é sempre desligado */
-    table.excel thead th, table.excel tfoot td, table.excel td.name-col, table.excel th.name-col{
-      position:static !important;
-      top:auto !important;
-      left:auto !important;
-      background:white !important;
-    }
-    table.excel th.name-col, table.excel td.name-col{
-      width:60px !important; min-width:60px !important; max-width:60px !important;
-      font-size:7.3px; padding:2px 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    thead{ display:table-header-group; }
-    tfoot{ display:table-footer-group; }
-    tr{ page-break-inside:avoid; break-inside:avoid; }
-    select.cell-select{
-      border:none !important; -webkit-appearance:none; appearance:none;
-      background-image:none !important; padding:0 !important;
-      font-size:7px !important; width:100% !important; min-width:0 !important;
-    }
-    /* célula de turno para quem não é gestão (span com estilo inline min-width:40px) —
-       sem este bloco também contribuía para a tabela ficar mais larga que a página */
-    table.excel .shift-chip{
-      min-width:0 !important; width:100% !important; padding:1px 0 !important;
-      font-size:7px !important; display:block !important; box-sizing:border-box;
-    }
-    .day-head{ min-width:0; }
-    .day-head .num{ font-size:7.3px; }
-    .day-head .dow{ font-size:6px; }
-    .day-lock, .holiday-flag{ font-size:7px; }
-    .week-lock{ font-size:7px; padding:0; }
-    .legend{ font-size:7.5px; margin-top:4px; gap:8px; page-break-inside:avoid; }
-    .legend .swatch{ width:8px; height:8px; }
+    @page{ size: A4 landscape; margin: 10mm; }
+    body{ background:white; }
+    body::before, body::after{ display:none !important; }
+    h1{ background:none; color:var(--sage-deep); -webkit-text-fill-color:initial; }
+    .brand-mark{ animation:none; }
+    .toolbar, .panel.no-print, .home-menu, .tabs, .back-link, #globalErrorBanner, #gestorBadge, #nurseBadge{ display:none !important; }
+    .panel{ border:none; padding:0; box-shadow:none; background:white; backdrop-filter:none; animation:none; }
+    .section{ animation:none; }
+    .grid-scroll{ max-height:none; overflow:visible; background:white; }
+    table.excel{ font-size:9.5px; }
+    table.excel th, table.excel td{ padding:2px 3px; }
+    table.excel th.name-col, table.excel td.name-col{ min-width:100px; max-width:100px; }
+    select.cell-select{ border:none; -webkit-appearance:none; appearance:none; background-image:none !important; padding:2px 1px; font-size:9.5px; width:36px; }
+    .day-head .num{ font-size:11px; }
+    .day-head .dow{ font-size:8px; }
+    .exc-chip{ border:1px solid #999; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .dd-row{ page-break-inside:avoid; }
   }
 </style>
 </head>
@@ -238,7 +291,7 @@
         <h1 id="titulo">Escala de Enfermagem</h1>
       </div>
     </div>
-    <div class="week-nav">
+    <div class="week-nav" id="weekNav" style="display:none;">
       <button id="prevMonth">← Mês anterior</button>
       <div class="week-label" id="monthLabel">—</div>
       <button id="nextMonth">Mês seguinte →</button>
@@ -254,6 +307,14 @@
   </div>
   <div id="nurseBadge" class="sans" style="display:none; font-size:12.5px; color:var(--sage-deep); margin-bottom:6px;">
     👤 <span id="nurseBadgeName"></span> — <span id="nurseBadgeLogoutLink" style="text-decoration:underline; cursor:pointer;">sair</span>
+  </div>
+  <div id="notifBar" class="sans" style="display:none; background:#FFF8E6; border:1px solid #F0D48A; border-radius:12px; padding:10px 14px; margin-bottom:10px; font-size:13px; line-height:1.7;">
+    <div id="notifList"></div>
+    <button class="exc-add-btn" id="notifClearBtn" style="margin-top:8px;">Marcar como visto</button>
+  </div>
+  <div id="myStatsBar" class="sans" style="display:none; background:var(--glass); border:1px solid var(--line); border-radius:14px; padding:12px 16px; margin-bottom:12px; font-size:13px;">
+    <div style="font-weight:700; color:var(--sage-deep); margin-bottom:7px;">O teu mês — <span id="myStatsMonth"></span></div>
+    <div id="myStatsContent" style="display:flex; gap:18px; flex-wrap:wrap;"></div>
   </div>
   <!-- LOGIN GATE: single entry point -->
   <div id="appLoginGate" class="panel">
@@ -271,33 +332,63 @@
   </div>
   <!-- HOME MENU -->
   <div id="homeMenu" class="home-menu" style="display:none;">
-    <div class="home-card" data-target="horario">
+    <div class="home-card" data-target="horario" id="horarioCard">
       <span class="icon">🗓️</span>
       <h3>Horário</h3>
-      <p>Grelha do mês — enfermeiros à esquerda, dias em cima. Escolhe o turno de cada pessoa em cada dia.</p>
     </div>
     <div class="home-card" data-target="disponibilidade" id="dispCard">
       <span class="icon">✅</span>
       <h3>Disponibilidades</h3>
-      <p>Vista para os recibos verdes marcarem os dias em que não podem trabalhar este mês.</p>
+    </div>
+    <div class="home-card" data-target="dispequipa" id="teamDispCard">
+      <span class="icon">👥</span>
+      <h3>Disponibilidades da equipa</h3>
     </div>
     <div class="home-card" data-target="config" id="configCard">
       <span class="icon">⚙️</span>
       <h3>Configurações</h3>
-      <p>Equipa, turnos, regras da escala, e revisão das disponibilidades submetidas.</p>
+    </div>
+    <div class="home-card" data-target="relatorios" id="reportCard">
+      <span class="icon">📊</span>
+      <h3>Relatórios</h3>
+    </div>
+  </div>
+  <div id="logoutSmallBar" class="sans" style="display:none; margin:-10px 0 20px;">
+    <div style="display:flex; justify-content:flex-end; gap:20px;">
+      <span class="back-link" id="showChangePinLink" style="font-size:12.5px;">🔑 Mudar o meu PIN</span>
+      <span class="back-link" id="logoutSmallLink" style="font-size:12.5px;">🚪 Terminar sessão</span>
+    </div>
+    <div id="changePinForm" style="display:none; margin:10px 0 0 auto; max-width:280px; text-align:left; background:var(--glass); border:1px solid var(--line); border-radius:14px; padding:16px;">
+      <div class="field" style="margin-bottom:8px;">
+        <label>PIN atual</label>
+        <input type="password" id="oldPinInput" maxlength="10">
+      </div>
+      <div class="field" style="margin-bottom:8px;">
+        <label>Novo PIN</label>
+        <input type="password" id="newPinInput" maxlength="10">
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Confirmar novo PIN</label>
+        <input type="password" id="newPinInput2" maxlength="10">
+      </div>
+      <button class="btn btn-primary" id="changePinBtn">Guardar novo PIN</button>
+      <p class="note" id="changePinError" style="color:var(--danger);"></p>
+      <p class="note" id="changePinSuccess" style="color:var(--sage-deep);"></p>
     </div>
   </div>
   <!-- SECTION: HORÁRIO -->
   <div id="section-horario" class="section" style="display:none;">
     <span class="back-link" data-back>← Voltar ao início</span>
     <div class="toolbar">
-      <button class="btn btn-primary" id="genBtn" title="Só preenche os turnos que ainda estão vazios neste mês — não apaga o que já lá está">Preencher turnos em falta</button>
-      <button class="btn btn-ghost" id="clearBtn" title="Apaga TODOS os turnos deste mês, incluindo os que foram colocados à mão">Limpar mês</button>
       <button class="btn btn-ghost" id="printBtn">Imprimir / Exportar PDF</button>
       <span class="save-status" id="saveStatus"></span>
     </div>
     <div class="panel">
       <h2>Escala do mês</h2>
+      <div id="horarioFilterBar" class="sans" style="display:none; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 12px; padding:8px 12px; background:var(--weekend-bg); border-radius:10px; font-size:13px;">
+        <span id="horarioFilterText"></span>
+        <button class="exc-add-btn" id="horarioFilterClear">Mostrar todos</button>
+      </div>
       <div class="grid-scroll">
         <table class="excel" id="excelTable">
           <thead id="excelHead"></thead>
@@ -317,6 +408,10 @@
     </div>
     <div class="panel" id="nurseCalendarWrap" style="display:none;">
       <h2 id="nurseCalendarTitle">Marcar disponibilidade</h2>
+      <div id="ownerDispPicker" class="sans" style="display:none; margin:0 0 12px; display:none; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span class="blk-label">Marcar/alterar disponibilidade de:</span>
+        <select id="ownerDispSelect" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);"></select>
+      </div>
       <p class="note">Se não tocares em nenhum turno num dia, a gestão assume que não tens essa informação.</p>
       <div class="sans" id="nurseSaveStatusBar" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:10px 0 16px; padding:10px 14px; background:var(--weekend-bg); border-radius:10px; font-size:13px;">
         <span id="nurseSaveStatusText"></span>
@@ -328,26 +423,43 @@
         <span>Toca num turno para o marcar como disponível nesse dia. Toca outra vez para desmarcar.</span>
       </div>
       <button class="btn btn-primary" id="nurseGuardarBtn" style="margin-top:16px;">Guardar disponibilidade</button>
-      <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--line);" class="sans">
-        <span class="back-link" id="showChangePinLink">Mudar o meu PIN</span>
-        <div id="changePinForm" style="display:none; margin-top:10px; max-width:260px;">
-          <div class="field" style="margin-bottom:8px;">
-            <label>PIN atual</label>
-            <input type="password" id="oldPinInput" maxlength="10">
-          </div>
-          <div class="field" style="margin-bottom:8px;">
-            <label>Novo PIN</label>
-            <input type="password" id="newPinInput" maxlength="10">
-          </div>
-          <div class="field" style="margin-bottom:10px;">
-            <label>Confirmar novo PIN</label>
-            <input type="password" id="newPinInput2" maxlength="10">
-          </div>
-          <button class="btn btn-primary" id="changePinBtn">Guardar novo PIN</button>
-          <p class="note" id="changePinError" style="color:var(--danger);"></p>
-          <p class="note" id="changePinSuccess" style="color:var(--sage-deep);"></p>
-        </div>
+    </div>
+  </div>
+  <!-- SECTION: DISPONIBILIDADES DA EQUIPA (gestão) -->
+  <div id="section-dispequipa" class="section" style="display:none;">
+    <span class="back-link" data-back>← Voltar ao início</span>
+    <div class="toolbar">
+      <button class="btn btn-ghost" id="printTeamDispBtn">Imprimir / Exportar PDF</button>
+    </div>
+    <div class="panel">
+      <h2>Disponibilidades da equipa — <span id="teamDispMonthLabel"></span></h2>
+      <div id="teamAvailabilityList"></div>
+      <p class="note">Isto é o que cada recibo verde marcou como disponível na vista "Disponibilidades", para o mês em exibição. Usa as setas no topo para mudar de mês. Já se aplica automaticamente à grelha do Horário.</p>
+    </div>
+  </div>
+  <!-- SECTION: RELATORIOS -->
+  <div id="section-relatorios" class="section" style="display:none;">
+    <span class="back-link" data-back>← Voltar ao início</span>
+    <div class="toolbar">
+      <button class="btn btn-ghost" id="printReportBtn">Imprimir relatório do mês</button>
+      <button class="btn btn-ghost" id="printContabBtn">Imprimir contabilidade</button>
+    </div>
+    <div class="panel" id="reportPanel">
+      <h2>Relatório do mês — <span id="reportMonthLabel"></span></h2>
+      <div class="grid-scroll" id="reportTableWrap"></div>
+      <p class="note">"Horas disponibilizadas" soma as horas de todos os turnos que a pessoa marcou como disponível na vista Disponibilidades (aplica-se aos recibos verdes). "Horas feitas" soma as horas dos turnos atribuídos na grelha do Horário deste mês — os descansos (DC/DO) não contam. "Aproveitamento" = horas feitas ÷ horas disponibilizadas.</p>
+    </div>
+    <div class="panel" id="contabPanel">
+      <h2>Contabilidade</h2>
+      <div class="exc-row sans" style="margin-bottom:12px;">
+        <span class="blk-label">De:</span>
+        <input type="date" id="contabStart">
+        <span class="blk-label">até:</span>
+        <input type="date" id="contabEnd">
+        <button class="exc-add-btn" id="contabResetBtn">Período 21 → 20 deste mês</button>
       </div>
+      <div class="grid-scroll" id="contabTableWrap"></div>
+      <p class="note">As horas vêm dos turnos atribuídos na grelha do Horário dentro do período escolhido (descansos DC/DO e Férias não contam). "Útil" = segunda a sexta; fim de semana = sábado e domingo (feriados em dia de semana contam como útil). Clica num nome para ver só essa pessoa.</p>
     </div>
   </div>
   <!-- SECTION: CONFIGURAÇÕES -->
@@ -363,8 +475,7 @@
       <h2>Turnos</h2>
       <div id="shiftsList"></div>
       <button class="btn btn-ghost" style="margin-top:10px;" id="addShiftBtn">+ Adicionar turno</button>
-      <p class="note">Para turnos partidos (duas partes no mesmo dia, como o MT1), preenche também o 2º bloco de horas. Deixa o 2º bloco vazio se o turno for contínuo. A cor escolhida aqui é a que aparece na grelha do horário.
-      <br><strong>Regra especial do M1 em dias de semana:</strong> só entra em "Preencher turnos em falta" se esse dia já tiver um T atribuído. Se a fixa fizer o M, só é preciso o T1. Ao fim de semana, o M1 e o T1 aplicam sempre o nº de pessoas definido abaixo.</p>
+      <p class="note">Para turnos partidos (duas partes no mesmo dia, como o MT1), preenche também o 2º bloco de horas. Deixa o 2º bloco vazio se o turno for contínuo. A cor escolhida aqui é a que aparece na grelha do horário.</p>
     </div>
     <div class="panel" id="settingsPanel">
       <h2>Regras da escala</h2>
@@ -399,6 +510,16 @@
       <div id="availabilityList"></div>
       <p class="note">Isto é o que cada recibo verde marcou como disponível na vista "Disponibilidades", para o mês em exibição. Já se aplica automaticamente à grelha do Horário — lá, cada célula só deixa escolher os turnos que a pessoa marcou (ou, se não marcou nada nesse dia, os turnos habituais dela).</p>
     </div>
+    <div class="panel" id="backupPanel">
+      <h2>Cópia de segurança</h2>
+      <div class="toolbar" style="margin:0;">
+        <button class="btn btn-ghost" id="backupBtn">⬇️ Descarregar cópia (JSON)</button>
+        <button class="btn btn-ghost" id="restoreBtn">⬆️ Repor a partir de cópia</button>
+        <input type="file" id="restoreFile" accept=".json,application/json" style="display:none;">
+      </div>
+      <div id="backupList" class="sans" style="margin-top:10px;"></div>
+      <p class="note">No último dia de cada mês é criada automaticamente uma cópia de segurança na base de dados (listada acima) — basta alguém abrir a app nesse dia ou nos 3 dias seguintes. Podes também descarregar uma cópia manual quando quiseres. <strong>"Repor" substitui todos os dados atuais</strong> pelos do ficheiro escolhido — usa só para recuperar de um problema.</p>
+    </div>
   </div>
   <footer class="app-footer sans">
     <strong>FRATERNIDADE DA ORDEM FRANCISCANA SECULAR — Lar de São Francisco</strong>
@@ -420,11 +541,12 @@ function defaultShiftTypes(){
     {code:"MT1", label:"Manhã/Tarde 1", blocks:[[8,13],[17,20]], needed:1, color:DEFAULT_COLORS[4]},
     {code:"DC",  label:"Descanso Complementar", blocks:[], needed:0, color:"#94A3B8", isRest:true},
     {code:"DO",  label:"Descanso Obrigatório",  blocks:[], needed:0, color:"#CBD5E1", isRest:true},
+    {code:"Fe",  label:"Férias",                blocks:[], needed:0, color:"#EC4899", isRest:true},
   ];
 }
 let state = {
   staff: [
-    {id:"s1", nome:"Catia", tipo:"efetivo", off:[5,6], principal:true, isManager:true, exceptions:{}, allowedWeekday:["M","T","DC","DO"], allowedWeekend:["M1","T1","DC","DO"], pin:"9999"},
+    {id:"s1", nome:"Catia", tipo:"efetivo", off:[5,6], principal:true, isManager:true, exceptions:{}, allowedWeekday:["M","T","DC","DO","Fe"], allowedWeekend:["M1","T1","DC","DO","Fe"], pin:"9999"},
     {id:"s7", nome:"Luis", tipo:"rv_gestao", off:[], principal:false, isManager:true, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"6666"},
     {id:"s2", nome:"Catarina", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"1111"},
     {id:"s3", nome:"Diana", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"2222"},
@@ -441,13 +563,18 @@ let state = {
   availabilityMeta: {},
   lockedDays: {}, // { "YYYY-MM-DD": true }
   customHolidays: {}, // manager-added extra holidays: { "YYYY-MM-DD": "Nome" }
-  removedHolidays: {} // auto-calculated holidays the manager chose to hide: { "YYYY-MM-DD": true }
+  removedHolidays: {}, // auto-calculated holidays the manager chose to hide: { "YYYY-MM-DD": true }
+  notifSeen: {},
+  payRates: { efetivoMensal:1400, rvHora:15, rvFds:18, gestorHora:22, gestorFds:25 },
+  tzMigrated: true
 };
 let nursePersonId = null;
 let authRole = null;      // null | "gestor"
 let authNurseId = null;   // id of the logged-in person
 let nurseDraft = null;    // in-progress edits before "Guardar"
 let nurseEditing = false; // true while actively editing (after clicking "Alterar", or first time ever)
+let horarioFilterId = null; // quando definido, o horário mostra só esta pessoa
+let contabFilterId = null; // quando definido, a contabilidade mostra só esta pessoa
 // ---------- DATE HELPERS ----------
 function startOfWeek(d){
   const date = new Date(d);
@@ -461,9 +588,10 @@ function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
 function daysInMonth(monthStart){ return new Date(monthStart.getFullYear(), monthStart.getMonth()+1, 0).getDate(); }
 function addMonths(d, n){ return new Date(d.getFullYear(), d.getMonth()+n, 1); }
 function addDays(d, n){ const nd = new Date(d); nd.setDate(nd.getDate()+n); return nd; }
-function weekKey(d){ return d.toISOString().slice(0,10); }
+function weekKey(d){ return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()); }
 function fmtDate(d){ return d.toLocaleDateString("pt-PT", {day:"2-digit", month:"2-digit"}); }
 function pad2(n){ return n.toString().padStart(2,"0"); }
+function esc(t){ return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
 function hourToTime(h){ return pad2(Math.floor(h)) + ":" + pad2(Math.round((h%1)*60)); }
 function timeToHour(t){ const [hh,mm]=t.split(":").map(Number); return hh + (mm||0)/60; }
 function dowIndex(date){ const d = date.getDay(); return d===0 ? 6 : d-1; }
@@ -518,9 +646,47 @@ function getHolidayLabel(iso){
   const year = parseInt(iso.slice(0,4));
   return computedHolidaysForYear(year)[iso];
 }
+// ---------- LIGACAO A BASE DE DADOS (Supabase) ----------
+// 1) Cria um projeto gratuito em https://supabase.com
+// 2) Em Settings -> API, copia o "Project URL" e a chave "anon public" e cola aqui:
+const SUPABASE_URL = "https://kzcdaxbqnfsuufnkdkfx.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6Y2RheGJxbmZzdXVmbmtka2Z4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1OTc2ODYsImV4cCI6MjA5OTE3MzY4Nn0.1H7KwxxCP4m70L_RwJTiJNG3qtCoprKb8L-HGMstbB8";
+const STATE_KEY = "lar-enfermeiros-state";
+const REV_KEY = "lar-enfermeiros-rev";
+const OWNER_ID = "s7"; // Luis — conta fundadora, protegida
+let dataRev = 0;
+let loadFailed = false;
+function supabaseConfigured(){
+  return SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 20;
+}
+async function storageSet(value, key){
+  if(!supabaseConfigured()) throw new Error("A app ainda nao esta ligada a base de dados - edita SUPABASE_URL e SUPABASE_ANON_KEY no topo do <script> do index.html.");
+  const res = await fetch(SUPABASE_URL + "/rest/v1/app_state?on_conflict=key", {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json",
+      "Prefer": "resolution=merge-duplicates"
+    },
+    body: JSON.stringify({ key: key || STATE_KEY, value: value })
+  });
+  if(!res.ok) throw new Error("Erro Supabase " + res.status + ": " + await res.text());
+}
+async function storageGet(key){
+  if(!supabaseConfigured()) throw new Error("Supabase ainda nao configurado.");
+  const res = await fetch(SUPABASE_URL + "/rest/v1/app_state?key=eq." + (key || STATE_KEY) + "&select=value", {
+    headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY }
+  });
+  if(!res.ok) throw new Error("Erro Supabase " + res.status);
+  const rows = await res.json();
+  return rows.length ? { value: rows[0].value } : null;
+}
 let saveTimer = null;
 let lastSaveError = null;
+let savePending = false;
 function scheduleSave(){
+  savePending = true;
   const statusEl = document.getElementById("saveStatus");
   if(statusEl) statusEl.textContent = "A guardar...";
   clearTimeout(saveTimer);
@@ -529,12 +695,19 @@ function scheduleSave(){
 async function doSave(){
   const statusEl = document.getElementById("saveStatus");
   try{
-    await window.storage.set("lar-enfermeiros-state", JSON.stringify(state), true);
+    if(loadFailed) throw new Error("Os dados iniciais não carregaram — recarrega a página antes de editar.");
+    const revRow = await storageGet(REV_KEY);
+    const cur = revRow ? (parseInt(revRow.value)||0) : 0;
+    if(cur !== dataRev) throw new Error("Os dados foram alterados noutro dispositivo depois de abrires esta página. Recarrega a página (F5) para veres a versão mais recente — as últimas alterações feitas aqui não foram gravadas.");
+    await storageSet(JSON.stringify(state));
+    dataRev = cur + 1;
+    await storageSet(String(dataRev), REV_KEY);
     if(statusEl){
       statusEl.textContent = "Guardado ✓";
       setTimeout(()=>{ if(statusEl.textContent==="Guardado ✓") statusEl.textContent=""; }, 1500);
     }
     lastSaveError = null;
+    savePending = false;
     document.getElementById("globalErrorBanner").style.display = "none";
   }catch(e){
     if(statusEl) statusEl.textContent = "Erro ao guardar";
@@ -546,17 +719,18 @@ async function doSave(){
   }
 }
 document.getElementById("retrySaveBtn").addEventListener("click", ()=> doSave());
-async function loadState(){
-  try{
-    const res = await window.storage.get("lar-enfermeiros-state", true);
-    if(res && res.value){
-      const parsed = JSON.parse(res.value);
+window.addEventListener("beforeunload", (e)=>{
+  if(savePending || lastSaveError){ e.preventDefault(); e.returnValue = ""; }
+});
+function applyLoadedState(raw){
+    {
+      const parsed = JSON.parse(raw);
       if(parsed.monthStart){ parsed.monthStart = startOfMonth(new Date(parsed.monthStart)); }
       else if(parsed.weekStart){ parsed.monthStart = startOfMonth(new Date(parsed.weekStart)); }
       else { parsed.monthStart = startOfMonth(new Date()); }
       if(!parsed.shiftTypes || !parsed.shiftTypes.length) parsed.shiftTypes = defaultShiftTypes();
       parsed.shiftTypes.forEach((st,i)=>{ if(!st.color) st.color = DEFAULT_COLORS[i % DEFAULT_COLORS.length]; });
-      ["DC","DO"].forEach(code=>{
+      ["DC","DO","Fe"].forEach(code=>{
         if(!parsed.shiftTypes.some(st=>st.code===code)){
           const defs = defaultShiftTypes();
           parsed.shiftTypes.push(defs.find(d=>d.code===code));
@@ -573,18 +747,28 @@ async function loadState(){
         if(!p.allowedWeekend) p.allowedWeekend = [];
         if(p.pin === undefined) p.pin = "";
         if(p.isManager === undefined) p.isManager = false;
+        if(p.canViewTeamDisp === undefined) p.canViewTeamDisp = false;
+        if(p.canViewReports === undefined) p.canViewReports = false;
+        if(p.canViewContab === undefined) p.canViewContab = false;
+        if(!Array.isArray(p.editHorarioIds)) p.editHorarioIds = [];
         if(!p.tipo) p.tipo = "rv";
         if(p.tipo==="efetivo"){
           if(p.allowedWeekday.length && !p.allowedWeekday.includes("DC")) p.allowedWeekday.push("DC","DO");
           if(p.allowedWeekend.length && !p.allowedWeekend.includes("DC")) p.allowedWeekend.push("DC","DO");
+          if(p.allowedWeekday.length && !p.allowedWeekday.includes("Fe")) p.allowedWeekday.push("Fe");
+          if(p.allowedWeekend.length && !p.allowedWeekend.includes("Fe")) p.allowedWeekend.push("Fe");
         }
       });
+      const ownerP = (parsed.staff||[]).find(pp=>pp.id===OWNER_ID);
+      if(ownerP){ ownerP.isManager = true; if(ownerP.tipo!=="rv_gestao" && ownerP.tipo!=="gestao") ownerP.tipo = "rv_gestao"; }
       if(!parsed.schedules) parsed.schedules = {};
       if(!parsed.availabilityRequests) parsed.availabilityRequests = {};
       if(!parsed.availabilityMeta) parsed.availabilityMeta = {};
       if(!parsed.lockedDays) parsed.lockedDays = {};
       if(!parsed.customHolidays) parsed.customHolidays = {};
       if(!parsed.removedHolidays) parsed.removedHolidays = {};
+      if(!parsed.notifSeen) parsed.notifSeen = {};
+      if(!parsed.payRates) parsed.payRates = { efetivoMensal:1400, rvHora:15, rvFds:18, gestorHora:22, gestorFds:25 };
       if(parsed.holidays){
         Object.keys(parsed.holidays).forEach(iso=>{
           const year = parseInt(iso.slice(0,4));
@@ -595,10 +779,65 @@ async function loadState(){
         });
         delete parsed.holidays;
       }
+      if(!parsed.tzMigrated){
+        // Migração única: chaves de datas antigas estavam desviadas 1 dia (hora de verão / UTC)
+        const shiftIso = iso => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate()+1); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+        const shiftKeys = obj => { const out = {}; Object.keys(obj||{}).forEach(k=>{ out[shiftIso(k)] = obj[k]; }); return out; };
+        const newSched = {};
+        Object.keys(parsed.schedules||{}).forEach(k=>{
+          const d = new Date(k + "T12:00:00");
+          newSched[d.getDay()===0 ? shiftIso(k) : k] = parsed.schedules[k];
+        });
+        parsed.schedules = newSched;
+        Object.keys(parsed.availabilityRequests||{}).forEach(pid=>{
+          parsed.availabilityRequests[pid] = shiftKeys(parsed.availabilityRequests[pid]);
+        });
+        parsed.lockedDays = shiftKeys(parsed.lockedDays);
+        parsed.removedHolidays = shiftKeys(parsed.removedHolidays);
+        (parsed.staff||[]).forEach(pp=>{
+          const exc = pp.exceptions||{}; const out={};
+          Object.keys(exc).forEach(k=>{ out[exc[k]==="ferias" ? shiftIso(k) : k] = exc[k]; });
+          pp.exceptions = out;
+        });
+        parsed.tzMigrated = true;
+      }
       state = parsed;
     }
-  }catch(e){ /* first run */ }
 }
+async function loadState(){
+  try{
+    const revRow = await storageGet(REV_KEY);
+    dataRev = revRow ? (parseInt(revRow.value)||0) : 0;
+    const res = await storageGet();
+    if(res && res.value){ applyLoadedState(res.value); }
+  }catch(e){
+    loadFailed = true;
+    console.error(e);
+    document.getElementById("appLoginGate").style.display = "none";
+    document.getElementById("globalErrorBanner").style.display = "flex";
+    document.getElementById("globalErrorText").textContent = !supabaseConfigured()
+      ? "A app ainda não está ligada à base de dados — edita SUPABASE_URL e SUPABASE_ANON_KEY no topo do index.html."
+      : "Não foi possível carregar os dados (" + (e && e.message ? e.message : String(e)) + "). Verifica a ligação à internet e recarrega a página. Por segurança, nada será gravado até os dados carregarem.";
+  }
+}
+async function refreshFromServer(){
+  try{
+    if(loadFailed || savePending || lastSaveError || nurseEditing || nurseDraft) return;
+    if(document.hidden) return;
+    if(document.getElementById("section-config").style.display !== "none") return;
+    const revRow = await storageGet(REV_KEY);
+    const cur = revRow ? (parseInt(revRow.value)||0) : 0;
+    if(cur === dataRev) return;
+    const res = await storageGet();
+    if(!res || !res.value) return;
+    applyLoadedState(res.value);
+    dataRev = cur;
+    refreshVisibleSection();
+    renderOwnerNotifications();
+    if(document.getElementById("appLoginGate").style.display !== "none") populateAppLoginSelect();
+  }catch(e){ /* sem rede: tenta outra vez no próximo ciclo */ }
+}
+setInterval(refreshFromServer, 45000);
 // ---------- SCHEDULE DATA ACCESS ----------
 function ensureWeek(weekStartDate){
   const key = weekKey(weekStartDate);
@@ -670,6 +909,7 @@ function buildOptionsForCell(person, date, currentCode){
       const isCurrent = st.code === currentCode;
       if(submitted.includes(st.code) || isCurrent) opts.push(st.code);
     });
+    if(submitted.includes("M1") && submitted.includes("T1") && !opts.includes("MT1") && shiftType("MT1")) opts.push("MT1");
   } else if(isRvLike(person.tipo)){
     if(currentCode) opts.push(currentCode);
   } else {
@@ -748,32 +988,45 @@ function populateAppLoginSelect(){
   });
 }
 function enterApp(){
+  const person = staffById(authNurseId);
   document.getElementById("appLoginGate").style.display = "none";
   document.getElementById("homeMenu").style.display = "grid";
+  document.getElementById("logoutSmallBar").style.display = "";
+  document.getElementById("weekNav").style.display = "";
   document.getElementById("configCard").style.display = authRole==="gestor" ? "" : "none";
-  const person = staffById(authNurseId);
+  document.getElementById("reportCard").style.display = (authRole==="gestor" || (person && (person.canViewReports || person.canViewContab))) ? "" : "none";
+  document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
+  document.getElementById("horarioCard").style.display = "";
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
   document.getElementById("gestorBadge").style.display = authRole==="gestor" ? "" : "none";
-  if(authRole==="gestor" && person) document.getElementById("gestorBadgeName").textContent = person.nome;
+  if(authRole==="gestor" && person) document.getElementById("gestorBadgeName").textContent = person.nome + (person.id===OWNER_ID ? " 👑" : "");
   if(authRole!=="gestor" && person){
     document.getElementById("nurseBadge").style.display = "";
     document.getElementById("nurseBadgeName").textContent = person.nome;
   } else {
     document.getElementById("nurseBadge").style.display = "none";
   }
+  renderOwnerNotifications();
+  renderMyStats();
 }
 function logoutApp(){
+  horarioFilterId = null;
+  contabFilterId = null;
   authRole = null;
   authNurseId = null;
   nursePersonId = null;
   nurseDraft = null;
   nurseEditing = false;
   document.getElementById("homeMenu").style.display = "none";
-  ["horario","disponibilidade","config"].forEach(n=>{
+  document.getElementById("logoutSmallBar").style.display = "none";
+  document.getElementById("weekNav").style.display = "none";
+  ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = "none";
   });
   document.getElementById("gestorBadge").style.display = "none";
   document.getElementById("nurseBadge").style.display = "none";
+  document.getElementById("notifBar").style.display = "none";
+  document.getElementById("myStatsBar").style.display = "none";
   document.getElementById("appLoginPin").value = "";
   document.getElementById("appLoginError").textContent = "";
   populateAppLoginSelect();
@@ -805,24 +1058,49 @@ document.querySelectorAll(".home-card").forEach(card=>{
 document.querySelectorAll("[data-back]").forEach(el=>{
   el.addEventListener("click", ()=> showSection(null));
 });
+document.getElementById("logoutSmallLink").addEventListener("click", logoutApp);
 function showSection(name){
+  const viewer = staffById(authNurseId);
+  if(name === "dispequipa" && authRole !== "gestor" && !(viewer && viewer.canViewTeamDisp)){
+    alert("Acesso restrito à gestão.");
+    return;
+  }
+  if(name === "relatorios" && authRole !== "gestor" && !(viewer && (viewer.canViewReports || viewer.canViewContab))){
+    alert("Acesso restrito à gestão.");
+    return;
+  }
   if(name === "config" && authRole !== "gestor"){
     alert("Acesso restrito à gestão.");
     return;
   }
   document.getElementById("homeMenu").style.display = name ? "none" : "grid";
-  ["horario","disponibilidade","config"].forEach(n=>{
+  document.getElementById("logoutSmallBar").style.display = name ? "none" : "";
+  if(name){ document.getElementById("myStatsBar").style.display = "none"; } else { renderMyStats(); }
+  ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = (n===name) ? "" : "none";
   });
   if(name==="horario") renderExcelGrid();
   if(name==="disponibilidade") renderNurseView();
   if(name==="config") renderConfigSection();
+  if(name==="relatorios"){
+    const podeRel = authRole==="gestor" || (viewer && viewer.canViewReports);
+    const podeCtb = authRole==="gestor" || (viewer && viewer.canViewContab);
+    document.getElementById("reportPanel").style.display = podeRel ? "" : "none";
+    document.getElementById("contabPanel").style.display = podeCtb ? "" : "none";
+    document.getElementById("printReportBtn").style.display = podeRel ? "" : "none";
+    document.getElementById("printContabBtn").style.display = podeCtb ? "" : "none";
+    if(podeRel) renderRelatorios();
+    if(podeCtb) renderContabilidade();
+  }
+  if(name==="dispequipa") renderTeamAvailability();
 }
 // ---------- RENDER: STAFF (Configurações) ----------
 function renderStaff(){
   const list = document.getElementById("staffList");
   list.innerHTML = "";
   state.staff.forEach(person=>{
+    const isOwnerRow = person.id === OWNER_ID;
+    const soDono = authNurseId === OWNER_ID;
     const row = document.createElement("div");
     row.className = "staff-row";
     const top = document.createElement("div");
@@ -831,6 +1109,12 @@ function renderStaff(){
     nameInput.type = "text";
     nameInput.value = person.nome;
     nameInput.addEventListener("input", e=>{ person.nome = e.target.value; scheduleSave(); });
+    if(isOwnerRow){
+      const crown = document.createElement("span");
+      crown.textContent = "👑";
+      crown.title = "Fundador — conta protegida; só o próprio a pode alterar";
+      top.appendChild(crown);
+    }
     const tipoSelect = document.createElement("select");
     [["efetivo","Efetivo"],["rv","Recibos Verdes"],["rv_gestao","Recibos Verdes / Gestão"],["gestao","Gestão (sem turnos)"],["guest","Guest (só visualização)"]].forEach(([t,label])=>{
       const opt = document.createElement("option");
@@ -882,12 +1166,47 @@ function renderStaff(){
     const managerChk = document.createElement("input");
     managerChk.type = "checkbox";
     managerChk.checked = !!person.isManager;
+    managerChk.disabled = authNurseId !== OWNER_ID;
+    if(managerChk.disabled) managerLbl.title = "Só o fundador pode dar ou tirar acesso de gestão";
     managerChk.addEventListener("change", e=>{
       person.isManager = e.target.checked;
       renderStaff(); scheduleSave();
     });
     managerLbl.appendChild(managerChk);
     managerLbl.appendChild(document.createTextNode("Acesso de gestão"));
+    const viewDispLbl = document.createElement("label");
+    viewDispLbl.style.cssText = "display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);cursor:pointer;";
+    const viewDispChk = document.createElement("input");
+    viewDispChk.type = "checkbox";
+    viewDispChk.checked = !!person.canViewTeamDisp;
+    viewDispChk.addEventListener("change", e=>{
+      person.canViewTeamDisp = e.target.checked;
+      scheduleSave();
+    });
+    viewDispLbl.appendChild(viewDispChk);
+    viewDispLbl.appendChild(document.createTextNode("Vê disponibilidades (só ver/imprimir)"));
+    const viewRepLbl = document.createElement("label");
+    viewRepLbl.style.cssText = "display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);cursor:pointer;";
+    const viewRepChk = document.createElement("input");
+    viewRepChk.type = "checkbox";
+    viewRepChk.checked = !!person.canViewReports;
+    viewRepChk.addEventListener("change", e=>{
+      person.canViewReports = e.target.checked;
+      scheduleSave();
+    });
+    viewRepLbl.appendChild(viewRepChk);
+    viewRepLbl.appendChild(document.createTextNode("Vê relatórios (só ver/imprimir)"));
+    const viewCtbLbl = document.createElement("label");
+    viewCtbLbl.style.cssText = "display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);cursor:pointer;";
+    const viewCtbChk = document.createElement("input");
+    viewCtbChk.type = "checkbox";
+    viewCtbChk.checked = !!person.canViewContab;
+    viewCtbChk.addEventListener("change", e=>{
+      person.canViewContab = e.target.checked;
+      scheduleSave();
+    });
+    viewCtbLbl.appendChild(viewCtbChk);
+    viewCtbLbl.appendChild(document.createTextNode("Vê contabilidade (só ver/imprimir)"));
     const pinLbl = document.createElement("label");
     pinLbl.style.cssText = "display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);";
     pinLbl.appendChild(document.createTextNode("PIN:"));
@@ -903,6 +1222,7 @@ function renderStaff(){
     removeBtn.className = "remove-x";
     removeBtn.textContent = "✕";
     removeBtn.title = "Remover";
+    if(isOwnerRow) removeBtn.style.display = "none";
     removeBtn.addEventListener("click", ()=>{
       if(!confirm(`Remover ${person.nome} da equipa? Isto não apaga turnos já atribuídos em meses passados, mas a pessoa deixa de aparecer para novas atribuições.`)) return;
       state.staff = state.staff.filter(p=>p.id!==person.id);
@@ -913,6 +1233,9 @@ function renderStaff(){
     top.appendChild(availWrap);
     top.appendChild(principalLbl);
     top.appendChild(managerLbl);
+    top.appendChild(viewDispLbl);
+    top.appendChild(viewRepLbl);
+    top.appendChild(viewCtbLbl);
     top.appendChild(pinLbl);
     top.appendChild(removeBtn);
     row.appendChild(top);
@@ -1022,6 +1345,33 @@ function renderStaff(){
     allowRow.appendChild(mkGroup("Fim de semana","allowedWeekend"));
     if(!isSchedulableTipo(person.tipo)) allowRow.style.display = "none";
     row.appendChild(allowRow);
+    const editHorRow = document.createElement("div");
+    editHorRow.className = "avail-days allow-row";
+    const ehLabel = document.createElement("span");
+    ehLabel.className = "blk-label";
+    ehLabel.textContent = "Pode alterar o horário de:";
+    editHorRow.appendChild(ehLabel);
+    state.staff.filter(x=>isSchedulableTipo(x.tipo)).forEach(x=>{
+      const l = document.createElement("label");
+      l.style.cssText = "display:inline-flex;flex-direction:row;align-items:center;gap:3px;font-size:11px;color:var(--ink-soft);cursor:pointer;";
+      const c = document.createElement("input");
+      c.type = "checkbox";
+      c.checked = (person.editHorarioIds||[]).includes(x.id);
+      c.addEventListener("change", ()=>{
+        person.editHorarioIds = person.editHorarioIds || [];
+        if(c.checked){ if(!person.editHorarioIds.includes(x.id)) person.editHorarioIds.push(x.id); }
+        else person.editHorarioIds = person.editHorarioIds.filter(i=>i!==x.id);
+        scheduleSave();
+      });
+      l.appendChild(c);
+      l.appendChild(document.createTextNode(x.nome));
+      editHorRow.appendChild(l);
+    });
+    if(person.tipo !== "guest") editHorRow.style.display = "none";
+    row.appendChild(editHorRow);
+    if(isOwnerRow && !soDono){
+      row.querySelectorAll("input, select, button").forEach(el=>{ el.disabled = true; });
+    }
     list.appendChild(row);
   });
 }
@@ -1058,15 +1408,15 @@ function renderShiftTypes(){
     labelInput.value = st.label;
     labelInput.title = "Nome do turno";
     labelInput.addEventListener("input", e=>{ st.label = e.target.value; scheduleSave(); });
-    const b1s = document.createElement("input"); b1s.type="time"; b1s.value = hourToTime(st.blocks[0][0]);
-    const b1e = document.createElement("input"); b1e.type="time"; b1e.value = hourToTime(st.blocks[0][1]);
-    b1s.addEventListener("change", e=>{ st.blocks[0][0]=timeToHour(e.target.value); scheduleSave(); });
-    b1e.addEventListener("change", e=>{ st.blocks[0][1]=timeToHour(e.target.value); scheduleSave(); });
+    const b1s = document.createElement("input"); b1s.type="time"; b1s.value = st.blocks[0] ? hourToTime(st.blocks[0][0]) : "";
+    const b1e = document.createElement("input"); b1e.type="time"; b1e.value = st.blocks[0] ? hourToTime(st.blocks[0][1]) : "";
+    b1s.addEventListener("change", e=>{ if(!st.blocks[0]) st.blocks[0]=[8,16]; st.blocks[0][0]=timeToHour(e.target.value); scheduleSave(); });
+    b1e.addEventListener("change", e=>{ if(!st.blocks[0]) st.blocks[0]=[8,16]; st.blocks[0][1]=timeToHour(e.target.value); scheduleSave(); });
     const b2s = document.createElement("input"); b2s.type="time"; b2s.value = st.blocks[1] ? hourToTime(st.blocks[1][0]) : "";
     const b2e = document.createElement("input"); b2e.type="time"; b2e.value = st.blocks[1] ? hourToTime(st.blocks[1][1]) : "";
     function updateBlock2(){
       if(b2s.value && b2e.value){ st.blocks[1] = [timeToHour(b2s.value), timeToHour(b2e.value)]; }
-      else { st.blocks = [st.blocks[0]]; }
+      else { st.blocks = st.blocks[0] ? [st.blocks[0]] : []; }
       scheduleSave();
     }
     b2s.addEventListener("change", updateBlock2);
@@ -1128,6 +1478,8 @@ function renderConfigSection(){
   syncSettingsInputs();
   renderAvailabilityPanel();
   renderHolidays();
+  document.getElementById("restoreBtn").style.display = authNurseId===OWNER_ID ? "" : "none";
+  renderBackupList();
 }
 function renderHolidays(){
   const wrap = document.getElementById("holidaysList");
@@ -1155,7 +1507,7 @@ function renderHolidays(){
     const d = new Date(iso + "T00:00:00");
     const chip = document.createElement("span");
     chip.className = "exc-chip on";
-    chip.innerHTML = `${fmtDate(d)} — ${entry.label}${entry.isCustom ? " (personalizado)" : ""} `;
+    chip.innerHTML = `${fmtDate(d)} — ${esc(entry.label)}${entry.isCustom ? " (personalizado)" : ""} `;
     const rm = document.createElement("button");
     rm.textContent = "✕";
     rm.title = entry.isCustom ? "Remover este feriado personalizado" : "Esconder este feriado (fica marcado como não observado)";
@@ -1180,10 +1532,377 @@ document.getElementById("holidayAddBtn").addEventListener("click", ()=>{
   renderHolidays();
   scheduleSave();
 });
+// ---------- CONTABILIDADE ----------
+function contabPrefill(force){
+  const si = document.getElementById("contabStart"), ei = document.getElementById("contabEnd");
+  if(force || !si.value || !ei.value){
+    const m = state.monthStart;
+    si.value = weekKey(new Date(m.getFullYear(), m.getMonth()-1, 21));
+    ei.value = weekKey(new Date(m.getFullYear(), m.getMonth(), 20));
+  }
+}
+function renderContabilidade(){
+  contabPrefill(false);
+  const start = new Date(document.getElementById("contabStart").value + "T00:00:00");
+  const end = new Date(document.getElementById("contabEnd").value + "T00:00:00");
+  const wrap = document.getElementById("contabTableWrap");
+  wrap.innerHTML = "";
+  if(!(start <= end)){ wrap.innerHTML = '<p class="note">Período inválido — a data de início tem de ser anterior à de fim.</p>'; return; }
+  const fp = contabFilterId ? staffById(contabFilterId) : null;
+  if(contabFilterId && !fp) contabFilterId = null;
+  if(fp){
+    const fbar = document.createElement("div");
+    fbar.className = "exc-row sans";
+    fbar.style.cssText = "background:var(--weekend-bg); border-radius:10px; padding:8px 12px; margin-bottom:8px;";
+    const ft = document.createElement("span");
+    ft.className = "blk-label";
+    ft.textContent = "A mostrar apenas " + fp.nome + ". Clica no nome outra vez (ou aqui) para voltar.";
+    const fb = document.createElement("button");
+    fb.className = "exc-add-btn";
+    fb.textContent = "Mostrar todos";
+    fb.addEventListener("click", ()=>{ contabFilterId = null; renderContabilidade(); });
+    fbar.appendChild(ft); fbar.appendChild(fb);
+    wrap.appendChild(fbar);
+  }
+  const table = document.createElement("table");
+  table.className = "excel sans";
+  table.style.width = "100%";
+  table.innerHTML = '<thead><tr><th class="name-col">Pessoa</th><th>Horas úteis</th><th>Horas fim de semana</th><th>Total de horas</th><th>Nº turnos</th></tr></thead>';
+  const tbody = document.createElement("tbody");
+  let totU=0, totF=0, totT=0;
+  state.staff.filter(pp=>isSchedulableTipo(pp.tipo)).filter(pp=> !contabFilterId || pp.id===contabFilterId).forEach(person=>{
+    let hU=0, hF=0, turnos=0;
+    for(let d = new Date(start); d <= end; d = addDays(d, 1)){
+      const code = getPersonShiftForDate(person.id, d);
+      if(!code) continue;
+      const st = shiftType(code);
+      if(st && st.isRest) continue;
+      const h = shiftHours(code);
+      turnos++;
+      if(isWeekendDay(d)) hF += h; else hU += h;
+    }
+    totU += hU; totF += hF; totT += turnos;
+    const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
+    const cell = 'style="padding:6px 10px;"';
+    const tr = document.createElement("tr");
+    tr.innerHTML = '<td class="name-col"><span class="name-cell-inner"><span class="dot ' + dotClass + '"></span>' + esc(person.nome) + '</span></td>' +
+      '<td ' + cell + '>' + hU + 'h</td>' +
+      '<td ' + cell + '>' + hF + 'h</td>' +
+      '<td ' + cell + ' style="font-weight:700;">' + (hU + hF) + 'h</td>' +
+      '<td ' + cell + '>' + turnos + '</td>';
+    const nc = tr.querySelector(".name-col");
+    nc.style.cursor = "pointer";
+    nc.title = contabFilterId===person.id ? "Clica para voltar a ver toda a equipa" : "Clica para ver só " + person.nome;
+    nc.addEventListener("click", ()=>{
+      contabFilterId = contabFilterId===person.id ? null : person.id;
+      renderContabilidade();
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  const tfoot = document.createElement("tfoot");
+  tfoot.innerHTML = '<tr><td class="name-col" style="font-weight:700;">Total</td>' +
+    '<td style="font-weight:700;">' + totU + 'h</td>' +
+    '<td style="font-weight:700;">' + totF + 'h</td>' +
+    '<td style="font-weight:700;">' + (totU + totF) + 'h</td>' +
+    '<td style="font-weight:700;">' + totT + '</td></tr>';
+  table.appendChild(tfoot);
+  const periodo = document.createElement("p");
+  periodo.className = "note";
+  periodo.style.marginTop = "0";
+  periodo.textContent = "Período: " + fmtDate(start) + " a " + fmtDate(end) + " (inclusive).";
+  wrap.appendChild(periodo);
+  wrap.appendChild(table);
+  if(authNurseId === OWNER_ID && state.payRates){
+    let ohU=0, ohF=0;
+    for(let d = new Date(start); d <= end; d = addDays(d, 1)){
+      const code = getPersonShiftForDate(OWNER_ID, d);
+      if(!code) continue;
+      const st = shiftType(code);
+      if(st && st.isRest) continue;
+      const h = shiftHours(code);
+      if(isWeekendDay(d)) ohF += h; else ohU += h;
+    }
+    const rH = state.payRates.gestorHora || 0;
+    const rF = state.payRates.gestorFds || 0;
+    const val = ohU * rH + ohF * rF;
+    const fmt2 = v => v.toFixed(2).replace(".", ",") + " €";
+    const est = document.createElement("p");
+    est.className = "note";
+    est.style.cssText = "background:var(--weekend-bg); border-radius:10px; padding:10px 14px; font-size:13px;";
+    est.innerHTML = "<strong>A tua estimativa (só tu vês isto):</strong> " + ohU + "h úteis × " + fmt2(rH) + " + " + ohF + "h fim de semana × " + fmt2(rF) + " = <strong>" + fmt2(val) + "</strong>";
+    wrap.appendChild(est);
+  }
+}
+document.getElementById("contabStart").addEventListener("change", renderContabilidade);
+document.getElementById("contabEnd").addEventListener("change", renderContabilidade);
+document.getElementById("contabResetBtn").addEventListener("click", ()=>{ contabPrefill(true); renderContabilidade(); });
+document.getElementById("printContabBtn").addEventListener("click", ()=> printOnly("reportPanel"));
+// ---------- COPIA DE SEGURANCA ----------
+document.getElementById("backupBtn").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "escala-enfermagem-backup-" + weekKey(new Date()) + ".json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById("restoreBtn").addEventListener("click", ()=> document.getElementById("restoreFile").click());
+document.getElementById("restoreFile").addEventListener("change", (e)=>{
+  const f = e.target.files[0];
+  e.target.value = "";
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(!parsed || !Array.isArray(parsed.staff) || !Array.isArray(parsed.shiftTypes)) throw new Error("O ficheiro não parece ser uma cópia de segurança desta app.");
+      if(!confirm("Repor a cópia de segurança? Isto substitui TODOS os dados atuais (equipa, horários, disponibilidades) pelos do ficheiro.")) return;
+      applyLoadedState(reader.result);
+      scheduleSave();
+      renderConfigSection();
+      alert("Cópia reposta com sucesso. Confirma o \"Guardado ✓\" antes de fechar.");
+    }catch(err){
+      alert("Erro ao repor: " + (err && err.message ? err.message : String(err)));
+    }
+  };
+  reader.readAsText(f);
+});
+async function ensureMonthlyBackup(){
+  try{
+    if(loadFailed) return;
+    const now = new Date();
+    const lastDay = daysInMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+    const jobs = [];
+    if(now.getDate() === lastDay) jobs.push(now.getFullYear() + "-" + pad2(now.getMonth()+1));
+    if(now.getDate() <= 3){
+      const prev = new Date(now.getFullYear(), now.getMonth()-1, 1);
+      jobs.push(prev.getFullYear() + "-" + pad2(prev.getMonth()+1));
+    }
+    for(const ym of jobs){
+      const k = "backup-" + ym;
+      const existing = await storageGet(k);
+      if(!existing) await storageSet(JSON.stringify(state), k);
+    }
+  }catch(e){ /* silencioso */ }
+}
+async function renderBackupList(){
+  const wrap = document.getElementById("backupList");
+  if(!wrap) return;
+  wrap.innerHTML = '<span class="blk-label">A procurar cópias automáticas...</span>';
+  try{
+    const res = await fetch(SUPABASE_URL + "/rest/v1/app_state?key=like.backup-%25&select=key&order=key.desc", {
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY }
+    });
+    if(!res.ok) throw new Error(res.status);
+    const rows = await res.json();
+    wrap.innerHTML = "";
+    if(!rows.length){
+      wrap.innerHTML = '<span class="blk-label">Ainda não existem cópias automáticas — a primeira é criada no último dia do mês.</span>';
+      return;
+    }
+    rows.forEach(r=>{
+      const ym = r.key.replace("backup-","");
+      const d = new Date(parseInt(ym.slice(0,4)), parseInt(ym.slice(5,7))-1, 1);
+      const nomeMes = d.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+      const line = document.createElement("div");
+      line.className = "exc-row";
+      const lbl = document.createElement("span");
+      lbl.className = "blk-label";
+      lbl.style.minWidth = "170px";
+      lbl.textContent = "Cópia automática — " + nomeMes;
+      line.appendChild(lbl);
+      const dl = document.createElement("button");
+      dl.className = "exc-add-btn";
+      dl.textContent = "Descarregar";
+      dl.addEventListener("click", async ()=>{
+        const row = await storageGet(r.key);
+        if(!row){ alert("Cópia não encontrada."); return; }
+        const blob = new Blob([row.value], {type:"application/json"});
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "escala-enfermagem-" + r.key + ".json";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+      line.appendChild(dl);
+      if(authNurseId === OWNER_ID){
+        const rst = document.createElement("button");
+        rst.className = "exc-add-btn";
+        rst.textContent = "Repor esta cópia";
+        rst.addEventListener("click", async ()=>{
+          if(!confirm("Repor a cópia de " + nomeMes + "? Substitui TODOS os dados atuais.")) return;
+          const row = await storageGet(r.key);
+          if(!row){ alert("Cópia não encontrada."); return; }
+          applyLoadedState(row.value);
+          scheduleSave();
+          renderConfigSection();
+        });
+        line.appendChild(rst);
+      }
+      wrap.appendChild(line);
+    });
+  }catch(e){
+    wrap.innerHTML = '<span class="blk-label">Não foi possível carregar a lista de cópias.</span>';
+  }
+}
+// ---------- ESTATISTICAS PESSOAIS (recibos verdes) ----------
+function renderMyStats(){
+  const bar = document.getElementById("myStatsBar");
+  const person = staffById(authNurseId);
+  if(!person || !isRvLike(person.tipo)){ bar.style.display = "none"; return; }
+  const monthStart = state.monthStart;
+  const nDays = daysInMonth(monthStart);
+  let disp=0, feitas=0, turnos=0, fds=0;
+  const reqs = state.availabilityRequests[person.id] || {};
+  for(let day=1; day<=nDays; day++){
+    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+    const iso = weekKey(date);
+    if(reqs[iso]) Object.keys(reqs[iso]).forEach(c=>{ if(reqs[iso][c]) disp += shiftHours(c); });
+    const code = getPersonShiftForDate(person.id, date);
+    if(code){
+      const st = shiftType(code);
+      if(!st || !st.isRest){
+        const h = shiftHours(code);
+        feitas += h; turnos++;
+        if(isWeekendDay(date)) fds += h;
+      }
+    }
+  }
+  const apr = disp > 0 ? Math.round(feitas/disp*100) + "%" : "—";
+  document.getElementById("myStatsMonth").textContent = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+  const mk = (v, lbl) => '<span><strong style="color:var(--sage-deep); font-size:15px;">' + v + '</strong> ' + lbl + '</span>';
+  let extra = "";
+  if(authNurseId === OWNER_ID && state.payRates){
+    const val = (feitas - fds) * (state.payRates.gestorHora || 0) + fds * (state.payRates.gestorFds || 0);
+    extra = mk(val.toFixed(2).replace(".", ",") + " €", "estimativa do mês");
+  }
+  document.getElementById("myStatsContent").innerHTML =
+    mk(disp + "h", "disponibilizadas") +
+    mk(feitas + "h", "feitas") +
+    mk(turnos, "turnos") +
+    mk(fds + "h", "fim de semana") +
+    mk(apr, "aproveitamento") + extra;
+  bar.style.display = "";
+}
+// ---------- NOTIFICACOES (apenas fundador) ----------
+function renderOwnerNotifications(){
+  const bar = document.getElementById("notifBar");
+  if(authNurseId !== OWNER_ID){ bar.style.display = "none"; return; }
+  const seen = state.notifSeen || {};
+  const news = [];
+  Object.keys(state.availabilityMeta || {}).forEach(pid=>{
+    const person = staffById(pid);
+    if(!person || pid === OWNER_ID) return;
+    Object.keys(state.availabilityMeta[pid] || {}).forEach(ym=>{
+      const ts = state.availabilityMeta[pid][ym];
+      if(seen[pid + "|" + ym] !== ts) news.push({ nome: person.nome, ym: ym, ts: ts });
+    });
+  });
+  if(news.length === 0){ bar.style.display = "none"; return; }
+  news.sort((a,b)=> a.ts < b.ts ? 1 : -1);
+  const list = document.getElementById("notifList");
+  list.innerHTML = "";
+  news.slice(0, 12).forEach(n=>{
+    const d = new Date(n.ts);
+    const mes = new Date(parseInt(n.ym.slice(0,4)), parseInt(n.ym.slice(5,7))-1, 1).toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+    const div = document.createElement("div");
+    div.textContent = "🔔 " + n.nome + " guardou disponibilidades de " + mes + " — " + d.toLocaleDateString("pt-PT",{day:"2-digit",month:"2-digit"}) + " às " + d.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"});
+    list.appendChild(div);
+  });
+  if(news.length > 12){
+    const more = document.createElement("div");
+    more.className = "blk-label";
+    more.textContent = "... e mais " + (news.length - 12) + ".";
+    list.appendChild(more);
+  }
+  bar.style.display = "";
+}
+document.getElementById("notifClearBtn").addEventListener("click", ()=>{
+  const seen = {};
+  Object.keys(state.availabilityMeta || {}).forEach(pid=>{
+    Object.keys(state.availabilityMeta[pid] || {}).forEach(ym=>{ seen[pid + "|" + ym] = state.availabilityMeta[pid][ym]; });
+  });
+  state.notifSeen = seen;
+  scheduleSave();
+  renderOwnerNotifications();
+});
 // ---------- MANAGER: availability requests review ----------
 function monthPrefix(monthStart){ return monthStart.getFullYear() + "-" + pad2(monthStart.getMonth()+1); }
 function renderAvailabilityPanel(){
-  const wrap = document.getElementById("availabilityList");
+  renderAvailabilityInto(document.getElementById("availabilityList"));
+}
+function renderTeamAvailability(){
+  const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+  document.getElementById("monthLabel").textContent = label;
+  document.getElementById("teamDispMonthLabel").textContent = label;
+  const wrap = document.getElementById("teamAvailabilityList");
+  wrap.innerHTML = "";
+  const rule = document.createElement("p");
+  rule.className = "note";
+  rule.style.cssText = "margin:0 0 6px; font-size:13px;";
+  rule.innerHTML = "<strong>Mínimo 10 disponibilidades + 2 ao fim de semana.</strong>";
+  wrap.appendChild(rule);
+  const rvStaff = state.staff.filter(p=>isRvLike(p.tipo));
+  if(rvStaff.length===0){
+    wrap.innerHTML += '<p class="note">Sem recibos verdes na equipa.</p>';
+    return;
+  }
+  const monthStart = state.monthStart;
+  const nDays = daysInMonth(monthStart);
+  const prefix = monthPrefix(monthStart);
+  const isMorning = code => { const st = shiftType(code); return !!(st && st.blocks.length && st.blocks[0][0] < 13); };
+  const isAfternoon = code => { const st = shiftType(code); return !!(st && st.blocks.some(b=>b[0] >= 13)); };
+  const mk = arr => arr.length ? arr.join(", ") : "—";
+  rvStaff.forEach(person=>{
+    const buckets = { uM:[], uT:[], sM:[], sT:[], dM:[], dT:[] };
+    let total = 0, weekend = 0;
+    for(let day=1; day<=nDays; day++){
+      const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+      const iso = weekKey(date);
+      const codes = submittedAvailableCodes(person.id, iso);
+      if(!codes || codes.length===0) continue;
+      const dow = dowIndex(date);
+      const grp = dow<=4 ? "u" : (dow===5 ? "s" : "d");
+      codes.forEach(code=>{
+        total++;
+        if(dow>=5) weekend++;
+        if(isMorning(code) && !buckets[grp+"M"].includes(day)) buckets[grp+"M"].push(day);
+        if(isAfternoon(code) && !buckets[grp+"T"].includes(day)) buckets[grp+"T"].push(day);
+      });
+    }
+    const savedAt = (state.availabilityMeta[person.id]||{})[prefix];
+    const head = document.createElement("div");
+    head.className = "sans";
+    head.style.cssText = "display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:16px;";
+    const okRule = total>=10 && weekend>=2;
+    let headHtml = '<strong style="font-size:14px; color:var(--sage-deep);">' + esc(person.nome) + '</strong>';
+    headHtml += '<span class="exc-chip ' + (okRule ? 'on' : 'off') + '">' + total + ' disponibilidades · ' + weekend + ' ao fim de semana</span>';
+    if(savedAt){
+      const d = new Date(savedAt);
+      headHtml += '<span class="blk-label">guardado em ' + d.toLocaleDateString("pt-PT",{day:"2-digit",month:"2-digit"}) + ' ' + d.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}) + '</span>';
+    } else {
+      headHtml += '<span class="blk-label">ainda não guardou este mês</span>';
+    }
+    head.innerHTML = headHtml;
+    wrap.appendChild(head);
+    const t = document.createElement("table");
+    t.className = "excel sans";
+    t.style.cssText = "width:100%; max-width:620px; margin:6px 0 2px;";
+    const cell = 'style="text-align:left; padding:5px 12px;"';
+    const gcell = 'style="text-align:left; padding:5px 12px; font-weight:700; vertical-align:top;"';
+    t.innerHTML = '<tbody>' +
+      '<tr><td rowspan="2" ' + gcell + '>Dias úteis</td><td ' + cell + '>Manhã</td><td ' + cell + '>' + mk(buckets.uM) + '</td></tr>' +
+      '<tr><td ' + cell + '>Tarde</td><td ' + cell + '>' + mk(buckets.uT) + '</td></tr>' +
+      '<tr><td rowspan="2" ' + gcell + '>Sábados</td><td ' + cell + '>Manhã</td><td ' + cell + '>' + mk(buckets.sM) + '</td></tr>' +
+      '<tr><td ' + cell + '>Tarde</td><td ' + cell + '>' + mk(buckets.sT) + '</td></tr>' +
+      '<tr><td rowspan="2" ' + gcell + '>Domingos</td><td ' + cell + '>Manhã</td><td ' + cell + '>' + mk(buckets.dM) + '</td></tr>' +
+      '<tr><td ' + cell + '>Tarde</td><td ' + cell + '>' + mk(buckets.dT) + '</td></tr>' +
+      '</tbody>';
+    wrap.appendChild(t);
+  });
+}
+function renderAvailabilityInto(wrap){
   wrap.innerHTML = "";
   const prefix = monthPrefix(state.monthStart);
   const rvStaff = state.staff.filter(p=>isRvLike(p.tipo));
@@ -1209,7 +1928,7 @@ function renderAvailabilityPanel(){
     } else {
       const fmt = d => d.toLocaleDateString("pt-PT",{day:"2-digit",month:"2-digit"}) + " " + d.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"});
       const canStillEdit = withinEditWindow(savedAt);
-      statusSpan.textContent = "Guardado em " + fmt(new Date(savedAt)) + (canStillEdit ? " (ainda pode alterar)" : " (prazo terminado)");
+      statusSpan.textContent = "Guardado em " + fmt(new Date(savedAt));
       if(!canStillEdit){
         const reopenBtn = document.createElement("button");
         reopenBtn.className = "exc-add-btn";
@@ -1251,7 +1970,7 @@ function renderLegend(){
   legend.innerHTML = "";
   state.shiftTypes.forEach(st=>{
     const span = document.createElement("span");
-    span.innerHTML = `<span class="swatch" style="background:${st.color}"></span>${st.label} (${st.code})`;
+    span.innerHTML = `<span class="swatch" style="background:${st.color}"></span>${esc(st.label)} (${esc(st.code)})`;
     legend.appendChild(span);
   });
   const s1 = document.createElement("span");
@@ -1266,9 +1985,11 @@ function renderLegend(){
   legend.appendChild(s3);
 }
 function renderExcelGrid(){
+  const gridScroller = document.querySelector("#section-horario .grid-scroll");
+  const keepLeft = gridScroller ? gridScroller.scrollLeft : 0;
+  const keepTop = gridScroller ? gridScroller.scrollTop : 0;
   const isGestor = authRole === "gestor";
-  document.getElementById("genBtn").style.display = isGestor ? "" : "none";
-  document.getElementById("clearBtn").style.display = isGestor ? "" : "none";
+  const gridViewer = staffById(authNurseId);
   const monthStart = state.monthStart;
   const label = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
@@ -1328,7 +2049,7 @@ function renderExcelGrid(){
     const holidayName = getHolidayLabel(iso);
     if(holidayName) th.classList.add("holiday-col");
     const lockHtml = locked ? `<span class="day-lock locked" title="Dia bloqueado (faz parte de uma semana bloqueada)">🔒</span>` : "";
-    const holidayHtml = holidayName ? `<span class="holiday-flag" title="Feriado: ${holidayName}">🎉</span>` : "";
+    const holidayHtml = holidayName ? `<span class="holiday-flag" title="Feriado: ${esc(holidayName)}">🎉</span>` : "";
     th.innerHTML = `<div class="day-head"><span class="dow">${DAYS_SHORT[dowIndex(date)]}</span><span class="num">${date.getDate()}</span>${lockHtml}${holidayHtml}</div>`;
     trh.appendChild(th);
   });
@@ -1340,12 +2061,34 @@ function renderExcelGrid(){
   body.innerHTML = "";
   const dailyCounts = dates.map(()=>0);
   state.staff.filter(p=>isSchedulableTipo(p.tipo)).forEach(person=>{
+    dates.forEach((date, di)=>{
+      const c = getPersonShiftForDate(person.id, date);
+      if(c){ const st = shiftType(c); if(!st || !st.isRest) dailyCounts[di]++; }
+    });
+  });
+  const fbar = document.getElementById("horarioFilterBar");
+  const fperson = horarioFilterId ? staffById(horarioFilterId) : null;
+  if(fperson){
+    fbar.style.display = "flex";
+    document.getElementById("horarioFilterText").textContent = "A mostrar apenas os turnos de " + fperson.nome + ". Clica no nome outra vez (ou em Mostrar todos) para voltar.";
+  } else {
+    horarioFilterId = null;
+    fbar.style.display = "none";
+  }
+  state.staff.filter(p=>isSchedulableTipo(p.tipo)).filter(p=> !horarioFilterId || p.id===horarioFilterId).forEach(person=>{
     const tr = document.createElement("tr");
     const tdName = document.createElement("td");
     tdName.className = "name-col";
     const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
-    tdName.innerHTML = `<span class="name-cell-inner"><span class="dot ${dotClass}"></span>${person.nome}</span>`;
+    tdName.innerHTML = `<span class="name-cell-inner"><span class="dot ${dotClass}"></span>${esc(person.nome)}</span>`;
+    tdName.style.cursor = "pointer";
+    tdName.title = horarioFilterId===person.id ? "Clica para voltar a ver toda a equipa" : "Clica para ver só os turnos de " + person.nome;
+    tdName.addEventListener("click", ()=>{
+      horarioFilterId = horarioFilterId===person.id ? null : person.id;
+      renderExcelGrid();
+    });
     tr.appendChild(tdName);
+    const canEditRow = isGestor || (gridViewer && Array.isArray(gridViewer.editHorarioIds) && gridViewer.editHorarioIds.includes(person.id));
     let monthHours = 0;
     dates.forEach((date, di)=>{
       const td = document.createElement("td");
@@ -1357,11 +2100,11 @@ function renderExcelGrid(){
       const current = getPersonShiftForDate(person.id, date);
       if(current){
         const curSt = shiftType(current);
-        if(!curSt || !curSt.isRest){ dailyCounts[di]++; monthHours += shiftHours(current); }
+        if(!curSt || !curSt.isRest){ monthHours += shiftHours(current); }
       }
-      if(!isGestor){
+      if(!canEditRow){
         const span = document.createElement("span");
-        span.className = "sans shift-chip";
+        span.className = "sans";
         span.style.cssText = "display:inline-block; min-width:40px; padding:3px 6px; border-radius:5px; font-size:11.5px; font-weight:700; text-align:center;";
         if(current){
           const st = shiftType(current);
@@ -1454,6 +2197,7 @@ function renderExcelGrid(){
   const tdCorner = document.createElement("td");
   trf.appendChild(tdCorner);
   foot.appendChild(trf);
+  if(gridScroller){ gridScroller.scrollLeft = keepLeft; gridScroller.scrollTop = keepTop; }
 }
 // ---------- AUTO GENERATE (whole visible month, weekly cap enforced) ----------
 function autoGenerate(){
@@ -1515,21 +2259,11 @@ function autoGenerate(){
   renderExcelGrid();
   scheduleSave();
 }
-document.getElementById("genBtn").addEventListener("click", autoGenerate);
-document.getElementById("clearBtn").addEventListener("click", ()=>{
-  const monthStart = state.monthStart;
-  const nDays = daysInMonth(monthStart);
-  let skippedLocked = 0;
-  for(let day=1; day<=nDays; day++){
-    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
-    if(state.lockedDays[weekKey(date)]){ skippedLocked++; continue; }
-    const dayData = getDayShifts(date);
-    Object.keys(dayData).forEach(code=>{ dayData[code].length = 0; });
-  }
-  if(skippedLocked>0) alert(skippedLocked + " dia(s) bloqueado(s) não foram apagados. Desbloqueia-os primeiro se quiseres limpá-los também.");
-  renderExcelGrid(); scheduleSave();
-});
 document.getElementById("printBtn").addEventListener("click", ()=> window.print());
+document.getElementById("horarioFilterClear").addEventListener("click", ()=>{
+  horarioFilterId = null;
+  renderExcelGrid();
+});
 document.getElementById("prevMonth").addEventListener("click", ()=>{
   state.monthStart = addMonths(state.monthStart, -1);
   nurseDraft = null; nurseEditing = false;
@@ -1543,9 +2277,15 @@ document.getElementById("nextMonth").addEventListener("click", ()=>{
   scheduleSave();
 });
 function refreshVisibleSection(){
+  if(document.getElementById("homeMenu").style.display !== "none") renderMyStats();
   if(document.getElementById("section-horario").style.display !== "none") renderExcelGrid();
   if(document.getElementById("section-disponibilidade").style.display !== "none") renderNurseView();
   if(document.getElementById("section-config").style.display !== "none") renderAvailabilityPanel();
+  if(document.getElementById("section-relatorios").style.display !== "none"){
+    if(document.getElementById("reportPanel").style.display !== "none") renderRelatorios();
+    if(document.getElementById("contabPanel").style.display !== "none") renderContabilidade();
+  }
+  if(document.getElementById("section-dispequipa").style.display !== "none") renderTeamAvailability();
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
 }
@@ -1582,7 +2322,25 @@ function renderNurseView(){
   if(person && isRvLike(person.tipo)){
     document.getElementById("nurseGestorNotice").style.display = "none";
     document.getElementById("nurseCalendarWrap").style.display = "";
-    document.getElementById("nurseCalendarTitle").textContent = "Marcar disponibilidade — " + person.nome;
+    const picker = document.getElementById("ownerDispPicker");
+    if(authNurseId === OWNER_ID){
+      picker.style.display = "flex";
+      const sel = document.getElementById("ownerDispSelect");
+      sel.innerHTML = "";
+      state.staff.filter(x=>isRvLike(x.tipo)).forEach(x=>{
+        const o = document.createElement("option");
+        o.value = x.id;
+        o.textContent = x.id === OWNER_ID ? x.nome + " (eu)" : x.nome;
+        sel.appendChild(o);
+      });
+      if(!nursePersonId || !staffById(nursePersonId)) nursePersonId = OWNER_ID;
+      sel.value = nursePersonId;
+    } else {
+      picker.style.display = "none";
+      nursePersonId = authNurseId;
+    }
+    const alvo = staffById(nursePersonId) || person;
+    document.getElementById("nurseCalendarTitle").textContent = "Marcar disponibilidade — " + alvo.nome;
     renderNurseCalendar();
     return;
   }
@@ -1632,7 +2390,7 @@ function renderNurseCalendar(){
       alterarBtn.style.display = "none";
       guardarBtn.style.display = "";
     } else if(withinWindow){
-      statusText.textContent = "Guardado em " + fmt(savedDate) + ". Podes alterar até " + fmt(deadline) + ".";
+      statusText.textContent = "Guardado em " + fmt(savedDate) + ". Podes alterar sempre que precisares.";
       alterarBtn.style.display = "";
       guardarBtn.style.display = "none";
     } else {
@@ -1690,9 +2448,14 @@ function renderNurseCalendar(){
   }
 }
 function withinEditWindow(savedAtIso){
-  const saved = new Date(savedAtIso);
-  return (Date.now() - saved.getTime()) <= 2*24*3600*1000;
+  return true; // sem prazo: as disponibilidades podem ser alteradas a qualquer momento
 }
+document.getElementById("ownerDispSelect").addEventListener("change", e=>{
+  nursePersonId = e.target.value;
+  nurseDraft = null;
+  nurseEditing = false;
+  renderNurseView();
+});
 document.getElementById("nurseAlterarBtn").addEventListener("click", ()=>{
   nurseDraft = JSON.parse(JSON.stringify(state.availabilityRequests[nursePersonId] || {}));
   nurseEditing = true;
@@ -1708,11 +2471,238 @@ document.getElementById("nurseGuardarBtn").addEventListener("click", ()=>{
   scheduleSave();
   renderNurseCalendar();
 });
+// ---------- RELATORIOS ----------
+function renderRelatorios(){
+  const monthStart = state.monthStart;
+  const nDays = daysInMonth(monthStart);
+  const label = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+  document.getElementById("monthLabel").textContent = label;
+  document.getElementById("reportMonthLabel").textContent = label;
+  const wrap = document.getElementById("reportTableWrap");
+  wrap.innerHTML = "";
+  const table = document.createElement("table");
+  table.className = "excel";
+  table.style.width = "100%";
+  const thead = document.createElement("thead");
+  thead.innerHTML = "<tr>" +
+    "<th class=\"name-col\">Enfermeiro(a)</th>" +
+    "<th>Horas disponibilizadas</th>" +
+    "<th>Horas feitas</th>" +
+    "<th>Nº turnos</th>" +
+    "<th>Horas fim de semana</th>" +
+    "<th>Aproveitamento</th>" +
+    "</tr>";
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  let totDisp=0, totFeitas=0, totTurnos=0, totFds=0;
+  state.staff.filter(p=>isSchedulableTipo(p.tipo)).forEach(person=>{
+    let disp=0, feitas=0, turnos=0, fds=0;
+    const reqs = state.availabilityRequests[person.id] || {};
+    for(let day=1; day<=nDays; day++){
+      const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+      const iso = weekKey(date);
+      if(reqs[iso]){
+        Object.keys(reqs[iso]).forEach(code=>{ if(reqs[iso][code]) disp += shiftHours(code); });
+      }
+      const code = getPersonShiftForDate(person.id, date);
+      if(code){
+        const st = shiftType(code);
+        if(!st || !st.isRest){
+          const h = shiftHours(code);
+          feitas += h; turnos++;
+          if(isWeekendDay(date)) fds += h;
+        }
+      }
+    }
+    totDisp+=disp; totFeitas+=feitas; totTurnos+=turnos; totFds+=fds;
+    const rv = isRvLike(person.tipo);
+    const tr = document.createElement("tr");
+    const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
+    const dispTxt = rv ? disp + "h" : "—";
+    const aprTxt = (rv && disp>0) ? Math.round(feitas/disp*100) + "%" : "—";
+    tr.innerHTML = "<td class=\"name-col\"><span class=\"name-cell-inner\"><span class=\"dot " + dotClass + "\"></span>" + esc(person.nome) + "</span></td>" +
+      "<td>" + dispTxt + "</td>" +
+      "<td style=\"font-weight:700;\">" + feitas + "h</td>" +
+      "<td>" + turnos + "</td>" +
+      "<td>" + fds + "h</td>" +
+      "<td>" + aprTxt + "</td>";
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  const tfoot = document.createElement("tfoot");
+  tfoot.innerHTML = "<tr>" +
+    "<td class=\"name-col\" style=\"font-weight:700;\">Total</td>" +
+    "<td style=\"font-weight:700;\">" + totDisp + "h</td>" +
+    "<td style=\"font-weight:700;\">" + totFeitas + "h</td>" +
+    "<td style=\"font-weight:700;\">" + totTurnos + "</td>" +
+    "<td style=\"font-weight:700;\">" + totFds + "h</td>" +
+    "<td>" + (totDisp>0 ? Math.round(totFeitas/totDisp*100) + "%" : "—") + "</td>" +
+    "</tr>";
+  table.appendChild(tfoot);
+  wrap.appendChild(table);
+}
+function printOnly(hideId){
+  const el = document.getElementById(hideId);
+  const prev = el.style.display;
+  el.style.display = "none";
+  window.print();
+  el.style.display = prev;
+}
+document.getElementById("printReportBtn").addEventListener("click", ()=> printOnly("contabPanel"));
+document.getElementById("printTeamDispBtn").addEventListener("click", ()=> window.print());
 loadState().then(()=>{
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
   populateAppLoginSelect();
+  ensureMonthlyBackup();
 });
+</script>
+
+<style>
+  #helpFab{
+    position:fixed; right:20px; bottom:20px; z-index:9999;
+    width:56px; height:56px; border-radius:50%; border:none; cursor:pointer;
+    background:linear-gradient(135deg, var(--sage) 0%, var(--sage-deep) 100%);
+    color:white; font-size:24px; box-shadow:0 6px 18px rgba(6,122,79,0.35);
+  }
+  #helpFab:hover{ filter:brightness(1.08); }
+  #helpPanel{
+    position:fixed; right:20px; bottom:88px; z-index:9999;
+    width:340px; max-width:calc(100vw - 40px); max-height:70vh;
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    box-shadow:0 12px 32px rgba(6,122,79,0.22); display:none; flex-direction:column; overflow:hidden;
+    font-family:"Plus Jakarta Sans","Manrope",sans-serif;
+  }
+  #helpPanel.open{ display:flex; }
+  #helpHeader{
+    background:linear-gradient(135deg, var(--sage), var(--sage-deep)); color:white;
+    padding:12px 16px; font-weight:800; font-size:14px; display:flex; justify-content:space-between; align-items:center;
+  }
+  #helpClose{ background:none; border:none; color:white; font-size:18px; cursor:pointer; line-height:1; }
+  #helpMsgs{ flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; min-height:180px; }
+  .help-msg{ font-size:12.5px; line-height:1.5; padding:8px 11px; border-radius:12px; max-width:88%; white-space:pre-line; }
+  .help-msg.bot{ background:var(--weekend-bg); color:var(--ink); align-self:flex-start; border-bottom-left-radius:4px; }
+  .help-msg.user{ background:var(--sage-deep); color:white; align-self:flex-end; border-bottom-right-radius:4px; }
+  #helpSugs{ display:flex; flex-wrap:wrap; gap:5px; padding:0 12px 8px; }
+  .help-sug{
+    font-size:11px; padding:4px 9px; border-radius:12px; cursor:pointer;
+    border:1px solid var(--line); background:var(--bg); color:var(--sage-deep); font-weight:600;
+  }
+  .help-sug:hover{ background:var(--weekend-bg); border-color:var(--sage); }
+  #helpInputRow{ display:flex; gap:6px; padding:10px 12px; border-top:1px solid var(--line); }
+  #helpInput{ flex:1; padding:8px 10px; border:1px solid var(--line); border-radius:9px; font-size:13px; font-family:inherit; }
+  #helpSend{
+    border:none; border-radius:9px; padding:8px 14px; cursor:pointer; font-weight:700; font-size:13px;
+    background:linear-gradient(135deg, var(--sage), var(--sage-deep)); color:white;
+  }
+  @media print{ #helpFab, #helpPanel{ display:none !important; } }
+</style>
+<button id="helpFab" title="Ajuda">?</button>
+<div id="helpPanel">
+  <div id="helpHeader"><span>💬 Ajuda — Escala de Enfermagem</span><button id="helpClose">✕</button></div>
+  <div id="helpMsgs"></div>
+  <div id="helpSugs"></div>
+  <div id="helpInputRow">
+    <input id="helpInput" type="text" placeholder="Escreve a tua pergunta...">
+    <button id="helpSend">Enviar</button>
+  </div>
+</div>
+<script>
+(function(){
+  const FAQ = [
+    { keys:["entrar","login","aceder","sessao","sessão","iniciar"],
+      sug:"Como entro na app?",
+      a:"Na página inicial, escolhe o teu nome na lista, escreve o teu PIN e carrega em Entrar. Se não sabes o teu PIN, pede à gestão — ela pode vê-lo e alterá-lo em Configurações → Equipa." },
+    { keys:["pin","password","palavra-passe","senha","mudar pin","esqueci"],
+      sug:"Como mudo o meu PIN?",
+      a:"Entra na app, vai a Disponibilidades e em baixo carrega em \"Mudar o meu PIN\". Escreve o PIN atual, o novo (mínimo 4 caracteres) e confirma.\n\nSe te esqueceste do PIN, pede à gestão — ela consegue vê-lo e mudá-lo em Configurações → Equipa." },
+    { keys:["disponibilidade","disponivel","disponível","marcar","submeter","recibos verdes","posso trabalhar"],
+      sug:"Como marco a minha disponibilidade?",
+      a:"1. Entra com o teu nome e PIN\n2. Abre \"Disponibilidades\"\n3. Em cada dia em que podes trabalhar, toca nos turnos que podes fazer (ex: M1, T1) — ficam coloridos\n4. No fim, carrega em \"Guardar disponibilidade\"\n\nSe não tocares em nada num dia, a gestão assume que não tens essa informação. Usa as setas no topo para mudar de mês." },
+    { keys:["alterar","prazo","2 dias","dois dias","mudar disponibilidade","corrigir","terminou"],
+      sug:"Posso alterar depois de guardar?",
+      a:"Sim, sempre que precisares — abre Disponibilidades, carrega em \"Alterar\", faz as mudanças e volta a carregar em \"Guardar disponibilidade\". Não há prazo limite." },
+    { keys:["turno","turnos","m1","t1","mt1","codigos","códigos","horas","horario dos turnos","significa"],
+      sug:"O que significam M, T, M1, T1?",
+      a:"Códigos dos turnos:\n• M — Manhã (8h–16h)\n• T — Tarde (13h–20h)\n• M1 — Manhã 1 (8h–14h)\n• T1 — Tarde 1 (17h–20h)\n• MT1 — turno partido (8h–13h + 17h–20h)\n• DC / DO — Descanso Complementar / Obrigatório\n\nAs cores e horários exatos podem ser ajustados pela gestão em Configurações → Turnos." },
+    { keys:["ver horario","ver horário","escala","grelha","meu horario","quando trabalho"],
+      sug:"Onde vejo o meu horário?",
+      a:"Entra na app e abre \"Horário\". A grelha mostra o mês inteiro: nomes à esquerda, dias em cima. O teu turno em cada dia aparece com a cor respetiva. A coluna final mostra o total de horas do mês. Usa as setas no topo para mudar de mês." },
+    { keys:["preencher","gerar","automatico","automático","em falta","distribuir"],
+      sug:"Como preencho a escala?",
+      a:"(Só gestão) No Horário, escolhe o turno de cada pessoa em cada dia diretamente na grelha. As alterações gravam-se automaticamente — aparece \"Guardado ✓\" no topo quando fica registado." },
+    { keys:["vermelho","conflito","contorno","erro na grelha"],
+      sug:"O que é o contorno vermelho?",
+      a:"Um contorno vermelho numa célula indica conflito: descanso insuficiente entre turnos, sobreposição de horários, ou dias de trabalho seguidos a mais. As regras (descanso mínimo, máx. turnos/semana, máx. dias seguidos) definem-se em Configurações → Regras da escala." },
+    { keys:["bloquear","cadeado","bloqueada","semana fechada","🔒"],
+      sug:"Para que serve o cadeado?",
+      a:"(Só gestão) Clicar no cadeado no cabeçalho de uma semana bloqueia-a: os turnos dessa semana deixam de poder ser alterados, e nem o \"Preencher\" nem o \"Limpar mês\" lhe tocam. Clicar outra vez desbloqueia." },
+    { keys:["imprimir","pdf","exportar","papel"],
+      sug:"Como imprimo a escala?",
+      a:"No Horário, carrega em \"Imprimir / Exportar PDF\". Na janela de impressão podes escolher uma impressora ou \"Guardar como PDF\". A escala sai em A4 ao baixo, pronta para afixar." },
+    { keys:["feriado","feriados","🎉"],
+      sug:"Como funcionam os feriados?",
+      a:"Os feriados nacionais e o feriado municipal de Leiria são calculados automaticamente todos os anos (incluindo Páscoa e derivados) e aparecem na grelha com 🎉. Não bloqueiam turnos — o lar funciona todos os dias. A gestão pode adicionar ou esconder feriados em Configurações → Feriados." },
+    { keys:["ferias","férias","excecao","exceção","folga","descansa"],
+      sug:"Como marco férias de alguém?",
+      a:"(Só gestão) Em Configurações → Equipa, na linha da pessoa: usa \"Férias (intervalo)\" para marcar um período, ou \"+ Adicionar exceção\" para um dia específico (Trabalha / Descansa / Férias). O \"Padrão semanal\" define os dias fixos de descanso todas as semanas." },
+    { keys:["adicionar pessoa","nova pessoa","equipa","remover pessoa","gestao","gestão","acesso"],
+      sug:"Como adiciono alguém à equipa?",
+      a:"(Só gestão) Em Configurações → Equipa, carrega em \"+ Adicionar pessoa\". Define o nome, o tipo (Efetivo, Recibos Verdes...), o PIN e os turnos permitidos. A caixa \"Acesso de gestão\" dá permissões de gestão a essa pessoa." },
+    { keys:["atualizar","recarregar","não vejo","nao vejo","alteracoes","alterações","outros","sincronizar"],
+      sug:"Não vejo as alterações dos outros",
+      a:"Os dados carregam quando a página abre. Se outra pessoa alterou algo entretanto, recarrega a página (F5 ou puxar para baixo no telemóvel) para veres a versão mais recente." },
+    { keys:["guardar","guardado","erro ao guardar","salvar","perde"],
+      sug:"Como sei que ficou guardado?",
+      a:"As alterações guardam-se automaticamente — aparece \"Guardado ✓\" no topo do Horário. Se aparecer \"Erro ao guardar\", verifica a ligação à internet e carrega em \"Tentar guardar outra vez\"." }
+  ];
+  function norm(t){ return t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,""); }
+  function answer(q){
+    const nq = norm(q);
+    let best = null, bestScore = 0;
+    FAQ.forEach(f=>{
+      let score = 0;
+      f.keys.forEach(k=>{ if(nq.includes(norm(k))) score += k.length; });
+      if(score > bestScore){ bestScore = score; best = f; }
+    });
+    if(best && bestScore > 0) return best.a;
+    return "Não tenho resposta para isso. Experimenta uma das perguntas sugeridas em baixo, ou pergunta com outras palavras (ex: \"como marco disponibilidade\", \"o que é o M1\", \"como imprimo\"). Para questões que não sejam sobre a utilização da app, fala com a gestão.";
+  }
+  const panel = document.getElementById("helpPanel");
+  const msgs = document.getElementById("helpMsgs");
+  const input = document.getElementById("helpInput");
+  function addMsg(text, who){
+    const div = document.createElement("div");
+    div.className = "help-msg " + who;
+    div.textContent = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  function ask(q){
+    if(!q.trim()) return;
+    addMsg(q, "user");
+    setTimeout(()=> addMsg(answer(q), "bot"), 250);
+    input.value = "";
+  }
+  document.getElementById("helpFab").addEventListener("click", ()=>{
+    panel.classList.toggle("open");
+    if(panel.classList.contains("open") && msgs.children.length===0){
+      addMsg("Olá! Sou o assistente de ajuda da Escala de Enfermagem. Pergunta-me como usar a app, ou escolhe uma sugestão em baixo.", "bot");
+    }
+    if(panel.classList.contains("open")) input.focus();
+  });
+  document.getElementById("helpClose").addEventListener("click", ()=> panel.classList.remove("open"));
+  document.getElementById("helpSend").addEventListener("click", ()=> ask(input.value));
+  input.addEventListener("keydown", e=>{ if(e.key==="Enter") ask(input.value); });
+  const sugs = document.getElementById("helpSugs");
+  FAQ.slice(0,6).forEach(f=>{
+    const b = document.createElement("button");
+    b.className = "help-sug";
+    b.textContent = f.sug;
+    b.addEventListener("click", ()=> ask(f.sug));
+    sugs.appendChild(b);
+  });
+})();
 </script>
 </body>
 </html>
