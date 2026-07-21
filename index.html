@@ -917,6 +917,18 @@ function shiftHours(code){
   if(!st) return 0;
   return st.blocks.reduce((sum,[s,e])=> sum + (e-s), 0);
 }
+// Regra especial: efetivos (a "fixa") contam 7h por turno de trabalho e 7h por dia de Férias. DC/DO contam 0h.
+function effectiveShiftHours(person, code){
+  const st = shiftType(code);
+  if(!st) return 0;
+  if(person && person.tipo === "efetivo"){
+    if(code === "Fe") return 7;
+    if(st.isRest) return 0;
+    return 7;
+  }
+  if(st.isRest) return 0;
+  return shiftHours(code);
+}
 function submittedAvailableCodes(personId, dateIso){
   const rec = state.availabilityRequests[personId];
   if(!rec || !rec[dateIso]) return null;
@@ -1597,10 +1609,9 @@ function renderContabilidade(){
     for(let d = new Date(start); d <= end; d = addDays(d, 1)){
       const code = getPersonShiftForDate(person.id, d);
       if(!code) continue;
-      const st = shiftType(code);
-      if(st && st.isRest) continue;
-      const h = shiftHours(code);
-      turnos++;
+      const h = effectiveShiftHours(person, code);
+      if(h <= 0) continue;
+      if(code !== "Fe") turnos++;
       if(isWeekendDay(d)) hF += h; else hU += h;
     }
     totU += hU; totF += hF; totT += turnos;
@@ -1783,10 +1794,9 @@ function renderMyStats(){
     if(reqs[iso]) Object.keys(reqs[iso]).forEach(c=>{ if(reqs[iso][c]) disp += shiftHours(c); });
     const code = getPersonShiftForDate(person.id, date);
     if(code){
-      const st = shiftType(code);
-      if(!st || !st.isRest){
-        const h = shiftHours(code);
-        feitas += h; turnos++;
+      const h = effectiveShiftHours(person, code);
+      if(h > 0){
+        feitas += h; if(code !== "Fe") turnos++;
         if(isWeekendDay(date)) fds += h;
       }
     }
@@ -2122,7 +2132,7 @@ function renderExcelGrid(){
       const current = getPersonShiftForDate(person.id, date);
       if(current){
         const curSt = shiftType(current);
-        if(!curSt || !curSt.isRest){ monthHours += shiftHours(current); }
+        monthHours += effectiveShiftHours(person, current);
       }
       if(!canEditRow){
         const span = document.createElement("span");
@@ -2528,10 +2538,9 @@ function renderRelatorios(){
       }
       const code = getPersonShiftForDate(person.id, date);
       if(code){
-        const st = shiftType(code);
-        if(!st || !st.isRest){
-          const h = shiftHours(code);
-          feitas += h; turnos++;
+        const h = effectiveShiftHours(person, code);
+        if(h > 0){
+          feitas += h; if(code !== "Fe") turnos++;
           if(isWeekendDay(date)) fds += h;
         }
       }
