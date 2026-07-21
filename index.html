@@ -256,21 +256,43 @@
   }
   .app-footer strong{ color:var(--sage-deep); font-size:11.5px; }
   @media print{
-    @page{ size: A4 landscape; margin: 10mm; }
+    /* Margens reduzidas: com 28-31 colunas de dias, cada mm de largura conta */
+    @page{ size: A4 landscape; margin: 6mm; }
     body{ background:white; }
     body::before, body::after{ display:none !important; }
-    h1{ background:none; color:var(--sage-deep); -webkit-text-fill-color:initial; }
+    h1{ background:none; color:var(--sage-deep); -webkit-text-fill-color:initial; font-size:16px; }
     .brand-mark{ animation:none; }
-    .toolbar, .panel.no-print, .home-menu, .tabs, .back-link, #globalErrorBanner, #gestorBadge, #nurseBadge{ display:none !important; }
-    .panel{ border:none; padding:0; box-shadow:none; background:white; backdrop-filter:none; animation:none; }
+    .toolbar, .panel.no-print, .home-menu, .tabs, .back-link, #globalErrorBanner, #gestorBadge, #nurseBadge, #notifBar, #myStatsBar, #logoutSmallBar, .app-footer, #horarioFilterBar{ display:none !important; }
+    .week-nav button{ display:none !important; }
+    .wrap{ max-width:none; width:100%; padding:0; margin:0; }
+    .panel{ border:none; padding:0; box-shadow:none; background:white; backdrop-filter:none; animation:none; margin:0 0 10px; }
     .section{ animation:none; }
-    .grid-scroll{ max-height:none; overflow:visible; background:white; }
+    .grid-scroll{ max-height:none; overflow:visible; background:white; border:none; }
     table.excel{ font-size:9.5px; }
     table.excel th, table.excel td{ padding:2px 3px; }
+    /* sticky imprime sobreposto/deslocado em alguns browsers — desligar na impressão */
+    table.excel thead th, table.excel tfoot td, table.excel th.name-col, table.excel td.name-col{ position:static !important; }
+    thead{ display:table-header-group; }
+    tfoot{ display:table-footer-group; }
+    table.excel tr{ page-break-inside:avoid; break-inside:avoid; }
     table.excel th.name-col, table.excel td.name-col{ min-width:100px; max-width:100px; }
     select.cell-select{ border:none; -webkit-appearance:none; appearance:none; background-image:none !important; padding:2px 1px; font-size:9.5px; width:36px; }
+    /* manter as cores dos turnos no papel (sem isto, texto branco em fundo branco = ilegível) */
+    table.excel, table.excel th, table.excel td, select.cell-select, table.excel td span{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .day-head .num{ font-size:11px; }
     .day-head .dow{ font-size:8px; }
+    /* Grelha do horário: forçar TODAS as colunas a caber na largura da página (sem cortar dias) */
+    #section-horario table.excel{ width:100%; table-layout:fixed; border-collapse:collapse; font-size:7.3px; }
+    #section-horario table.excel th, #section-horario table.excel td{ border:0.5px solid #bbb; padding:1px; overflow:hidden; }
+    #section-horario table.excel th.name-col, #section-horario table.excel td.name-col{ width:62px; min-width:62px; max-width:62px; font-size:7.3px; padding:2px 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:white; }
+    #section-horario select.cell-select{ width:100%; min-width:0; padding:0; font-size:7px; border-radius:0; }
+    #section-horario table.excel td span.sans{ display:block !important; min-width:0 !important; width:100% !important; padding:1px 0 !important; font-size:7px !important; border-radius:0 !important; box-sizing:border-box; }
+    #section-horario .day-head{ min-width:0; }
+    #section-horario .day-head .num{ font-size:7.3px; }
+    #section-horario .day-head .dow{ font-size:6px; }
+    #section-horario .day-lock, #section-horario .holiday-flag{ font-size:7px; }
+    #section-horario .week-lock{ font-size:7px; padding:0; }
+    #section-horario .legend{ font-size:8px; gap:8px; }
     .exc-chip{ border:1px solid #999; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .dd-row{ page-break-inside:avoid; }
   }
