@@ -304,12 +304,13 @@
     .exc-chip{ border:1px solid #999; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .dd-row{ page-break-inside:avoid; }
     #section-horario .print-side{ flex:1; display:flex; flex-direction:column; justify-content:space-between; font-size:11px; color:#333; min-width:220px; }
-    #section-horario .obs-line{ display:flex; align-items:flex-end; gap:8px; }
+    #section-horario .obs-line{ display:flex; align-items:flex-end; gap:8px; margin-top:16px; }
     #section-horario .obs-line-label{ white-space:nowrap; font-weight:600; }
     #section-horario .obs-line-fill{ flex:1; border-bottom:1px solid #333; height:14px; }
-    #section-horario .sign-block{ text-align:center; }
-    #section-horario .sign-fill{ display:block; border-bottom:1px solid #333; height:14px; margin-bottom:5px; }
-    #section-horario .sign-caption{ font-size:11px; }
+    #section-horario .sign-block{ text-align:center; align-self:flex-end; width:130px; }
+    #section-horario .sign-date{ display:block; font-size:9px; white-space:nowrap; margin-bottom:14px; }
+    #section-horario .sign-fill{ display:block; border-bottom:1px solid #333; height:10px; margin-bottom:4px; }
+    #section-horario .sign-caption{ font-size:9.5px; }
   }
 </style>
 </head>
@@ -442,6 +443,7 @@
             <span class="obs-line-fill"></span>
           </div>
           <div class="sign-block">
+            <span class="sign-date">Data: ____ / ____ / ________</span>
             <span class="sign-fill"></span>
             <span class="sign-caption">A direção</span>
           </div>
