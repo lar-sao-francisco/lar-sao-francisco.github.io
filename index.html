@@ -430,6 +430,7 @@
     <span class="back-link" data-back>← Voltar ao início</span>
     <div class="toolbar">
       <button class="btn btn-ghost" id="printBtn">Imprimir / Exportar PDF</button>
+      <button class="btn btn-ghost" id="autoFillBtn" style="display:none;" title="Preenche as vagas em aberto do mês visível, segundo as disponibilidades submetidas e as regras da escala. Não mexe em semanas bloqueadas nem em células já preenchidas.">🎲 Preencher automaticamente</button>
       <span class="save-status" id="saveStatus"></span>
     </div>
     <div class="panel">
@@ -952,10 +953,30 @@ function isShiftAllowed(person, date, code){
   if(!list || list.length===0) return true;
   return list.includes(code);
 }
+function getPrincipal(){ return state.staff.find(p=>p.principal); }
+// A "principal" (ex: Cátia) faz M nos dias de semana normais e T às quartas.
+// Quando ela não trabalha (férias, DC, DO, ou qualquer exceção), a cobertura passa para M1/T1.
+function principalWorkingOn(date){
+  const principal = getPrincipal();
+  if(!principal) return true;
+  const current = getPersonShiftForDate(principal.id, date);
+  if(current){
+    const st = shiftType(current);
+    return !!(st && !st.isRest);
+  }
+  return !isOff(principal, date);
+}
 function getNeededForShift(date, code){
-  if(code === "M1" && !isWeekendDay(date)){
-    const tArr = getDayShifts(date)["T"] || [];
-    return tArr.length > 0 ? 1 : 0;
+  if(!isWeekendDay(date)){
+    const isWed = dowIndex(date) === 2; // Quarta-feira
+    if(code === "M1"){
+      // Quarta: M1 é sempre precisa. Outros dias: só se a principal não estiver a trabalhar.
+      return isWed ? 1 : (principalWorkingOn(date) ? 0 : 1);
+    }
+    if(code === "T1"){
+      // Quarta sem a principal: reforça para 2 T1. Resto da semana: sempre 1.
+      return isWed ? (principalWorkingOn(date) ? 1 : 2) : 1;
+    }
   }
   const st = shiftType(code);
   return (st && st.needed) || 0;
@@ -2158,6 +2179,8 @@ function renderExcelGrid(){
   const monthStart = state.monthStart;
   const label = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
+  const autoFillBtnEl = document.getElementById("autoFillBtn");
+  if(autoFillBtnEl) autoFillBtnEl.style.display = isGestor ? "" : "none";
   renderLegend();
   renderPrintLegendTable();
   const nDays = daysInMonth(monthStart);
@@ -2378,14 +2401,16 @@ function renderExcelGrid(){
   foot.appendChild(trf);
   if(gridScroller){ gridScroller.scrollLeft = keepLeft; gridScroller.scrollTop = keepTop; }
 }
-// ---------- AUTO GENERATE (whole visible month, weekly cap enforced) ----------
+// ---------- AUTO GENERATE (whole visible month, semanal + teto mensal de 30h) ----------
+const AUTO_MONTHLY_CAP = 30;
 function autoGenerate(){
   const monthStart = state.monthStart;
   const nDays = daysInMonth(monthStart);
   const maxShifts = state.rules.maxShifts;
+  const dates = [];
+  for(let day=1; day<=nDays; day++) dates.push(new Date(monthStart.getFullYear(), monthStart.getMonth(), day));
   const weeklyCounts = {};
-  for(let day=1; day<=nDays; day++){
-    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+  dates.forEach(date=>{
     const wKey = weekKey(startOfWeek(date));
     if(!weeklyCounts[wKey]){
       weeklyCounts[wKey] = {};
@@ -2399,19 +2424,29 @@ function autoGenerate(){
         });
       }
     }
-  }
-  for(let day=1; day<=nDays; day++){
-    const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
-    if(state.lockedDays[weekKey(date)]) continue;
+  });
+  // Horas já atribuídas este mês (turnos que já lá estavam antes de gerar mais).
+  const monthHours = {};
+  state.staff.forEach(p=> monthHours[p.id] = 0);
+  dates.forEach(date=>{
+    state.staff.forEach(p=>{
+      const code = getPersonShiftForDate(p.id, date);
+      if(code) monthHours[p.id] += effectiveShiftHours(p, code);
+    });
+  });
+  const owner = staffById(OWNER_ID);
+  dates.forEach(date=>{
+    if(state.lockedDays[weekKey(date)]) return;
     const wKey = weekKey(startOfWeek(date));
     const dayData = getDayShifts(date);
     state.shiftTypes.forEach(st=>{
       const code = st.code;
       const already = dayData[code];
       const need = getNeededForShift(date, code);
-      const remaining = need - already.length;
+      let remaining = need - already.length;
       if(remaining <= 0) return;
       let candidates = state.staff.filter(p=>{
+        if(p.id === OWNER_ID) return false; // o dono só entra como reforço, ver abaixo
         if(!isSchedulableTipo(p.tipo)) return false;
         const submitted = submittedAvailableCodes(p.id, weekKey(date));
         if(isRvLike(p.tipo)){
@@ -2425,19 +2460,38 @@ function autoGenerate(){
         if(already.includes(p.id)) return false;
         if(getPersonShiftForDate(p.id, date)) return false;
         if(hasAnyConflict(p.id, date, code)) return false;
+        // teto de 30h/mês para recibos verdes (o dono da conta fica de fora deste limite)
+        if(isRvLike(p.tipo) && (monthHours[p.id] + effectiveShiftHours(p, code)) > AUTO_MONTHLY_CAP) return false;
         return true;
       });
-      candidates.sort((a,b)=> weeklyCounts[wKey][a.id]-weeklyCounts[wKey][b.id] || (Math.random()-0.5));
+      candidates.sort((a,b)=>
+        weeklyCounts[wKey][a.id]-weeklyCounts[wKey][b.id] ||
+        monthHours[a.id]-monthHours[b.id] ||
+        (Math.random()-0.5)
+      );
       for(let i=0; i<remaining && i<candidates.length; i++){
         const chosen = candidates[i];
         already.push(chosen.id);
         weeklyCounts[wKey][chosen.id]++;
+        monthHours[chosen.id] += effectiveShiftHours(chosen, code);
+      }
+      remaining = need - already.length;
+      // Ninguém elegível (ou todos passariam das 30h) — o dono da conta assume o turno.
+      if(remaining > 0 && owner && !already.includes(OWNER_ID) && !getPersonShiftForDate(OWNER_ID, date) &&
+         isShiftAllowed(owner, date, code) && !hasAnyConflict(OWNER_ID, date, code)){
+        already.push(OWNER_ID);
+        weeklyCounts[wKey][OWNER_ID]++;
+        monthHours[OWNER_ID] += effectiveShiftHours(owner, code);
       }
     });
-  }
+  });
   renderExcelGrid();
   scheduleSave();
 }
+document.getElementById("autoFillBtn").addEventListener("click", ()=>{
+  if(!confirm("Preencher automaticamente as vagas em aberto de " + state.monthStart.toLocaleDateString("pt-PT",{month:"long",year:"numeric"}) + "?\n\nRespeita as disponibilidades submetidas, o descanso mínimo e o máximo de dias seguidos. Não toca em semanas bloqueadas nem em células já preenchidas. Tenta manter os recibos verdes até 30h/mês — quando ninguém está disponível dentro desse limite, atribui a ti.")) return;
+  autoGenerate();
+});
 document.getElementById("printBtn").addEventListener("click", ()=> window.print());
 window.addEventListener("beforeprint", ()=>{
   const el = document.getElementById("printGenTime");
