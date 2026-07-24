@@ -251,6 +251,7 @@
   .note{ font-family:sans-serif; font-size:12.5px; color:var(--ink-soft); margin-top:10px; line-height:1.55;}
   .sign-line{ display:none; }
   .obs-line{ display:none; }
+  .print-legend-table{ display:none; }
   .save-status{ font-family:sans-serif; font-size:12px; color:var(--ink-soft); }
   .app-footer{
     margin-top:32px; padding-top:18px; border-top:1px solid rgba(6,122,79,0.15);
@@ -294,13 +295,18 @@
     #section-horario .day-head .dow{ font-size:6px; }
     #section-horario .day-lock, #section-horario .holiday-flag{ font-size:7px; }
     #section-horario .week-lock{ font-size:7px; padding:0; }
-    #section-horario .legend{ font-size:8px; gap:8px; }
+    #section-horario .legend{ display:none !important; }
+    #section-horario .print-legend-table{ display:block !important; margin-top:12px; }
+    table.print-legend{ border-collapse:collapse; font-family:sans-serif; font-size:9px; }
+    table.print-legend th, table.print-legend td{ border:0.5px solid #999; padding:2px 7px; text-align:left; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    table.print-legend thead tr:first-child th{ text-align:center; font-size:10.5px; background:#eee; }
+    table.print-legend td.pl-code{ color:#fff; font-weight:700; text-align:center; }
     .exc-chip{ border:1px solid #999; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .dd-row{ page-break-inside:avoid; }
     .obs-line{ display:flex !important; align-items:flex-end; gap:10px; margin-top:22px; font-family:sans-serif; font-size:11px; color:#333; page-break-inside:avoid; }
     .obs-line-label{ white-space:nowrap; font-weight:600; }
     .obs-line-fill{ flex:1; border-bottom:1px solid #333; height:14px; }
-    .sign-line{ display:flex !important; justify-content:space-between; align-items:flex-end; gap:24px; margin-top:20px; padding-top:10px; font-family:sans-serif; font-size:11px; color:#333; page-break-inside:avoid; }
+    .sign-line{ display:flex !important; justify-content:space-between; align-items:flex-end; gap:24px; margin-top:52px; padding-top:10px; font-family:sans-serif; font-size:11px; color:#333; page-break-inside:avoid; }
     .sign-line-slot{ white-space:nowrap; }
   }
 </style>
@@ -426,6 +432,7 @@
         </table>
       </div>
       <div class="legend" id="legend"></div>
+      <div class="print-legend-table" id="printLegendTable"></div>
       <div class="obs-line">
         <span class="obs-line-label">Observações:</span>
         <span class="obs-line-fill"></span>
@@ -2094,6 +2101,25 @@ function renderLegend(){
   s3.textContent = "contorno vermelho = conflito (descanso, sobreposição, ou dias seguidos a mais)";
   legend.appendChild(s3);
 }
+function renderPrintLegendTable(){
+  const wrap = document.getElementById("printLegendTable");
+  if(!wrap) return;
+  const fmtHours = h => h.toFixed(1).replace(".", ",");
+  const fmtHorario = st => (st.blocks && st.blocks.length)
+    ? st.blocks.map(b=> b[0] + "-" + b[1] + "H").join(" + ")
+    : st.label;
+  let html = '<table class="print-legend"><thead><tr><th colspan="3">Legenda</th></tr>' +
+    '<tr><th>Código</th><th>Horas</th><th>Horário</th></tr></thead><tbody>';
+  state.shiftTypes.forEach(st=>{
+    html += '<tr>' +
+      '<td class="pl-code" style="background:' + st.color + ';">' + esc(st.code) + '</td>' +
+      '<td>' + fmtHours(shiftHours(st.code)) + '</td>' +
+      '<td>' + esc(fmtHorario(st)) + '</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
 function renderExcelGrid(){
   const gridScroller = document.querySelector("#section-horario .grid-scroll");
   const keepLeft = gridScroller ? gridScroller.scrollLeft : 0;
@@ -2104,6 +2130,7 @@ function renderExcelGrid(){
   const label = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
   renderLegend();
+  renderPrintLegendTable();
   const nDays = daysInMonth(monthStart);
   const dates = [];
   for(let day=1; day<=nDays; day++) dates.push(new Date(monthStart.getFullYear(), monthStart.getMonth(), day));
@@ -2207,10 +2234,21 @@ function renderExcelGrid(){
       if(getHolidayLabel(dayIso)) td.classList.add("holiday-col");
       const dayLocked = !!state.lockedDays[dayIso];
       if(dayLocked) td.classList.add("locked-col");
+      const canSeeCell = canEditRow || dayLocked;
       const current = getPersonShiftForDate(person.id, date);
-      if(current){
+      if(current && canSeeCell){
         const curSt = shiftType(current);
         monthHours += effectiveShiftHours(person, current);
+      }
+      if(!canSeeCell){
+        const span = document.createElement("span");
+        span.className = "sans";
+        span.style.cssText = "display:inline-block; min-width:40px; padding:3px 6px; border-radius:5px; font-size:11.5px; font-weight:700; text-align:center; color:var(--ink-soft); opacity:.5;";
+        span.textContent = "·";
+        span.title = "Ainda por publicar — fica visível quando a gestão bloquear esta semana";
+        td.appendChild(span);
+        tr.appendChild(td);
+        return;
       }
       if(!canEditRow){
         const span = document.createElement("span");
@@ -2301,7 +2339,9 @@ function renderExcelGrid(){
     const td = document.createElement("td");
     if(isWeekendDay(date)) td.classList.add("weekend-col");
     td.style.fontWeight = "700";
-    td.textContent = dailyCounts[di];
+    const dIsoFoot = weekKey(date);
+    const dLockedFoot = !!state.lockedDays[dIsoFoot];
+    td.textContent = (isGestor || dLockedFoot) ? dailyCounts[di] : "·";
     trf.appendChild(td);
   });
   const tdCorner = document.createElement("td");
@@ -2745,7 +2785,7 @@ loadState().then(()=>{
       a:"Um contorno vermelho numa célula indica conflito: descanso insuficiente entre turnos, sobreposição de horários, ou dias de trabalho seguidos a mais. As regras (descanso mínimo, máx. turnos/semana, máx. dias seguidos) definem-se em Configurações → Regras da escala." },
     { keys:["bloquear","cadeado","bloqueada","semana fechada","🔒"],
       sug:"Para que serve o cadeado?",
-      a:"(Só gestão) Clicar no cadeado no cabeçalho de uma semana bloqueia-a: os turnos dessa semana deixam de poder ser alterados, e nem o \"Preencher\" nem o \"Limpar mês\" lhe tocam. Clicar outra vez desbloqueia." },
+      a:"(Só gestão) Clicar no cadeado no cabeçalho de uma semana bloqueia-a: os turnos dessa semana deixam de poder ser alterados, e nem o \"Preencher\" nem o \"Limpar mês\" lhe tocam. Enquanto uma semana não está bloqueada, quem não é gestão também não vê os turnos dela — só aparecem depois de bloqueada. Clicar outra vez desbloqueia (e volta a esconder dos outros)." },
     { keys:["imprimir","pdf","exportar","papel"],
       sug:"Como imprimo a escala?",
       a:"No Horário, carrega em \"Imprimir / Exportar PDF\". Na janela de impressão podes escolher uma impressora ou \"Guardar como PDF\". A escala sai em A4 ao baixo, pronta para afixar." },
