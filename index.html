@@ -977,6 +977,12 @@ function getNeededForShift(date, code){
       // Quarta sem a principal: reforça para 2 T1. Resto da semana: sempre 1.
       return isWed ? (principalWorkingOn(date) ? 1 : 2) : 1;
     }
+    if(code === "M" || code === "T"){
+      const st = shiftType(code);
+      return (st && st.needed) || 0; // a principal preenche à mão, isto não afeta o preenchimento automático
+    }
+    // qualquer outro código (ex: MT1) não faz parte da regra da principal — não entra no preenchimento automático em dias de semana
+    return 0;
   }
   const st = shiftType(code);
   return (st && st.needed) || 0;
