@@ -431,6 +431,7 @@
     <div class="toolbar">
       <button class="btn btn-ghost" id="printBtn">Imprimir / Exportar PDF</button>
       <button class="btn btn-ghost" id="autoFillBtn" style="display:none;" title="Preenche as vagas em aberto do mês visível, segundo as disponibilidades submetidas e as regras da escala. Não mexe em semanas bloqueadas nem em células já preenchidas.">🎲 Preencher automaticamente</button>
+      <button class="btn btn-ghost" id="undoFillBtn" style="display:none;" title="Repõe exatamente o que estava antes do último preenchimento automático.">↩️ Desfazer preenchimento</button>
       <span class="save-status" id="saveStatus"></span>
     </div>
     <div class="panel">
@@ -645,6 +646,7 @@ let authNurseId = null;   // id of the logged-in person
 let nurseDraft = null;    // in-progress edits before "Guardar"
 let nurseEditing = false; // true while actively editing (after clicking "Alterar", or first time ever)
 let horarioFilterId = null; // quando definido, o horário mostra só esta pessoa
+let autoFillUndo = null; // { label, weeks:{wKey: clone-ou-null} } — snapshot do último "Preencher automaticamente", para desfazer
 let contabFilterId = null; // quando definido, a contabilidade mostra só esta pessoa
 // ---------- DATE HELPERS ----------
 function startOfWeek(d){
@@ -2187,6 +2189,8 @@ function renderExcelGrid(){
   document.getElementById("monthLabel").textContent = label;
   const autoFillBtnEl = document.getElementById("autoFillBtn");
   if(autoFillBtnEl) autoFillBtnEl.style.display = isGestor ? "" : "none";
+  const undoFillBtnEl = document.getElementById("undoFillBtn");
+  if(undoFillBtnEl) undoFillBtnEl.style.display = (isGestor && autoFillUndo) ? "" : "none";
   renderLegend();
   renderPrintLegendTable();
   const nDays = daysInMonth(monthStart);
@@ -2415,6 +2419,18 @@ function autoGenerate(){
   const maxShifts = state.rules.maxShifts;
   const dates = [];
   for(let day=1; day<=nDays; day++) dates.push(new Date(monthStart.getFullYear(), monthStart.getMonth(), day));
+  // Snapshot de tudo o que vai poder ser tocado, antes de mexer em nada — para o "Desfazer".
+  const snapshotWeeks = {};
+  dates.forEach(date=>{
+    const wKey = weekKey(startOfWeek(date));
+    if(!(wKey in snapshotWeeks)){
+      snapshotWeeks[wKey] = state.schedules[wKey] ? JSON.parse(JSON.stringify(state.schedules[wKey])) : null;
+    }
+  });
+  autoFillUndo = {
+    label: monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"}),
+    weeks: snapshotWeeks
+  };
   const weeklyCounts = {};
   dates.forEach(date=>{
     const wKey = weekKey(startOfWeek(date));
@@ -2497,8 +2513,24 @@ function autoGenerate(){
   scheduleSave();
 }
 document.getElementById("autoFillBtn").addEventListener("click", ()=>{
-  if(!confirm("Preencher automaticamente as vagas em aberto de " + state.monthStart.toLocaleDateString("pt-PT",{month:"long",year:"numeric"}) + "?\n\nRespeita as disponibilidades submetidas, o descanso mínimo e o máximo de dias seguidos. Não toca em semanas bloqueadas nem em células já preenchidas. Tenta manter os recibos verdes até 30h/mês — quando ninguém está disponível dentro desse limite, atribui a ti.")) return;
+  if(!confirm("Preencher automaticamente as vagas em aberto de " + state.monthStart.toLocaleDateString("pt-PT",{month:"long",year:"numeric"}) + "?\n\nRespeita as disponibilidades submetidas, o descanso mínimo e o máximo de dias seguidos. Não toca em semanas bloqueadas nem em células já preenchidas. Tenta manter os recibos verdes até 30h/mês — quando ninguém está disponível dentro desse limite, atribui a ti.\n\nSe não gostares do resultado, dá para desfazer logo a seguir com \"Desfazer preenchimento\".")) return;
   autoGenerate();
+});
+function undoAutoFill(){
+  if(!autoFillUndo) return;
+  Object.keys(autoFillUndo.weeks).forEach(wKey=>{
+    const snap = autoFillUndo.weeks[wKey];
+    if(snap === null) delete state.schedules[wKey];
+    else state.schedules[wKey] = JSON.parse(JSON.stringify(snap));
+  });
+  autoFillUndo = null;
+  renderExcelGrid();
+  scheduleSave();
+}
+document.getElementById("undoFillBtn").addEventListener("click", ()=>{
+  if(!autoFillUndo) return;
+  if(!confirm("Desfazer o preenchimento automático de " + autoFillUndo.label + "?\n\nRepõe exatamente o que estava antes de teres clicado em \"Preencher automaticamente\" — incluindo qualquer alteração manual que tenhas feito depois nesse período.")) return;
+  undoAutoFill();
 });
 document.getElementById("printBtn").addEventListener("click", ()=> window.print());
 window.addEventListener("beforeprint", ()=>{
