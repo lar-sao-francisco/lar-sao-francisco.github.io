@@ -2124,10 +2124,11 @@ function renderLegend(){
 function representativeHoursForCode(code){
   // Usa a mesma conta que a app usa de verdade: efetivo conta turno completo como
   // 7h fixas (independentemente da janela do turno); recibos verdes contam as horas reais do turno.
-  const holder = state.staff.find(p=>
-    (p.allowedWeekday && p.allowedWeekday.includes(code)) ||
-    (p.allowedWeekend && p.allowedWeekend.includes(code))
-  );
+  // Prioriza o padrão semanal (allowedWeekday) — é o que define o "dono" habitual do código.
+  // O allowedWeekend fica só como fallback, porque muitas vezes é uma exceção (ex: efetivo
+  // a fazer M1/T1 ao fim de semana) que não deve mudar a leitura do código na legenda.
+  let holder = state.staff.find(p=> p.allowedWeekday && p.allowedWeekday.includes(code));
+  if(!holder) holder = state.staff.find(p=> p.allowedWeekend && p.allowedWeekend.includes(code));
   return holder ? effectiveShiftHours(holder, code) : shiftHours(code);
 }
 function renderPrintLegendTable(){
