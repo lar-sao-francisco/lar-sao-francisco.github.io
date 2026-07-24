@@ -2435,6 +2435,7 @@ function autoGenerate(){
     });
   });
   const owner = staffById(OWNER_ID);
+  const principal = getPrincipal();
   dates.forEach(date=>{
     if(state.lockedDays[weekKey(date)]) return;
     const wKey = weekKey(startOfWeek(date));
@@ -2447,6 +2448,7 @@ function autoGenerate(){
       if(remaining <= 0) return;
       let candidates = state.staff.filter(p=>{
         if(p.id === OWNER_ID) return false; // o dono só entra como reforço, ver abaixo
+        if(principal && p.id === principal.id) return false; // a principal preenche o próprio horário — nunca mexer
         if(!isSchedulableTipo(p.tipo)) return false;
         const submitted = submittedAvailableCodes(p.id, weekKey(date));
         if(isRvLike(p.tipo)){
