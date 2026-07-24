@@ -2101,6 +2101,15 @@ function renderLegend(){
   s3.textContent = "contorno vermelho = conflito (descanso, sobreposição, ou dias seguidos a mais)";
   legend.appendChild(s3);
 }
+function representativeHoursForCode(code){
+  // Usa a mesma conta que a app usa de verdade: efetivo conta turno completo como
+  // 7h fixas (independentemente da janela do turno); recibos verdes contam as horas reais do turno.
+  const holder = state.staff.find(p=>
+    (p.allowedWeekday && p.allowedWeekday.includes(code)) ||
+    (p.allowedWeekend && p.allowedWeekend.includes(code))
+  );
+  return holder ? effectiveShiftHours(holder, code) : shiftHours(code);
+}
 function renderPrintLegendTable(){
   const wrap = document.getElementById("printLegendTable");
   if(!wrap) return;
@@ -2113,7 +2122,7 @@ function renderPrintLegendTable(){
   state.shiftTypes.forEach(st=>{
     html += '<tr>' +
       '<td class="pl-code" style="background:' + st.color + ';">' + esc(st.code) + '</td>' +
-      '<td>' + fmtHours(shiftHours(st.code)) + '</td>' +
+      '<td>' + fmtHours(representativeHoursForCode(st.code)) + '</td>' +
       '<td>' + esc(fmtHorario(st)) + '</td>' +
     '</tr>';
   });
