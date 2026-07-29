@@ -302,25 +302,26 @@
     #section-horario .day-lock, #section-horario .holiday-flag{ font-size:7px; }
     #section-horario .week-lock{ font-size:7px; padding:0; }
     #section-horario .legend{ display:none !important; }
-    #section-horario .print-footer{
+    #section-horario .print-footer, #section-dispequipa .print-footer{
       display:flex !important; align-items:stretch; gap:56px; margin-top:20px; padding-top:14px;
       border-top:0.75px solid var(--line); page-break-inside:avoid;
       font-family:"Plus Jakarta Sans","Manrope",sans-serif;
     }
+    #section-dispequipa .print-footer{ justify-content:flex-end; }
     table.print-legend{ border-collapse:collapse; font-size:9px; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
     table.print-legend th, table.print-legend td{ border:0.5px solid #c8d3ce; padding:3px 11px; text-align:left; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     table.print-legend thead th{ text-align:center; font-size:11px; font-weight:700; background:var(--sage-deep); color:#fff; font-family:"Space Grotesk",sans-serif; letter-spacing:0.3px; padding:5px 10px; }
     table.print-legend td.pl-code{ color:#1a1a1a; font-weight:700; text-align:center; }
     .exc-chip{ border:1px solid #999; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .dd-row{ page-break-inside:avoid; }
-    #section-horario .print-side{ flex:1; display:flex; flex-direction:column; justify-content:space-between; font-size:11px; color:#333; min-width:220px; }
-    #section-horario .obs-line{ display:flex; align-items:flex-end; gap:8px; margin-top:16px; }
-    #section-horario .obs-line-label{ white-space:nowrap; font-weight:600; color:var(--sage-deep); }
-    #section-horario .obs-line-fill{ flex:1; border-bottom:1px solid #333; height:14px; }
-    #section-horario .sign-block{ text-align:center; align-self:flex-end; width:130px; }
-    #section-horario .sign-date{ display:block; font-size:9px; white-space:nowrap; margin-bottom:14px; color:#555; }
-    #section-horario .sign-fill{ display:block; border-bottom:1px solid #333; height:10px; margin-bottom:4px; }
-    #section-horario .sign-caption{ font-size:9.5px; font-weight:600; }
+    #section-horario .print-side, #section-dispequipa .print-side{ flex:1; display:flex; flex-direction:column; justify-content:space-between; font-size:11px; color:#333; min-width:220px; max-width:340px; }
+    #section-horario .obs-line, #section-dispequipa .obs-line{ display:flex; align-items:flex-end; gap:8px; margin-top:16px; }
+    #section-horario .obs-line-label, #section-dispequipa .obs-line-label{ white-space:nowrap; font-weight:600; color:var(--sage-deep); }
+    #section-horario .obs-line-fill, #section-dispequipa .obs-line-fill{ flex:1; border-bottom:1px solid #333; height:14px; }
+    #section-horario .sign-block, #section-dispequipa .sign-block{ text-align:center; align-self:flex-end; width:130px; }
+    #section-horario .sign-date, #section-dispequipa .sign-date{ display:block; font-size:9px; white-space:nowrap; margin-bottom:14px; color:#555; }
+    #section-horario .sign-fill, #section-dispequipa .sign-fill{ display:block; border-bottom:1px solid #333; height:10px; margin-bottom:4px; }
+    #section-horario .sign-caption, #section-dispequipa .sign-caption{ font-size:9.5px; font-weight:600; }
     .print-doc-footer{ display:block !important; margin-top:14px; font-size:8.5px; color:#8a978f; text-align:right; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
   }
 </style>
@@ -507,6 +508,20 @@
       <h2>Disponibilidades da equipa — <span id="teamDispMonthLabel"></span></h2>
       <div id="teamAvailabilityList"></div>
       <p class="note">Isto é o que cada recibo verde marcou como disponível na vista "Disponibilidades", para o mês em exibição. Usa as setas no topo para mudar de mês. Já se aplica automaticamente à grelha do Horário.</p>
+      <div class="print-footer">
+        <div class="print-side">
+          <div class="obs-line">
+            <span class="obs-line-label">Obs:</span>
+            <span class="obs-line-fill"></span>
+          </div>
+          <div class="sign-block">
+            <span class="sign-date">Data: ____ / ____ / ________</span>
+            <span class="sign-fill"></span>
+            <span class="sign-caption">A direção</span>
+          </div>
+        </div>
+      </div>
+      <div class="print-doc-footer">Lar de São Francisco — Escala de Enfermagem · documento gerado em <span id="printGenTimeDisp"></span></div>
     </div>
   </div>
   <!-- SECTION: RELATORIOS -->
@@ -2411,8 +2426,7 @@ function renderExcelGrid(){
   foot.appendChild(trf);
   if(gridScroller){ gridScroller.scrollLeft = keepLeft; gridScroller.scrollTop = keepTop; }
 }
-// ---------- AUTO GENERATE (whole visible month, semanal + teto mensal de 30h) ----------
-const AUTO_MONTHLY_CAP = 30;
+// ---------- AUTO GENERATE (whole visible month, respeita máximo semanal) ----------
 function autoGenerate(){
   const monthStart = state.monthStart;
   const nDays = daysInMonth(monthStart);
@@ -2484,8 +2498,6 @@ function autoGenerate(){
         if(already.includes(p.id)) return false;
         if(getPersonShiftForDate(p.id, date)) return false;
         if(hasAnyConflict(p.id, date, code)) return false;
-        // teto de 30h/mês para recibos verdes (o dono da conta fica de fora deste limite)
-        if(isRvLike(p.tipo) && (monthHours[p.id] + effectiveShiftHours(p, code)) > AUTO_MONTHLY_CAP) return false;
         return true;
       });
       candidates.sort((a,b)=>
@@ -2500,7 +2512,7 @@ function autoGenerate(){
         monthHours[chosen.id] += effectiveShiftHours(chosen, code);
       }
       remaining = need - already.length;
-      // Ninguém elegível (ou todos passariam das 30h) — o dono da conta assume o turno.
+      // Ninguém elegível (sem disponibilidade ou em conflito) — o dono da conta assume o turno.
       if(remaining > 0 && owner && !already.includes(OWNER_ID) && !getPersonShiftForDate(OWNER_ID, date) &&
          isShiftAllowed(owner, date, code) && !hasAnyConflict(OWNER_ID, date, code)){
         already.push(OWNER_ID);
@@ -2513,7 +2525,7 @@ function autoGenerate(){
   scheduleSave();
 }
 document.getElementById("autoFillBtn").addEventListener("click", ()=>{
-  if(!confirm("Preencher automaticamente as vagas em aberto de " + state.monthStart.toLocaleDateString("pt-PT",{month:"long",year:"numeric"}) + "?\n\nRespeita as disponibilidades submetidas, o descanso mínimo e o máximo de dias seguidos. Não toca em semanas bloqueadas nem em células já preenchidas. Tenta manter os recibos verdes até 30h/mês — quando ninguém está disponível dentro desse limite, atribui a ti.\n\nSe não gostares do resultado, dá para desfazer logo a seguir com \"Desfazer preenchimento\".")) return;
+  if(!confirm("Preencher automaticamente as vagas em aberto de " + state.monthStart.toLocaleDateString("pt-PT",{month:"long",year:"numeric"}) + "?\n\nRespeita as disponibilidades submetidas, o descanso mínimo e o máximo de dias seguidos. Não toca em semanas bloqueadas nem em células já preenchidas. Sem ninguém disponível, atribui a ti.\n\nSe não gostares do resultado, dá para desfazer logo a seguir com \"Desfazer preenchimento\".")) return;
   autoGenerate();
 });
 function undoAutoFill(){
@@ -2534,11 +2546,12 @@ document.getElementById("undoFillBtn").addEventListener("click", ()=>{
 });
 document.getElementById("printBtn").addEventListener("click", ()=> window.print());
 window.addEventListener("beforeprint", ()=>{
-  const el = document.getElementById("printGenTime");
-  if(el){
-    const d = new Date();
-    el.textContent = d.toLocaleDateString("pt-PT",{day:"2-digit",month:"2-digit",year:"numeric"}) + " " + d.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"});
-  }
+  const d = new Date();
+  const stamp = d.toLocaleDateString("pt-PT",{day:"2-digit",month:"2-digit",year:"numeric"}) + " " + d.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"});
+  ["printGenTime","printGenTimeDisp"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.textContent = stamp;
+  });
 });
 document.getElementById("horarioFilterClear").addEventListener("click", ()=>{
   horarioFilterId = null;
