@@ -167,6 +167,11 @@
   table.excel thead th.weekend-col{ background:var(--weekend-bg); }
   table.excel td.weekend-col{ background:var(--weekend-bg); }
   table.excel tbody tr:hover td:not(.name-col){ background:rgba(14,166,107,0.07); }
+  table.excel tbody tr.contab-row-incomplete{ background:rgba(255,255,255,0.6); }
+  table.excel tbody tr.contab-row-incomplete td.name-col{ background:rgba(255,255,255,0.9); }
+  table.excel tbody tr.contab-row-complete{ background:rgba(120,150,132,0.16); }
+  table.excel tbody tr.contab-row-complete td.name-col{ background:#EFF4F1; }
+  table.excel tbody tr.contab-row-complete:hover td:not(.name-col){ background:rgba(14,166,107,0.14); }
   table.excel th.name-col, table.excel td.name-col{
     position:sticky; left:0; background:#FFFFFF; z-index:3; text-align:left;
     min-width:150px; max-width:150px; font-weight:700; padding:6px 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -565,21 +570,6 @@
       </div>
       <div class="grid-scroll" id="contabTableWrap"></div>
       <p class="note">As horas vêm dos turnos atribuídos na grelha do Horário dentro do período escolhido (descansos DC/DO e Férias não contam). "Útil" = segunda a sexta; fim de semana = sábado e domingo (feriados em dia de semana contam como útil). Clica num nome para ver só essa pessoa.</p>
-      <div id="contabPersonReportBlock" class="no-print" style="display:none; margin-top:22px; padding-top:18px; border-top:1px solid var(--line);">
-        <h2>Relatório individual para impressão</h2>
-        <div class="exc-row sans" style="margin-bottom:12px; flex-wrap:wrap; gap:10px;">
-          <span class="blk-label">Pessoa:</span>
-          <select id="contabPersonSelect" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
-            <option value="">— escolhe —</option>
-          </select>
-          <span class="blk-label">De:</span>
-          <input type="date" id="contabPersonStart" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
-          <span class="blk-label">até:</span>
-          <input type="date" id="contabPersonEnd" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
-          <button class="btn btn-ghost" id="printContabPersonBtn">Imprimir relatório desta pessoa</button>
-        </div>
-        <p class="note" style="margin-top:0;">Escolhe a pessoa e o período (já vem preenchido com o ciclo 20 → 21 do mês seguinte, mas podes mudar as datas) e imprime o relatório de contas só dela: taxas, horas do período, estimativas e o salário a pagar, pronto para assinar.</p>
-      </div>
       <div id="contabPersonPrintArea" style="display:none;"></div>
     </div>
   </div>
@@ -1829,15 +1819,10 @@ function isContabAccountant(){
   return authRole !== "gestor" && !!(viewer && viewer.canEditContab);
 }
 function renderContabilidadeAny(){
-  const block = document.getElementById("contabPersonReportBlock");
   if(isContabAccountant()){
     renderContabilidadeAccountant();
-    if(block) block.style.display = "";
-    populateContabPersonSelect();
-    contabPersonPrefill(false);
   } else {
     renderContabilidade();
-    if(block) block.style.display = "none";
   }
 }
 function renderContabilidadeAccountant(){
@@ -1976,8 +1961,7 @@ function renderContabilidadeAccountant(){
     saveBtn.addEventListener("click", ()=>{
       commitFinal();
       scheduleSave();
-      saveBtn.classList.add("saved");
-      setTimeout(()=> saveBtn.classList.remove("saved"), 900);
+      renderContabilidadeAccountant();
     });
     const printBtn = document.createElement("button");
     printBtn.type = "button";
@@ -1992,6 +1976,12 @@ function renderContabilidadeAccountant(){
     tdActions.appendChild(saveBtn);
     tdActions.appendChild(printBtn);
     tr.appendChild(tdActions);
+    // Linha fica mais clara enquanto falta preencher/gravar algo, e mais escura quando
+    // a taxa, a estimativa (ponto) e o salário a pagar já estão todos definidos e gravados.
+    const rowComplete = (!isNaN(rH) && rH > 0) &&
+      (estPontoVal !== undefined && estPontoVal !== null) &&
+      (finalVal !== undefined && finalVal !== null);
+    tr.classList.add(rowComplete ? "contab-row-complete" : "contab-row-incomplete");
     contabRowRefs.push({person, finalInp, commitFinal});
     tbody.appendChild(tr);
   });
@@ -2034,28 +2024,8 @@ document.getElementById("contabEnd").addEventListener("change", renderContabilid
 document.getElementById("contabResetBtn").addEventListener("click", ()=>{ contabPrefill(true); renderContabilidadeAny(); });
 document.getElementById("printContabBtn").addEventListener("click", ()=> printOnly("reportPanel"));
 // ---------- RELATÓRIO INDIVIDUAL DE CONTABILIDADE (só na vista da contabilista) ----------
-// Escolhe-se uma pessoa e um período (por omissão vem preenchido com o ciclo 20 → 21 do mês
-// seguinte, mas pode ser alterado à mão), e imprime-se uma página só com o relatório de contas
-// dessa pessoa: taxas, horas do período
-// (só semanas já bloqueadas/publicadas), estimativas e o salário a pagar — sem detalhe dia a dia.
-function populateContabPersonSelect(){
-  const sel = document.getElementById("contabPersonSelect");
-  if(!sel) return;
-  const prevValue = sel.value;
-  const staffList = state.staff.filter(p=>isSchedulableTipo(p.tipo));
-  sel.innerHTML = '<option value="">— escolhe —</option>' +
-    staffList.map(p=>'<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>').join("");
-  if(staffList.some(p=>p.id===prevValue)) sel.value = prevValue;
-}
-function contabPersonPrefill(force){
-  const si = document.getElementById("contabPersonStart"), ei = document.getElementById("contabPersonEnd");
-  if(!si || !ei) return;
-  if(force || !si.value || !ei.value){
-    const m = state.monthStart;
-    si.value = weekKey(new Date(m.getFullYear(), m.getMonth()-1, 20));
-    ei.value = weekKey(new Date(m.getFullYear(), m.getMonth(), 21));
-  }
-}
+// Já não há um seletor de pessoa/período à parte — cada linha da tabela tem os seus próprios
+// ícones de gravar/imprimir, e há um botão "Imprimir todos" para todas de uma vez.
 function computeContabPersonReport(person, start, end, periodKey){
   let hU=0, hF=0;
   for(let d = new Date(start); d <= end; d = addDays(d, 1)){
@@ -2149,19 +2119,6 @@ function printAllPersonReports(people, start, end){
   els.forEach((el,i)=>{ if(el) el.style.display = prevDisplay[i] || ""; });
   area.style.display = "none";
 }
-document.getElementById("printContabPersonBtn").addEventListener("click", ()=>{
-  const personId = document.getElementById("contabPersonSelect").value;
-  const startI = document.getElementById("contabPersonStart").value;
-  const endI = document.getElementById("contabPersonEnd").value;
-  if(!personId){ alert("Escolhe a pessoa antes de imprimir."); return; }
-  if(!startI || !endI){ alert("Escolhe as duas datas (de / até) antes de imprimir."); return; }
-  const person = staffById(personId);
-  if(!person){ alert("Pessoa não encontrada."); return; }
-  const start = new Date(startI + "T00:00:00");
-  const end = new Date(endI + "T00:00:00");
-  if(start > end){ alert("A data de início tem de ser anterior (ou igual) à data de fim."); return; }
-  printOnePersonReport(person, start, end);
-});
 // ---------- COPIA DE SEGURANCA ----------
 document.getElementById("backupBtn").addEventListener("click", ()=>{
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
