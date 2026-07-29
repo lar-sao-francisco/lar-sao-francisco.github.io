@@ -2303,6 +2303,7 @@ function renderExcelGrid(){
     });
     tr.appendChild(tdName);
     const canEditRow = isGestor || (gridViewer && Array.isArray(gridViewer.editHorarioIds) && gridViewer.editHorarioIds.includes(person.id));
+    const isPrincipalRow = person.principal === true;
     let monthHours = 0;
     dates.forEach((date, di)=>{
       const td = document.createElement("td");
@@ -2311,7 +2312,8 @@ function renderExcelGrid(){
       if(getHolidayLabel(dayIso)) td.classList.add("holiday-col");
       const dayLocked = !!state.lockedDays[dayIso];
       if(dayLocked) td.classList.add("locked-col");
-      const canSeeCell = canEditRow || dayLocked;
+      // O horário da principal (ex: Cátia) fica sempre visível para todos, mesmo com a semana por bloquear.
+      const canSeeCell = canEditRow || dayLocked || isPrincipalRow;
       const current = getPersonShiftForDate(person.id, date);
       if(current && canSeeCell){
         const curSt = shiftType(current);
