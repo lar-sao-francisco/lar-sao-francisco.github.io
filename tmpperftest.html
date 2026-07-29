@@ -1887,6 +1887,10 @@ function renderContabilidadeAny(){
 // Estado visual de uma linha da Contabilidade (trancada vs. em edição). Igual ao que o
 // render completo produz — está numa função só para os dois caminhos não divergirem.
 let contabFinalTotalTd = null;
+// Ao nível do módulo de propósito: se um campo desta tabela provocar um render novo,
+// os botões têm de encontrar as referências ATUAIS e não as da tabela já substituída —
+// caso contrário trancavam os dados mas pintavam linhas que já não estão no ecrã.
+let contabRowRefs = [];
 function applyContabRowLockState(ref){
   const locked = ref.isLocked;
   ref.inputs.forEach(inp=> inp.disabled = locked);
@@ -1936,7 +1940,7 @@ function renderContabilidadeAccountant(){
     '<th>Estimativa (ponto) €</th><th>Estimativa (app) €</th><th>Salário a pagar</th><th></th></tr></thead>';
   const tbody = document.createElement("tbody");
   let totU = 0, totF = 0, totFeitas = 0, totEstApp = 0, totEstPonto = 0, anyEstPonto = false, totFinal = 0;
-  const contabRowRefs = [];
+  contabRowRefs = [];
   state.staff.filter(pp=>isSchedulableTipo(pp.tipo) && !pp.principal).forEach(person=>{
     let hU=0, hF=0;
     for(let d = new Date(start); d <= end; d = addDays(d, 1)){
