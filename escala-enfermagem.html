@@ -264,7 +264,7 @@
     body::before, body::after{ display:none !important; }
     h1{ background:none; color:var(--sage-deep); -webkit-text-fill-color:initial; font-size:16px; }
     .brand-mark{ animation:none; }
-    .toolbar, .panel.no-print, .home-menu, .tabs, .back-link, #globalErrorBanner, #gestorBadge, #nurseBadge, #notifBar, #myStatsBar, #logoutSmallBar, .app-footer, #horarioFilterBar{ display:none !important; }
+    .toolbar, .panel.no-print, .no-print, .home-menu, .tabs, .back-link, #globalErrorBanner, #gestorBadge, #nurseBadge, #notifBar, #myStatsBar, #logoutSmallBar, .app-footer, #horarioFilterBar{ display:none !important; }
     .week-nav button{ display:none !important; }
     .wrap{ max-width:none; width:100%; padding:0; margin:0; }
     /* Letterhead: cabeçalho com traço de marca por baixo, mais espaço de respiração */
@@ -302,12 +302,12 @@
     #section-horario .day-lock, #section-horario .holiday-flag{ font-size:7px; }
     #section-horario .week-lock{ font-size:7px; padding:0; }
     #section-horario .legend{ display:none !important; }
-    #section-horario .print-footer, #section-dispequipa .print-footer{
+    #section-horario .print-footer, #section-dispequipa .print-footer, #section-relatorios .print-footer{
       display:flex !important; align-items:stretch; gap:56px; margin-top:20px; padding-top:14px;
       border-top:0.75px solid var(--line); page-break-inside:avoid;
       font-family:"Plus Jakarta Sans","Manrope",sans-serif;
     }
-    #section-dispequipa .print-footer{ justify-content:flex-end; }
+    #section-dispequipa .print-footer, #section-relatorios .print-footer{ justify-content:flex-end; }
     #section-dispequipa .disp-person-block{ page-break-inside:avoid; break-inside:avoid; page-break-after:always; break-after:page; }
     #section-dispequipa .disp-person-block:last-of-type{ page-break-after:auto; break-after:auto; }
     table.print-legend{ border-collapse:collapse; font-size:9px; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
@@ -316,14 +316,23 @@
     table.print-legend td.pl-code{ color:#1a1a1a; font-weight:700; text-align:center; }
     .exc-chip{ border:1px solid #999; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .dd-row{ page-break-inside:avoid; }
-    #section-horario .print-side, #section-dispequipa .print-side{ flex:1; display:flex; flex-direction:column; justify-content:space-between; font-size:11px; color:#333; min-width:220px; max-width:340px; }
-    #section-horario .obs-line, #section-dispequipa .obs-line{ display:flex; align-items:flex-end; gap:8px; margin-top:16px; }
-    #section-horario .obs-line-label, #section-dispequipa .obs-line-label{ white-space:nowrap; font-weight:600; color:var(--sage-deep); }
-    #section-horario .obs-line-fill, #section-dispequipa .obs-line-fill{ flex:1; border-bottom:1px solid #333; height:14px; }
-    #section-horario .sign-block, #section-dispequipa .sign-block{ text-align:center; align-self:flex-end; width:130px; margin-top:26px; }
-    #section-horario .sign-date, #section-dispequipa .sign-date{ display:block; font-size:9px; white-space:nowrap; margin-top:14px; margin-bottom:14px; color:#555; }
-    #section-horario .sign-fill, #section-dispequipa .sign-fill{ display:block; border-bottom:1px solid #333; height:10px; margin-bottom:4px; }
-    #section-horario .sign-caption, #section-dispequipa .sign-caption{ font-size:9.5px; font-weight:600; }
+    #section-horario .print-side, #section-dispequipa .print-side, #section-relatorios .print-side{ flex:1; display:flex; flex-direction:column; justify-content:space-between; font-size:11px; color:#333; min-width:220px; max-width:340px; }
+    #section-horario .obs-line, #section-dispequipa .obs-line, #section-relatorios .obs-line{ display:flex; align-items:flex-end; gap:8px; margin-top:16px; }
+    #section-horario .obs-line-label, #section-dispequipa .obs-line-label, #section-relatorios .obs-line-label{ white-space:nowrap; font-weight:600; color:var(--sage-deep); }
+    #section-horario .obs-line-fill, #section-dispequipa .obs-line-fill, #section-relatorios .obs-line-fill{ flex:1; border-bottom:1px solid #333; height:14px; }
+    #section-horario .sign-block, #section-dispequipa .sign-block, #section-relatorios .sign-block{ text-align:center; align-self:flex-end; width:130px; margin-top:26px; }
+    #section-horario .sign-date, #section-dispequipa .sign-date, #section-relatorios .sign-date{ display:block; font-size:9px; white-space:nowrap; margin-top:14px; margin-bottom:14px; color:#555; }
+    #section-horario .sign-fill, #section-dispequipa .sign-fill, #section-relatorios .sign-fill{ display:block; border-bottom:1px solid #333; height:10px; margin-bottom:4px; }
+    #section-horario .sign-caption, #section-dispequipa .sign-caption, #section-relatorios .sign-caption{ font-size:9.5px; font-weight:600; }
+    #section-relatorios .contab-person-report{ font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
+    #section-relatorios .contab-person-head{ display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+    #section-relatorios .contab-person-name{ font-size:17px; font-weight:700; color:var(--sage-deep); font-family:"Space Grotesk",sans-serif; }
+    #section-relatorios .contab-person-name .dot{ margin-right:7px; }
+    #section-relatorios table.contab-person-table{ border-collapse:collapse; width:100%; max-width:520px; font-size:12.5px; }
+    #section-relatorios table.contab-person-table td{ padding:7px 12px; border-bottom:0.75px solid var(--line); }
+    #section-relatorios table.contab-person-table td.cpt-label{ color:var(--ink-soft); font-weight:600; width:60%; }
+    #section-relatorios table.contab-person-table td.cpt-value{ text-align:right; font-weight:700; }
+    #section-relatorios table.contab-person-table tr.cpt-total td{ border-bottom:none; border-top:1.5px solid var(--sage-deep); padding-top:10px; font-size:14px; }
     .print-doc-footer{ display:block !important; margin-top:14px; font-size:8.5px; color:#8a978f; text-align:right; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
   }
 </style>
@@ -402,7 +411,7 @@
     </div>
     <div class="home-card" data-target="relatorios" id="reportCard">
       <span class="icon">📊</span>
-      <h3>Relatórios</h3>
+      <h3>Contabilidade</h3>
     </div>
   </div>
   <div id="logoutSmallBar" class="sans" style="display:none; margin:-10px 0 20px;">
@@ -550,6 +559,22 @@
       </div>
       <div class="grid-scroll" id="contabTableWrap"></div>
       <p class="note">As horas vêm dos turnos atribuídos na grelha do Horário dentro do período escolhido (descansos DC/DO e Férias não contam). "Útil" = segunda a sexta; fim de semana = sábado e domingo (feriados em dia de semana contam como útil). Clica num nome para ver só essa pessoa.</p>
+      <div id="contabPersonReportBlock" class="no-print" style="display:none; margin-top:22px; padding-top:18px; border-top:1px solid var(--line);">
+        <h2>Relatório individual para impressão</h2>
+        <div class="exc-row sans" style="margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+          <span class="blk-label">Pessoa:</span>
+          <select id="contabPersonSelect" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
+            <option value="">— escolhe —</option>
+          </select>
+          <span class="blk-label">De:</span>
+          <input type="date" id="contabPersonStart" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
+          <span class="blk-label">até:</span>
+          <input type="date" id="contabPersonEnd" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
+          <button class="btn btn-ghost" id="printContabPersonBtn">Imprimir relatório desta pessoa</button>
+        </div>
+        <p class="note" style="margin-top:0;">Escolhe a pessoa e o período (sem datas por omissão — escolhes sempre à mão) e imprime o relatório de contas só dela: taxas, horas do período, estimativas e o salário a pagar, pronto para assinar.</p>
+      </div>
+      <div id="contabPersonPrintArea" style="display:none;"></div>
     </div>
   </div>
   <!-- SECTION: CONFIGURAÇÕES -->
@@ -1798,8 +1823,15 @@ function isContabAccountant(){
   return authRole !== "gestor" && !!(viewer && viewer.canEditContab);
 }
 function renderContabilidadeAny(){
-  if(isContabAccountant()) renderContabilidadeAccountant();
-  else renderContabilidade();
+  const block = document.getElementById("contabPersonReportBlock");
+  if(isContabAccountant()){
+    renderContabilidadeAccountant();
+    if(block) block.style.display = "";
+    populateContabPersonSelect();
+  } else {
+    renderContabilidade();
+    if(block) block.style.display = "none";
+  }
 }
 function renderContabilidadeAccountant(){
   contabPrefill(false);
@@ -1947,6 +1979,97 @@ document.getElementById("contabStart").addEventListener("change", renderContabil
 document.getElementById("contabEnd").addEventListener("change", renderContabilidadeAny);
 document.getElementById("contabResetBtn").addEventListener("click", ()=>{ contabPrefill(true); renderContabilidadeAny(); });
 document.getElementById("printContabBtn").addEventListener("click", ()=> printOnly("reportPanel"));
+// ---------- RELATÓRIO INDIVIDUAL DE CONTABILIDADE (só na vista da contabilista) ----------
+// Escolhe-se uma pessoa e um período (sem datas por omissão — a pessoa escolhe sempre à mão),
+// e imprime-se uma página só com o relatório de contas dessa pessoa: taxas, horas do período
+// (só semanas já bloqueadas/publicadas), estimativas e o salário a pagar — sem detalhe dia a dia.
+function populateContabPersonSelect(){
+  const sel = document.getElementById("contabPersonSelect");
+  if(!sel) return;
+  const prevValue = sel.value;
+  const staffList = state.staff.filter(p=>isSchedulableTipo(p.tipo));
+  sel.innerHTML = '<option value="">— escolhe —</option>' +
+    staffList.map(p=>'<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>').join("");
+  if(staffList.some(p=>p.id===prevValue)) sel.value = prevValue;
+}
+function computeContabPersonReport(person, start, end, periodKey){
+  let hU=0, hF=0;
+  for(let d = new Date(start); d <= end; d = addDays(d, 1)){
+    if(!state.lockedDays[weekKey(d)]) continue;
+    const code = getPersonShiftForDate(person.id, d);
+    if(!code) continue;
+    const h = effectiveShiftHours(person, code);
+    if(h <= 0) continue;
+    if(isWeekendDay(d)) hF += h; else hU += h;
+  }
+  const feitas = hU + hF;
+  const rH = (person.rateHora === undefined || person.rateHora === null || person.rateHora === "") ? NaN : parseFloat(person.rateHora);
+  const rF = (person.rateFds === undefined || person.rateFds === null || person.rateFds === "") ? rH : parseFloat(person.rateFds);
+  let estApp = null;
+  if(!isNaN(rH) && rH > 0) estApp = hU*rH + hF*(isNaN(rF) ? rH : rF);
+  if(!state.estimativaPonto) state.estimativaPonto = {};
+  if(!state.salarioFinal) state.salarioFinal = {};
+  const pKey = person.id + "|" + periodKey;
+  const estPonto = state.estimativaPonto[pKey] !== undefined ? state.estimativaPonto[pKey] : null;
+  const salarioFinal = state.salarioFinal[pKey] !== undefined ? state.salarioFinal[pKey] : estApp;
+  return { hU, hF, feitas, rH, rF, estApp, estPonto, salarioFinal };
+}
+function buildContabPersonReportHtml(person, start, end, r){
+  const fmtDF = d => d.toLocaleDateString("pt-PT", {day:"2-digit", month:"2-digit", year:"numeric"});
+  const fmtE = v => (v === null || v === undefined || isNaN(v)) ? "—" : v.toFixed(2).replace(".", ",") + " €";
+  const rHtxt = isNaN(r.rH) ? "—" : r.rH.toFixed(2).replace(".", ",") + " €/h";
+  const rFtxt = isNaN(r.rF) ? "—" : r.rF.toFixed(2).replace(".", ",") + " €/h";
+  const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
+  const tipoLabels = {efetivo:"Efetivo", rv:"Recibo Verde", rv_gestao:"Recibo Verde / Gestão", gestao:"Gestão", guest:"Guest"};
+  const row = (label, value) => '<tr><td class="cpt-label">' + esc(label) + '</td><td class="cpt-value">' + value + '</td></tr>';
+  let html = '<div class="contab-person-report">';
+  html += '<div class="contab-person-head">' +
+    '<span class="contab-person-name"><span class="dot ' + dotClass + '"></span>' + esc(person.nome) + '</span>' +
+    '<span class="blk-label">' + esc(tipoLabels[person.tipo] || person.tipo) + ' · Período: ' + fmtDF(start) + ' a ' + fmtDF(end) + '</span>' +
+  '</div>';
+  html += '<table class="contab-person-table"><tbody>';
+  html += row("€/hora em dias úteis", rHtxt);
+  html += row("€/hora ao fim de semana", rFtxt);
+  html += row("Horas na semana", r.hU + "h");
+  html += row("Horas ao fim de semana", r.hF + "h");
+  html += row("Horas feitas (total)", r.feitas + "h");
+  html += row("Estimativa (ponto)", fmtE(r.estPonto));
+  html += row("Estimativa (app)", fmtE(r.estApp));
+  html += '<tr class="cpt-total"><td class="cpt-label">Salário a pagar</td><td class="cpt-value">' + fmtE(r.salarioFinal) + '</td></tr>';
+  html += '</tbody></table></div>';
+  return html;
+}
+document.getElementById("printContabPersonBtn").addEventListener("click", ()=>{
+  const personId = document.getElementById("contabPersonSelect").value;
+  const startI = document.getElementById("contabPersonStart").value;
+  const endI = document.getElementById("contabPersonEnd").value;
+  if(!personId){ alert("Escolhe a pessoa antes de imprimir."); return; }
+  if(!startI || !endI){ alert("Escolhe as duas datas (de / até) antes de imprimir."); return; }
+  const person = staffById(personId);
+  if(!person){ alert("Pessoa não encontrada."); return; }
+  const start = new Date(startI + "T00:00:00");
+  const end = new Date(endI + "T00:00:00");
+  if(start > end){ alert("A data de início tem de ser anterior (ou igual) à data de fim."); return; }
+  const periodKey = weekKey(start) + "_" + weekKey(end);
+  const r = computeContabPersonReport(person, start, end, periodKey);
+  const area = document.getElementById("contabPersonPrintArea");
+  area.innerHTML = buildContabPersonReportHtml(person, start, end, r) +
+    '<div class="print-footer">' +
+      '<div class="print-side">' +
+        '<div class="obs-line"><span class="obs-line-label">Obs:</span><span class="obs-line-fill"></span></div>' +
+        '<div class="sign-block"><span class="sign-date">Data: ____ / ____ / ________</span><span class="sign-fill"></span><span class="sign-caption">A direção</span></div>' +
+      '</div>' +
+    '</div>';
+  const tableWrap = document.getElementById("contabTableWrap");
+  const dateRow = document.querySelector("#contabPanel > .exc-row");
+  const els = [tableWrap, dateRow];
+  const prevDisplay = els.map(el => el ? el.style.display : null);
+  els.forEach(el=>{ if(el) el.style.display = "none"; });
+  area.style.display = "block";
+  window.print();
+  els.forEach((el,i)=>{ if(el) el.style.display = prevDisplay[i] || ""; });
+  area.style.display = "none";
+});
 // ---------- COPIA DE SEGURANCA ----------
 document.getElementById("backupBtn").addEventListener("click", ()=>{
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
