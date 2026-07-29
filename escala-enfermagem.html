@@ -310,13 +310,6 @@
     #section-dispequipa .print-footer{ justify-content:flex-end; }
     #section-dispequipa .disp-person-block{ page-break-inside:avoid; break-inside:avoid; page-break-after:always; break-after:page; }
     #section-dispequipa .disp-person-block:last-of-type{ page-break-after:auto; break-after:auto; }
-    #horarioPrintPeriodWrap .horario-person-block{ page-break-after:always; break-after:page; margin-bottom:6px; }
-    #horarioPrintPeriodWrap .horario-person-block:last-of-type{ page-break-after:auto; break-after:auto; }
-    .horario-person-head{ display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--line); }
-    .horario-person-name{ font-size:16px; font-weight:700; color:var(--sage-deep); font-family:"Space Grotesk",sans-serif; }
-    .horario-person-name .dot{ margin-right:7px; }
-    .horario-person-table thead th{ background:#EAF6EF; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    .horario-person-table tfoot td{ background:#F5FBF7; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     table.print-legend{ border-collapse:collapse; font-size:9px; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
     table.print-legend th, table.print-legend td{ border:0.5px solid #c8d3ce; padding:3px 11px; text-align:left; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     table.print-legend thead th{ text-align:center; font-size:11px; font-weight:700; background:var(--sage-deep); color:#fff; font-family:"Space Grotesk",sans-serif; letter-spacing:0.3px; padding:5px 10px; }
@@ -441,19 +434,12 @@
     <div class="toolbar">
       <button class="btn btn-ghost" id="printBtn">Imprimir / Exportar PDF</button>
       <span class="blk-label sans" style="display:flex; align-items:center; gap:8px;">
-        Período:
+        Imprimir período:
         <input type="date" id="horarioPrintStart" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
         <span>até</span>
         <input type="date" id="horarioPrintEnd" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
-        <button class="exc-add-btn" id="horarioPrintResetBtn" title="Repõe o período padrão: dia 20 de um mês ao dia 21 do mês seguinte.">Período 20 → 21</button>
       </span>
-      <span class="blk-label sans" style="display:flex; align-items:center; gap:8px;">
-        Enfermeiro(a):
-        <select id="horarioPrintPersonSelect" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
-          <option value="">Toda a equipa (uma página por pessoa)</option>
-        </select>
-      </span>
-      <button class="btn btn-ghost" id="printHorarioRangeBtn" title="Imprime um documento oficial para este período: uma página por enfermeiro(a), com o horário dia a dia, observações, data e assinatura da direção.">Imprimir documento do período</button>
+      <button class="btn btn-ghost" id="printHorarioRangeBtn" title="Escolhe as duas datas e imprime esse período, mesmo que atravesse vários meses.">Imprimir período escolhido</button>
       <button class="btn btn-ghost" id="autoFillBtn" style="display:none;" title="Preenche as vagas em aberto do mês visível, segundo as disponibilidades submetidas e as regras da escala. Não mexe em semanas bloqueadas nem em células já preenchidas.">🎲 Preencher automaticamente</button>
       <button class="btn btn-ghost" id="undoFillBtn" style="display:none;" title="Repõe exatamente o que estava antes do último preenchimento automático.">↩️ Desfazer preenchimento</button>
       <span class="save-status" id="saveStatus"></span>
@@ -471,7 +457,13 @@
           <tfoot id="excelFoot"></tfoot>
         </table>
       </div>
-      <div id="horarioPrintPeriodWrap" style="display:none;"></div>
+      <div class="grid-scroll" id="horarioPrintRangeWrap" style="display:none;">
+        <table class="excel" id="horarioPrintRangeTable">
+          <thead id="horarioPrintRangeHead"></thead>
+          <tbody id="horarioPrintRangeBody"></tbody>
+          <tfoot id="horarioPrintRangeFoot"></tfoot>
+        </table>
+      </div>
       <div class="legend" id="legend"></div>
       <div class="print-footer">
         <div class="print-legend-table" id="printLegendTable"></div>
@@ -2385,7 +2377,9 @@ function representativeHoursForCode(code){
   if(!holder) holder = state.staff.find(p=> p.allowedWeekend && p.allowedWeekend.includes(code));
   return holder ? effectiveShiftHours(holder, code) : shiftHours(code);
 }
-function legendTableHtml(){
+function renderPrintLegendTable(){
+  const wrap = document.getElementById("printLegendTable");
+  if(!wrap) return;
   const fmtHours = h => h.toFixed(1).replace(".", ",");
   const fmtHorario = st => (st.blocks && st.blocks.length)
     ? st.blocks.map(b=> b[0] + "-" + b[1] + "H").join(" + ")
@@ -2399,12 +2393,7 @@ function legendTableHtml(){
     '</tr>';
   });
   html += '</tbody></table>';
-  return html;
-}
-function renderPrintLegendTable(){
-  const wrap = document.getElementById("printLegendTable");
-  if(!wrap) return;
-  wrap.innerHTML = legendTableHtml();
+  wrap.innerHTML = html;
 }
 function renderExcelGrid(){
   const gridScroller = document.querySelector("#section-horario .grid-scroll");
@@ -2415,8 +2404,6 @@ function renderExcelGrid(){
   const monthStart = state.monthStart;
   const label = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   document.getElementById("monthLabel").textContent = label;
-  horarioPrintPrefill(false);
-  populateHorarioPrintPersonSelect();
   const autoFillBtnEl = document.getElementById("autoFillBtn");
   if(autoFillBtnEl) autoFillBtnEl.style.display = isGestor ? "" : "none";
   const undoFillBtnEl = document.getElementById("undoFillBtn");
@@ -2643,154 +2630,156 @@ function renderExcelGrid(){
   foot.appendChild(trf);
   if(gridScroller){ gridScroller.scrollLeft = keepLeft; gridScroller.scrollTop = keepTop; }
 }
-// ---------- IMPRESSÃO DO DOCUMENTO OFICIAL DO PERÍODO (uma página por enfermeiro(a)) ----------
-// Período por omissão: dia 20 de um mês ao dia 21 do mês seguinte (ciclo pedido pela direção).
-function horarioPrintPrefill(force){
-  const si = document.getElementById("horarioPrintStart"), ei = document.getElementById("horarioPrintEnd");
-  if(!si || !ei) return;
-  if(force || !si.value || !ei.value){
-    const m = state.monthStart;
-    si.value = weekKey(new Date(m.getFullYear(), m.getMonth()-1, 20));
-    ei.value = weekKey(new Date(m.getFullYear(), m.getMonth(), 21));
-  }
-}
-function populateHorarioPrintPersonSelect(){
-  const sel = document.getElementById("horarioPrintPersonSelect");
-  if(!sel) return;
-  const prevValue = sel.value;
-  const staffList = state.staff.filter(p=>isSchedulableTipo(p.tipo));
-  sel.innerHTML = '<option value="">Toda a equipa (uma página por pessoa)</option>' +
-    staffList.map(p=>'<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>').join("");
-  if(staffList.some(p=>p.id===prevValue)) sel.value = prevValue;
-}
-function fmtDateFull(d){ return d.toLocaleDateString("pt-PT", {day:"2-digit", month:"2-digit", year:"numeric"}); }
-function fmtTurnoHorario(st){
-  if(!st || !st.blocks || !st.blocks.length) return "—";
-  return st.blocks.map(b=> b[0] + "-" + b[1] + "h").join(" + ");
-}
-// Constrói a página de uma pessoa: cabeçalho com nome/tipo/período, tabela dia a dia
-// (respeita a mesma regra de visibilidade da grelha — semanas por publicar ficam ocultas
-// para quem não é gestão, exceto a linha da principal), legenda, Obs, data e assinatura.
-function buildHorarioPersonBlock(person, dates, isGestor, gridViewer, periodLabel){
-  const block = document.createElement("div");
-  block.className = "horario-person-block";
-  const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
-  const tipoLabels = {efetivo:"Efetivo", rv:"Recibo Verde", rv_gestao:"Recibo Verde / Gestão", gestao:"Gestão", guest:"Guest"};
-  const head = document.createElement("div");
-  head.className = "sans horario-person-head";
-  head.innerHTML =
-    '<span class="horario-person-name"><span class="dot ' + dotClass + '"></span>' + esc(person.nome) + '</span>' +
-    '<span class="blk-label">' + esc(tipoLabels[person.tipo] || person.tipo) + ' · Período: ' + periodLabel + '</span>';
-  block.appendChild(head);
-  const canEditRow = isGestor || (gridViewer && Array.isArray(gridViewer.editHorarioIds) && gridViewer.editHorarioIds.includes(person.id));
-  const isPrincipalRow = person.principal === true;
-  const table = document.createElement("table");
-  table.className = "excel sans horario-person-table";
-  table.style.width = "100%";
-  table.innerHTML = '<thead><tr><th>Data</th><th>Dia</th><th>Turno</th><th>Horário</th><th>Horas</th></tr></thead>';
-  const tbody = document.createElement("tbody");
-  let hU = 0, hF = 0;
+// ---------- IMPRESSÃO DE PERÍODO PERSONALIZADO (ex: 21 de junho a 22 de julho) ----------
+// Gera uma tabela só para impressão, igual em estilo à grelha do mês, mas para um intervalo
+// de datas escolhido à mão — pode atravessar vários meses. Usa sempre a vista "leitura"
+// (sem <select>), com a mesma regra de visibilidade da grelha normal (semanas por publicar
+// ficam escondidas para quem não é gestão, exceto o horário da principal).
+function buildHorarioPrintRangeTable(start, end){
+  const isGestor = authRole === "gestor";
+  const gridViewer = staffById(authNurseId);
+  const dates = [];
+  for(let d = new Date(start); d <= end; d = addDays(d, 1)) dates.push(new Date(d));
+  const weekGroups = [];
   dates.forEach(date=>{
-    const dayIso = weekKey(date);
-    const dayLocked = !!state.lockedDays[dayIso];
-    const canSeeCell = canEditRow || dayLocked || isPrincipalRow;
-    const holidayName = getHolidayLabel(dayIso);
-    const current = getPersonShiftForDate(person.id, date);
-    const tr = document.createElement("tr");
-    if(isWeekendDay(date)) tr.style.background = "var(--weekend-bg)";
-    const tdData = document.createElement("td");
-    tdData.style.cssText = "padding:6px 10px; white-space:nowrap;";
-    tdData.textContent = fmtDateFull(date);
-    tr.appendChild(tdData);
-    const tdDia = document.createElement("td");
-    tdDia.style.cssText = "padding:6px 10px; white-space:nowrap;";
-    tdDia.textContent = DAYS[dowIndex(date)] + (holidayName ? " 🎉" : "");
-    if(holidayName) tdDia.title = "Feriado: " + holidayName;
-    tr.appendChild(tdDia);
-    const tdTurno = document.createElement("td");
-    tdTurno.style.cssText = "padding:6px 10px; font-weight:600;";
-    const tdHorario = document.createElement("td");
-    tdHorario.style.cssText = "padding:6px 10px;";
-    const tdHoras = document.createElement("td");
-    tdHoras.style.cssText = "padding:6px 10px; font-weight:600;";
-    if(!canSeeCell){
-      tdTurno.textContent = "Por publicar";
-      tdTurno.style.cssText += "color:var(--ink-soft); font-style:italic; font-weight:400;";
-      tdHorario.textContent = "—";
-      tdHoras.textContent = "—";
-    } else if(current){
-      const st = shiftType(current);
-      tdTurno.innerHTML = '<span style="display:inline-block; width:9px; height:9px; border-radius:3px; background:' + (st ? st.color : '#ccc') + '; margin-right:6px;"></span>' + esc(current) + (st ? ' — ' + esc(st.label) : '');
-      tdHorario.textContent = fmtTurnoHorario(st);
-      const h = effectiveShiftHours(person, current);
-      tdHoras.textContent = h + "h";
-      if(isWeekendDay(date)) hF += h; else hU += h;
-    } else {
-      tdTurno.textContent = "—";
-      tdTurno.style.cssText += "color:var(--ink-soft); font-weight:400;";
-      tdHorario.textContent = "—";
-      tdHoras.textContent = "—";
+    const wKey = weekKey(startOfWeek(date));
+    let group = weekGroups[weekGroups.length-1];
+    if(!group || group.wKey !== wKey){
+      group = { wKey, dates: [] };
+      weekGroups.push(group);
     }
-    tr.appendChild(tdTurno); tr.appendChild(tdHorario); tr.appendChild(tdHoras);
-    tbody.appendChild(tr);
+    group.dates.push(date);
   });
-  table.appendChild(tbody);
-  const tfoot = document.createElement("tfoot");
-  tfoot.innerHTML = '<tr><td colspan="4" style="font-weight:700; padding:6px 10px;">Total do período — semana: ' + hU + 'h · fim de semana: ' + hF + 'h</td><td style="font-weight:700; padding:6px 10px;">' + (hU+hF) + 'h</td></tr>';
-  table.appendChild(tfoot);
-  block.appendChild(table);
-  const footer = document.createElement("div");
-  footer.className = "print-footer";
-  footer.innerHTML =
-    '<div class="print-legend-table">' + legendTableHtml() + '</div>' +
-    '<div class="print-side">' +
-      '<div class="obs-line">' +
-        '<span class="obs-line-label">Obs:</span>' +
-        '<span class="obs-line-fill"></span>' +
-      '</div>' +
-      '<div class="sign-block">' +
-        '<span class="sign-date">Data: ____ / ____ / ________</span>' +
-        '<span class="sign-fill"></span>' +
-        '<span class="sign-caption">A direção</span>' +
-      '</div>' +
-    '</div>';
-  block.appendChild(footer);
-  return block;
+  const head = document.getElementById("horarioPrintRangeHead");
+  head.innerHTML = "";
+  const trWeek = document.createElement("tr");
+  const thNameSpacer = document.createElement("th");
+  thNameSpacer.className = "name-col";
+  trWeek.appendChild(thNameSpacer);
+  weekGroups.forEach(group=>{
+    const th = document.createElement("th");
+    th.colSpan = group.dates.length;
+    const allLocked = group.dates.every(d=> state.lockedDays[weekKey(d)]);
+    const first = group.dates[0], last = group.dates[group.dates.length-1];
+    const rangeLabel = fmtDate(first) + "–" + fmtDate(last);
+    th.innerHTML = `<span class="week-lock">${allLocked?'🔒 ':''}${rangeLabel}</span>`;
+    trWeek.appendChild(th);
+  });
+  const thHoursSpacer = document.createElement("th");
+  trWeek.appendChild(thHoursSpacer);
+  head.appendChild(trWeek);
+  const trh = document.createElement("tr");
+  const thName = document.createElement("th");
+  thName.className = "name-col";
+  thName.textContent = "Enfermeiro(a)";
+  trh.appendChild(thName);
+  dates.forEach(date=>{
+    const th = document.createElement("th");
+    if(isWeekendDay(date)) th.classList.add("weekend-col");
+    const iso = weekKey(date);
+    const locked = !!state.lockedDays[iso];
+    if(locked) th.classList.add("locked-col");
+    const holidayName = getHolidayLabel(iso);
+    if(holidayName) th.classList.add("holiday-col");
+    const lockHtml = locked ? `<span class="day-lock locked" title="Dia bloqueado (faz parte de uma semana bloqueada)">🔒</span>` : "";
+    const holidayHtml = holidayName ? `<span class="holiday-flag" title="Feriado: ${esc(holidayName)}">🎉</span>` : "";
+    th.innerHTML = `<div class="day-head"><span class="dow">${DAYS_SHORT[dowIndex(date)]}</span><span class="num">${date.getDate()}/${date.getMonth()+1}</span>${lockHtml}${holidayHtml}</div>`;
+    trh.appendChild(th);
+  });
+  const thHours = document.createElement("th");
+  thHours.innerHTML = `<div class="day-head"><span class="dow">Total</span><span class="num">Horas</span></div>`;
+  trh.appendChild(thHours);
+  head.appendChild(trh);
+  const body = document.getElementById("horarioPrintRangeBody");
+  body.innerHTML = "";
+  const dailyCounts = dates.map(()=>0);
+  state.staff.filter(p=>isSchedulableTipo(p.tipo)).forEach(person=>{
+    dates.forEach((date, di)=>{
+      const c = getPersonShiftForDate(person.id, date);
+      if(c){ const st = shiftType(c); if(!st || !st.isRest) dailyCounts[di]++; }
+    });
+  });
+  state.staff.filter(p=>isSchedulableTipo(p.tipo)).filter(p=> !horarioFilterId || p.id===horarioFilterId).forEach(person=>{
+    const tr = document.createElement("tr");
+    const tdName = document.createElement("td");
+    tdName.className = "name-col";
+    const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
+    tdName.innerHTML = `<span class="name-cell-inner"><span class="dot ${dotClass}"></span>${esc(person.nome)}</span>`;
+    tr.appendChild(tdName);
+    const canEditRow = isGestor || (gridViewer && Array.isArray(gridViewer.editHorarioIds) && gridViewer.editHorarioIds.includes(person.id));
+    const isPrincipalRow = person.principal === true;
+    let periodHours = 0;
+    dates.forEach(date=>{
+      const td = document.createElement("td");
+      if(isWeekendDay(date)) td.classList.add("weekend-col");
+      const dayIso = weekKey(date);
+      if(getHolidayLabel(dayIso)) td.classList.add("holiday-col");
+      const dayLocked = !!state.lockedDays[dayIso];
+      if(dayLocked) td.classList.add("locked-col");
+      const canSeeCell = canEditRow || dayLocked || isPrincipalRow;
+      const current = getPersonShiftForDate(person.id, date);
+      const span = document.createElement("span");
+      span.className = "sans";
+      span.style.cssText = "display:inline-block; min-width:40px; padding:3px 6px; border-radius:5px; font-size:11.5px; font-weight:700; text-align:center;";
+      if(!canSeeCell){
+        span.style.color = "var(--ink-soft)";
+        span.style.opacity = ".5";
+        span.textContent = "·";
+      } else if(current){
+        periodHours += effectiveShiftHours(person, current);
+        const st = shiftType(current);
+        span.style.background = st.color;
+        span.style.color = "white";
+        span.textContent = current;
+      } else {
+        span.textContent = "–";
+        span.style.color = "var(--ink-soft)";
+      }
+      td.appendChild(span);
+      tr.appendChild(td);
+    });
+    const tdHours = document.createElement("td");
+    tdHours.className = "sans";
+    tdHours.style.fontWeight = "700";
+    tdHours.textContent = periodHours + "h";
+    tr.appendChild(tdHours);
+    body.appendChild(tr);
+  });
+  const foot = document.getElementById("horarioPrintRangeFoot");
+  foot.innerHTML = "";
+  const trf = document.createElement("tr");
+  const tdLbl = document.createElement("td");
+  tdLbl.className = "name-col";
+  tdLbl.textContent = "Nº de enfermeiros";
+  trf.appendChild(tdLbl);
+  dates.forEach((date,di)=>{
+    const td = document.createElement("td");
+    if(isWeekendDay(date)) td.classList.add("weekend-col");
+    td.style.fontWeight = "700";
+    const dIsoFoot = weekKey(date);
+    const dLockedFoot = !!state.lockedDays[dIsoFoot];
+    td.textContent = (isGestor || dLockedFoot) ? dailyCounts[di] : "·";
+    trf.appendChild(td);
+  });
+  const tdCorner = document.createElement("td");
+  trf.appendChild(tdCorner);
+  foot.appendChild(trf);
 }
-document.getElementById("horarioPrintResetBtn").addEventListener("click", ()=> horarioPrintPrefill(true));
 document.getElementById("printHorarioRangeBtn").addEventListener("click", ()=>{
-  horarioPrintPrefill(false);
   const startI = document.getElementById("horarioPrintStart").value;
   const endI = document.getElementById("horarioPrintEnd").value;
-  if(!startI || !endI){ alert("Escolhe as duas datas (de / até) antes de imprimir o documento do período."); return; }
+  if(!startI || !endI){ alert("Escolhe as duas datas (de / até) antes de imprimir o período."); return; }
   const start = new Date(startI + "T00:00:00");
   const end = new Date(endI + "T00:00:00");
   if(start > end){ alert("A data de início tem de ser anterior (ou igual) à data de fim."); return; }
-  const dates = [];
-  for(let d = new Date(start); d <= end; d = addDays(d, 1)) dates.push(new Date(d));
-  const periodLabel = fmtDateFull(start) + " a " + fmtDateFull(end);
-  const isGestor = authRole === "gestor";
-  const gridViewer = staffById(authNurseId);
-  const personId = document.getElementById("horarioPrintPersonSelect").value;
-  const staffList = state.staff.filter(p=>isSchedulableTipo(p.tipo)).filter(p=> !personId || p.id===personId);
-  if(staffList.length === 0){ alert("Não há ninguém para imprimir com esta seleção."); return; }
-  const wrap = document.getElementById("horarioPrintPeriodWrap");
-  wrap.innerHTML = "";
-  staffList.forEach(person=>{
-    wrap.appendChild(buildHorarioPersonBlock(person, dates, isGestor, gridViewer, periodLabel));
-  });
-  const normalGrid = document.querySelector("#section-horario .grid-scroll");
-  const staticFooter = document.querySelector("#section-horario .panel > .print-footer");
-  const legend = document.getElementById("legend");
+  buildHorarioPrintRangeTable(start, end);
+  const normalGrid = document.querySelector("#section-horario .grid-scroll:not(#horarioPrintRangeWrap)");
+  const rangeWrap = document.getElementById("horarioPrintRangeWrap");
   if(normalGrid) normalGrid.style.display = "none";
-  if(staticFooter) staticFooter.style.display = "none";
-  if(legend) legend.style.display = "none";
-  wrap.style.display = "block";
+  rangeWrap.style.display = "";
   window.print();
   if(normalGrid) normalGrid.style.display = "";
-  if(staticFooter) staticFooter.style.display = "";
-  if(legend) legend.style.display = "";
-  wrap.style.display = "none";
+  rangeWrap.style.display = "none";
 });
 // ---------- AUTO GENERATE (whole visible month, respeita máximo semanal) ----------
 function autoGenerate(){
