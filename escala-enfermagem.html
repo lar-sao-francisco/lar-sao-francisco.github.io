@@ -433,6 +433,13 @@
     <span class="back-link" data-back>← Voltar ao início</span>
     <div class="toolbar">
       <button class="btn btn-ghost" id="printBtn">Imprimir / Exportar PDF</button>
+      <span class="blk-label sans" style="display:flex; align-items:center; gap:8px;">
+        Imprimir período:
+        <input type="date" id="horarioPrintStart" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
+        <span>até</span>
+        <input type="date" id="horarioPrintEnd" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
+      </span>
+      <button class="btn btn-ghost" id="printHorarioRangeBtn" title="Escolhe as duas datas e imprime esse período, mesmo que atravesse vários meses.">Imprimir período escolhido</button>
       <button class="btn btn-ghost" id="autoFillBtn" style="display:none;" title="Preenche as vagas em aberto do mês visível, segundo as disponibilidades submetidas e as regras da escala. Não mexe em semanas bloqueadas nem em células já preenchidas.">🎲 Preencher automaticamente</button>
       <button class="btn btn-ghost" id="undoFillBtn" style="display:none;" title="Repõe exatamente o que estava antes do último preenchimento automático.">↩️ Desfazer preenchimento</button>
       <span class="save-status" id="saveStatus"></span>
@@ -448,6 +455,13 @@
           <thead id="excelHead"></thead>
           <tbody id="excelBody"></tbody>
           <tfoot id="excelFoot"></tfoot>
+        </table>
+      </div>
+      <div class="grid-scroll" id="horarioPrintRangeWrap" style="display:none;">
+        <table class="excel" id="horarioPrintRangeTable">
+          <thead id="horarioPrintRangeHead"></thead>
+          <tbody id="horarioPrintRangeBody"></tbody>
+          <tfoot id="horarioPrintRangeFoot"></tfoot>
         </table>
       </div>
       <div class="legend" id="legend"></div>
@@ -1806,7 +1820,7 @@ function renderContabilidadeAccountant(){
   table.innerHTML = '<thead><tr><th class="name-col">Pessoa</th><th>€/h útil</th><th>€/h f.s.</th>' +
     '<th style="' + narrowTdCss + '">H semana</th><th style="' + narrowTdCss + '">H fim de semana</th>' +
     '<th>Horas feitas</th>' +
-    '<th>Estimativa (ponto)</th><th>Estimativa (app)</th><th>Salário a pagar</th></tr></thead>';
+    '<th>Estimativa (ponto) €</th><th>Estimativa (app) €</th><th>Salário a pagar</th></tr></thead>';
   const tbody = document.createElement("tbody");
   let totU = 0, totF = 0, totFeitas = 0, totEstApp = 0, totEstPonto = 0, anyEstPonto = false, totFinal = 0;
   state.staff.filter(pp=>isSchedulableTipo(pp.tipo)).forEach(person=>{
@@ -2616,6 +2630,157 @@ function renderExcelGrid(){
   foot.appendChild(trf);
   if(gridScroller){ gridScroller.scrollLeft = keepLeft; gridScroller.scrollTop = keepTop; }
 }
+// ---------- IMPRESSÃO DE PERÍODO PERSONALIZADO (ex: 21 de junho a 22 de julho) ----------
+// Gera uma tabela só para impressão, igual em estilo à grelha do mês, mas para um intervalo
+// de datas escolhido à mão — pode atravessar vários meses. Usa sempre a vista "leitura"
+// (sem <select>), com a mesma regra de visibilidade da grelha normal (semanas por publicar
+// ficam escondidas para quem não é gestão, exceto o horário da principal).
+function buildHorarioPrintRangeTable(start, end){
+  const isGestor = authRole === "gestor";
+  const gridViewer = staffById(authNurseId);
+  const dates = [];
+  for(let d = new Date(start); d <= end; d = addDays(d, 1)) dates.push(new Date(d));
+  const weekGroups = [];
+  dates.forEach(date=>{
+    const wKey = weekKey(startOfWeek(date));
+    let group = weekGroups[weekGroups.length-1];
+    if(!group || group.wKey !== wKey){
+      group = { wKey, dates: [] };
+      weekGroups.push(group);
+    }
+    group.dates.push(date);
+  });
+  const head = document.getElementById("horarioPrintRangeHead");
+  head.innerHTML = "";
+  const trWeek = document.createElement("tr");
+  const thNameSpacer = document.createElement("th");
+  thNameSpacer.className = "name-col";
+  trWeek.appendChild(thNameSpacer);
+  weekGroups.forEach(group=>{
+    const th = document.createElement("th");
+    th.colSpan = group.dates.length;
+    const allLocked = group.dates.every(d=> state.lockedDays[weekKey(d)]);
+    const first = group.dates[0], last = group.dates[group.dates.length-1];
+    const rangeLabel = fmtDate(first) + "–" + fmtDate(last);
+    th.innerHTML = `<span class="week-lock">${allLocked?'🔒 ':''}${rangeLabel}</span>`;
+    trWeek.appendChild(th);
+  });
+  const thHoursSpacer = document.createElement("th");
+  trWeek.appendChild(thHoursSpacer);
+  head.appendChild(trWeek);
+  const trh = document.createElement("tr");
+  const thName = document.createElement("th");
+  thName.className = "name-col";
+  thName.textContent = "Enfermeiro(a)";
+  trh.appendChild(thName);
+  dates.forEach(date=>{
+    const th = document.createElement("th");
+    if(isWeekendDay(date)) th.classList.add("weekend-col");
+    const iso = weekKey(date);
+    const locked = !!state.lockedDays[iso];
+    if(locked) th.classList.add("locked-col");
+    const holidayName = getHolidayLabel(iso);
+    if(holidayName) th.classList.add("holiday-col");
+    const lockHtml = locked ? `<span class="day-lock locked" title="Dia bloqueado (faz parte de uma semana bloqueada)">🔒</span>` : "";
+    const holidayHtml = holidayName ? `<span class="holiday-flag" title="Feriado: ${esc(holidayName)}">🎉</span>` : "";
+    th.innerHTML = `<div class="day-head"><span class="dow">${DAYS_SHORT[dowIndex(date)]}</span><span class="num">${date.getDate()}/${date.getMonth()+1}</span>${lockHtml}${holidayHtml}</div>`;
+    trh.appendChild(th);
+  });
+  const thHours = document.createElement("th");
+  thHours.innerHTML = `<div class="day-head"><span class="dow">Total</span><span class="num">Horas</span></div>`;
+  trh.appendChild(thHours);
+  head.appendChild(trh);
+  const body = document.getElementById("horarioPrintRangeBody");
+  body.innerHTML = "";
+  const dailyCounts = dates.map(()=>0);
+  state.staff.filter(p=>isSchedulableTipo(p.tipo)).forEach(person=>{
+    dates.forEach((date, di)=>{
+      const c = getPersonShiftForDate(person.id, date);
+      if(c){ const st = shiftType(c); if(!st || !st.isRest) dailyCounts[di]++; }
+    });
+  });
+  state.staff.filter(p=>isSchedulableTipo(p.tipo)).filter(p=> !horarioFilterId || p.id===horarioFilterId).forEach(person=>{
+    const tr = document.createElement("tr");
+    const tdName = document.createElement("td");
+    tdName.className = "name-col";
+    const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
+    tdName.innerHTML = `<span class="name-cell-inner"><span class="dot ${dotClass}"></span>${esc(person.nome)}</span>`;
+    tr.appendChild(tdName);
+    const canEditRow = isGestor || (gridViewer && Array.isArray(gridViewer.editHorarioIds) && gridViewer.editHorarioIds.includes(person.id));
+    const isPrincipalRow = person.principal === true;
+    let periodHours = 0;
+    dates.forEach(date=>{
+      const td = document.createElement("td");
+      if(isWeekendDay(date)) td.classList.add("weekend-col");
+      const dayIso = weekKey(date);
+      if(getHolidayLabel(dayIso)) td.classList.add("holiday-col");
+      const dayLocked = !!state.lockedDays[dayIso];
+      if(dayLocked) td.classList.add("locked-col");
+      const canSeeCell = canEditRow || dayLocked || isPrincipalRow;
+      const current = getPersonShiftForDate(person.id, date);
+      const span = document.createElement("span");
+      span.className = "sans";
+      span.style.cssText = "display:inline-block; min-width:40px; padding:3px 6px; border-radius:5px; font-size:11.5px; font-weight:700; text-align:center;";
+      if(!canSeeCell){
+        span.style.color = "var(--ink-soft)";
+        span.style.opacity = ".5";
+        span.textContent = "·";
+      } else if(current){
+        periodHours += effectiveShiftHours(person, current);
+        const st = shiftType(current);
+        span.style.background = st.color;
+        span.style.color = "white";
+        span.textContent = current;
+      } else {
+        span.textContent = "–";
+        span.style.color = "var(--ink-soft)";
+      }
+      td.appendChild(span);
+      tr.appendChild(td);
+    });
+    const tdHours = document.createElement("td");
+    tdHours.className = "sans";
+    tdHours.style.fontWeight = "700";
+    tdHours.textContent = periodHours + "h";
+    tr.appendChild(tdHours);
+    body.appendChild(tr);
+  });
+  const foot = document.getElementById("horarioPrintRangeFoot");
+  foot.innerHTML = "";
+  const trf = document.createElement("tr");
+  const tdLbl = document.createElement("td");
+  tdLbl.className = "name-col";
+  tdLbl.textContent = "Nº de enfermeiros";
+  trf.appendChild(tdLbl);
+  dates.forEach((date,di)=>{
+    const td = document.createElement("td");
+    if(isWeekendDay(date)) td.classList.add("weekend-col");
+    td.style.fontWeight = "700";
+    const dIsoFoot = weekKey(date);
+    const dLockedFoot = !!state.lockedDays[dIsoFoot];
+    td.textContent = (isGestor || dLockedFoot) ? dailyCounts[di] : "·";
+    trf.appendChild(td);
+  });
+  const tdCorner = document.createElement("td");
+  trf.appendChild(tdCorner);
+  foot.appendChild(trf);
+}
+document.getElementById("printHorarioRangeBtn").addEventListener("click", ()=>{
+  const startI = document.getElementById("horarioPrintStart").value;
+  const endI = document.getElementById("horarioPrintEnd").value;
+  if(!startI || !endI){ alert("Escolhe as duas datas (de / até) antes de imprimir o período."); return; }
+  const start = new Date(startI + "T00:00:00");
+  const end = new Date(endI + "T00:00:00");
+  if(start > end){ alert("A data de início tem de ser anterior (ou igual) à data de fim."); return; }
+  buildHorarioPrintRangeTable(start, end);
+  const normalGrid = document.querySelector("#section-horario .grid-scroll:not(#horarioPrintRangeWrap)");
+  const rangeWrap = document.getElementById("horarioPrintRangeWrap");
+  if(normalGrid) normalGrid.style.display = "none";
+  rangeWrap.style.display = "";
+  window.print();
+  if(normalGrid) normalGrid.style.display = "";
+  rangeWrap.style.display = "none";
+});
 // ---------- AUTO GENERATE (whole visible month, respeita máximo semanal) ----------
 function autoGenerate(){
   const monthStart = state.monthStart;
