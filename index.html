@@ -225,6 +225,10 @@
   .exc-row select{ padding:6px 7px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:12.5px; background:rgba(255,255,255,0.9);}
   .exc-add-btn{ padding:6px 11px; border-radius:9px; border:1px solid var(--line); background:rgba(255,255,255,0.9); font-family:sans-serif; font-size:12.5px; cursor:pointer; transition:border-color .2s, color .2s, transform .15s;}
   .exc-add-btn:hover{ border-color:var(--sage); color:var(--sage-deep); transform:translateY(-1px);}
+  .contab-icon-btn{ width:30px; height:30px; border-radius:7px; border:1px solid var(--line); background:rgba(255,255,255,0.9); cursor:pointer; font-size:14px; display:inline-flex; align-items:center; justify-content:center; margin-right:5px; transition:border-color .2s, transform .15s; }
+  .contab-icon-btn:last-child{ margin-right:0; }
+  .contab-icon-btn:hover{ border-color:var(--sage); transform:translateY(-1px); }
+  .contab-icon-btn.saved{ border-color:var(--sage-deep); background:#E3F4EA; }
   .exc-chip{ display:inline-flex; align-items:center; gap:5px; border-radius:16px; padding:4px 10px; font-size:11.5px; font-family:sans-serif; }
   .exc-chip.on{ background:#E3F4EA; color:var(--sage-deep); }
   .exc-chip.off{ background:var(--rest-bad); color:var(--danger); }
@@ -333,6 +337,8 @@
     #section-relatorios table.contab-person-table td.cpt-label{ color:var(--ink-soft); font-weight:600; width:60%; }
     #section-relatorios table.contab-person-table td.cpt-value{ text-align:right; font-weight:700; }
     #section-relatorios table.contab-person-table tr.cpt-total td{ border-bottom:none; border-top:1.5px solid var(--sage-deep); padding-top:10px; font-size:14px; }
+    #section-relatorios .contab-print-all-block{ page-break-inside:avoid; break-inside:avoid; page-break-after:always; break-after:page; }
+    #section-relatorios .contab-print-all-block:last-of-type{ page-break-after:auto; break-after:auto; }
     .print-doc-footer{ display:block !important; margin-top:14px; font-size:8.5px; color:#8a978f; text-align:right; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
   }
 </style>
@@ -1853,10 +1859,11 @@ function renderContabilidadeAccountant(){
   table.innerHTML = '<thead><tr><th class="name-col">Pessoa</th><th>€/h útil</th><th>€/h f.s.</th>' +
     '<th style="' + narrowTdCss + '">H semana</th><th style="' + narrowTdCss + '">H fim de semana</th>' +
     '<th>Horas feitas</th>' +
-    '<th>Estimativa (ponto) €</th><th>Estimativa (app) €</th><th>Salário a pagar</th></tr></thead>';
+    '<th>Estimativa (ponto) €</th><th>Estimativa (app) €</th><th>Salário a pagar</th><th></th></tr></thead>';
   const tbody = document.createElement("tbody");
   let totU = 0, totF = 0, totFeitas = 0, totEstApp = 0, totEstPonto = 0, anyEstPonto = false, totFinal = 0;
-  state.staff.filter(pp=>isSchedulableTipo(pp.tipo)).forEach(person=>{
+  const contabRowRefs = [];
+  state.staff.filter(pp=>isSchedulableTipo(pp.tipo) && !pp.principal).forEach(person=>{
     let hU=0, hF=0;
     for(let d = new Date(start); d <= end; d = addDays(d, 1)){
       if(!state.lockedDays[weekKey(d)]) continue; // só conta o que já está bloqueado/publicado — nada que ainda possa mudar
@@ -1947,14 +1954,45 @@ function renderContabilidadeAccountant(){
     finalInp.style.cssText = finalInpCss;
     const finalVal = state.salarioFinal[pKey];
     if(finalVal !== undefined && finalVal !== null) finalInp.value = finalVal;
-    finalInp.addEventListener("change", ()=>{
+    const commitFinal = ()=>{
       if(finalInp.value === ""){ delete state.salarioFinal[pKey]; }
       else { state.salarioFinal[pKey] = parseFloat(finalInp.value); }
+    };
+    finalInp.addEventListener("change", ()=>{
+      commitFinal();
       scheduleSave();
       renderContabilidadeAccountant();
     });
     const tdFinal = document.createElement("td"); tdFinal.appendChild(finalInp); tr.appendChild(tdFinal);
     totFinal += (finalVal !== undefined && finalVal !== null) ? finalVal : (estApp !== null ? estApp : 0);
+    // Ações: gravar (grava o salário a pagar desta pessoa) e imprimir (gera logo o relatório dela).
+    const tdActions = document.createElement("td");
+    tdActions.style.cssText = "padding:6px 6px; white-space:nowrap;";
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "contab-icon-btn";
+    saveBtn.title = "Gravar o salário a pagar de " + person.nome;
+    saveBtn.textContent = "💾";
+    saveBtn.addEventListener("click", ()=>{
+      commitFinal();
+      scheduleSave();
+      saveBtn.classList.add("saved");
+      setTimeout(()=> saveBtn.classList.remove("saved"), 900);
+    });
+    const printBtn = document.createElement("button");
+    printBtn.type = "button";
+    printBtn.className = "contab-icon-btn";
+    printBtn.title = "Imprimir o relatório de " + person.nome;
+    printBtn.textContent = "🖨️";
+    printBtn.addEventListener("click", ()=>{
+      commitFinal();
+      scheduleSave();
+      printOnePersonReport(person, start, end);
+    });
+    tdActions.appendChild(saveBtn);
+    tdActions.appendChild(printBtn);
+    tr.appendChild(tdActions);
+    contabRowRefs.push({person, finalInp, commitFinal});
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
@@ -1965,9 +2003,31 @@ function renderContabilidadeAccountant(){
     '<td style="font-weight:700;">' + totFeitas + 'h</td>' +
     '<td style="font-weight:700;">' + (anyEstPonto ? totEstPonto.toFixed(2).replace(".", ",") + ' €' : '—') + '</td>' +
     '<td style="font-weight:700;">' + totEstApp.toFixed(2).replace(".", ",") + ' €</td>' +
-    '<td style="font-weight:700;">' + totFinal.toFixed(2).replace(".", ",") + ' €</td></tr>';
+    '<td style="font-weight:700;">' + totFinal.toFixed(2).replace(".", ",") + ' €</td><td></td></tr>';
   table.appendChild(tfoot);
   wrap.appendChild(table);
+  const bulkBar = document.createElement("div");
+  bulkBar.className = "exc-row sans no-print";
+  bulkBar.style.cssText = "margin-top:12px; gap:10px;";
+  const saveAllBtn = document.createElement("button");
+  saveAllBtn.className = "exc-add-btn";
+  saveAllBtn.textContent = "💾 Gravar todos";
+  saveAllBtn.addEventListener("click", ()=>{
+    contabRowRefs.forEach(r=> r.commitFinal());
+    scheduleSave();
+    renderContabilidadeAccountant();
+  });
+  const printAllBtn = document.createElement("button");
+  printAllBtn.className = "exc-add-btn";
+  printAllBtn.textContent = "🖨️ Imprimir todos";
+  printAllBtn.addEventListener("click", ()=>{
+    contabRowRefs.forEach(r=> r.commitFinal());
+    scheduleSave();
+    printAllPersonReports(contabRowRefs.map(r=>r.person), start, end);
+  });
+  bulkBar.appendChild(saveAllBtn);
+  bulkBar.appendChild(printAllBtn);
+  wrap.appendChild(bulkBar);
 }
 document.getElementById("contabStart").addEventListener("change", renderContabilidadeAny);
 document.getElementById("contabEnd").addEventListener("change", renderContabilidadeAny);
@@ -2043,17 +2103,7 @@ function buildContabPersonReportHtml(person, start, end, r){
   html += '</tbody></table></div>';
   return html;
 }
-document.getElementById("printContabPersonBtn").addEventListener("click", ()=>{
-  const personId = document.getElementById("contabPersonSelect").value;
-  const startI = document.getElementById("contabPersonStart").value;
-  const endI = document.getElementById("contabPersonEnd").value;
-  if(!personId){ alert("Escolhe a pessoa antes de imprimir."); return; }
-  if(!startI || !endI){ alert("Escolhe as duas datas (de / até) antes de imprimir."); return; }
-  const person = staffById(personId);
-  if(!person){ alert("Pessoa não encontrada."); return; }
-  const start = new Date(startI + "T00:00:00");
-  const end = new Date(endI + "T00:00:00");
-  if(start > end){ alert("A data de início tem de ser anterior (ou igual) à data de fim."); return; }
+function printOnePersonReport(person, start, end){
   const periodKey = weekKey(start) + "_" + weekKey(end);
   const r = computeContabPersonReport(person, start, end, periodKey);
   const area = document.getElementById("contabPersonPrintArea");
@@ -2073,6 +2123,44 @@ document.getElementById("printContabPersonBtn").addEventListener("click", ()=>{
   window.print();
   els.forEach((el,i)=>{ if(el) el.style.display = prevDisplay[i] || ""; });
   area.style.display = "none";
+}
+function printAllPersonReports(people, start, end){
+  const periodKey = weekKey(start) + "_" + weekKey(end);
+  const area = document.getElementById("contabPersonPrintArea");
+  area.innerHTML = people.map(person=>{
+    const r = computeContabPersonReport(person, start, end, periodKey);
+    return '<div class="contab-print-all-block">' +
+      buildContabPersonReportHtml(person, start, end, r) +
+      '<div class="print-footer">' +
+        '<div class="print-side">' +
+          '<div class="obs-line"><span class="obs-line-label">Obs:</span><span class="obs-line-fill"></span></div>' +
+          '<div class="sign-block"><span class="sign-date">Data: ____ / ____ / ________</span><span class="sign-fill"></span><span class="sign-caption">A direção</span></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join("");
+  const tableWrap = document.getElementById("contabTableWrap");
+  const dateRow = document.querySelector("#contabPanel > .exc-row");
+  const els = [tableWrap, dateRow];
+  const prevDisplay = els.map(el => el ? el.style.display : null);
+  els.forEach(el=>{ if(el) el.style.display = "none"; });
+  area.style.display = "block";
+  window.print();
+  els.forEach((el,i)=>{ if(el) el.style.display = prevDisplay[i] || ""; });
+  area.style.display = "none";
+}
+document.getElementById("printContabPersonBtn").addEventListener("click", ()=>{
+  const personId = document.getElementById("contabPersonSelect").value;
+  const startI = document.getElementById("contabPersonStart").value;
+  const endI = document.getElementById("contabPersonEnd").value;
+  if(!personId){ alert("Escolhe a pessoa antes de imprimir."); return; }
+  if(!startI || !endI){ alert("Escolhe as duas datas (de / até) antes de imprimir."); return; }
+  const person = staffById(personId);
+  if(!person){ alert("Pessoa não encontrada."); return; }
+  const start = new Date(startI + "T00:00:00");
+  const end = new Date(endI + "T00:00:00");
+  if(start > end){ alert("A data de início tem de ser anterior (ou igual) à data de fim."); return; }
+  printOnePersonReport(person, start, end);
 });
 // ---------- COPIA DE SEGURANCA ----------
 document.getElementById("backupBtn").addEventListener("click", ()=>{
