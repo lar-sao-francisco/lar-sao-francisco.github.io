@@ -572,7 +572,7 @@
           <input type="date" id="contabPersonEnd" style="padding:7px 10px; border:1px solid var(--line); border-radius:9px; font-family:sans-serif; font-size:13px; background:rgba(255,255,255,0.9);">
           <button class="btn btn-ghost" id="printContabPersonBtn">Imprimir relatório desta pessoa</button>
         </div>
-        <p class="note" style="margin-top:0;">Escolhe a pessoa e o período (sem datas por omissão — escolhes sempre à mão) e imprime o relatório de contas só dela: taxas, horas do período, estimativas e o salário a pagar, pronto para assinar.</p>
+        <p class="note" style="margin-top:0;">Escolhe a pessoa e o período (já vem preenchido com o ciclo 20 → 21 do mês seguinte, mas podes mudar as datas) e imprime o relatório de contas só dela: taxas, horas do período, estimativas e o salário a pagar, pronto para assinar.</p>
       </div>
       <div id="contabPersonPrintArea" style="display:none;"></div>
     </div>
@@ -1828,6 +1828,7 @@ function renderContabilidadeAny(){
     renderContabilidadeAccountant();
     if(block) block.style.display = "";
     populateContabPersonSelect();
+    contabPersonPrefill(false);
   } else {
     renderContabilidade();
     if(block) block.style.display = "none";
@@ -1966,13 +1967,6 @@ function renderContabilidadeAccountant(){
     '<td style="font-weight:700;">' + totEstApp.toFixed(2).replace(".", ",") + ' €</td>' +
     '<td style="font-weight:700;">' + totFinal.toFixed(2).replace(".", ",") + ' €</td></tr>';
   table.appendChild(tfoot);
-  const periodo = document.createElement("p");
-  periodo.className = "note";
-  periodo.style.marginTop = "0";
-  periodo.innerHTML = "Período: " + fmtDate(start) + " a " + fmtDate(end) + " (inclusive). Só entram dias de semanas já bloqueadas/publicadas — o que ainda está por bloquear pode mudar e não conta.<br>" +
-    "<strong>Estimativa (ponto)</strong>: escreves tu à mão, com base no que confirmas no sistema de picagem. <strong>Estimativa (app)</strong> é calculada automaticamente pelas horas da grelha. Compara as duas.<br>" +
-    "<strong>Salário a pagar</strong> é o valor final, para escreveres à mão depois de decidires qual das duas estimativas (ou outro valor) está correto — fica gravado. Enquanto não o preencheres, mostra como sugestão a Estimativa (app).";
-  wrap.appendChild(periodo);
   wrap.appendChild(table);
 }
 document.getElementById("contabStart").addEventListener("change", renderContabilidadeAny);
@@ -1980,8 +1974,9 @@ document.getElementById("contabEnd").addEventListener("change", renderContabilid
 document.getElementById("contabResetBtn").addEventListener("click", ()=>{ contabPrefill(true); renderContabilidadeAny(); });
 document.getElementById("printContabBtn").addEventListener("click", ()=> printOnly("reportPanel"));
 // ---------- RELATÓRIO INDIVIDUAL DE CONTABILIDADE (só na vista da contabilista) ----------
-// Escolhe-se uma pessoa e um período (sem datas por omissão — a pessoa escolhe sempre à mão),
-// e imprime-se uma página só com o relatório de contas dessa pessoa: taxas, horas do período
+// Escolhe-se uma pessoa e um período (por omissão vem preenchido com o ciclo 20 → 21 do mês
+// seguinte, mas pode ser alterado à mão), e imprime-se uma página só com o relatório de contas
+// dessa pessoa: taxas, horas do período
 // (só semanas já bloqueadas/publicadas), estimativas e o salário a pagar — sem detalhe dia a dia.
 function populateContabPersonSelect(){
   const sel = document.getElementById("contabPersonSelect");
@@ -1991,6 +1986,15 @@ function populateContabPersonSelect(){
   sel.innerHTML = '<option value="">— escolhe —</option>' +
     staffList.map(p=>'<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>').join("");
   if(staffList.some(p=>p.id===prevValue)) sel.value = prevValue;
+}
+function contabPersonPrefill(force){
+  const si = document.getElementById("contabPersonStart"), ei = document.getElementById("contabPersonEnd");
+  if(!si || !ei) return;
+  if(force || !si.value || !ei.value){
+    const m = state.monthStart;
+    si.value = weekKey(new Date(m.getFullYear(), m.getMonth()-1, 20));
+    ei.value = weekKey(new Date(m.getFullYear(), m.getMonth(), 21));
+  }
 }
 function computeContabPersonReport(person, start, end, periodKey){
   let hU=0, hF=0;
