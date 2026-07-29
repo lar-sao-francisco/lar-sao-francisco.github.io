@@ -2,7 +2,7 @@
 <html lang="pt-PT">
 <head>
 <meta charset="UTF-8">
-<title>Lar de São Francisco — Escala de Enfermagem</title>
+<title>Lar de São Francisco — Horário de Enfermagem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -363,7 +363,7 @@
       </div>
       <div>
         <p class="eyebrow sans">Lar de São Francisco · Leiria</p>
-        <h1 id="titulo">Escala de Enfermagem</h1>
+        <h1 id="titulo">Horário de Enfermagem</h1>
       </div>
     </div>
     <div class="week-nav" id="weekNav" style="display:none;">
@@ -2060,14 +2060,6 @@ function renderContabilidadeAccountant(){
   const bulkBar = document.createElement("div");
   bulkBar.className = "exc-row sans no-print";
   bulkBar.style.cssText = "margin-top:12px; gap:10px;";
-  const saveAllBtn = document.createElement("button");
-  saveAllBtn.className = "exc-add-btn";
-  saveAllBtn.textContent = "💾 Gravar todos";
-  saveAllBtn.addEventListener("click", ()=>{
-    contabRowRefs.forEach(r=> r.commitFinal());
-    scheduleSave();
-    renderContabilidadeAccountant();
-  });
   const printAllBtn = document.createElement("button");
   printAllBtn.className = "exc-add-btn";
   printAllBtn.textContent = "🖨️ Imprimir todos (bloqueados)";
@@ -2076,7 +2068,6 @@ function renderContabilidadeAccountant(){
     if(!locked.length){ alert("Bloqueia (🔒) pelo menos uma pessoa antes de imprimir."); return; }
     printAllPersonReports(locked.map(r=>r.person), start, end);
   });
-  bulkBar.appendChild(saveAllBtn);
   bulkBar.appendChild(printAllBtn);
   wrap.appendChild(bulkBar);
 }
