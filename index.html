@@ -5,6 +5,9 @@
 <title>Lar de São Francisco — Horário de Enfermagem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Abre a ligação à base de dados em paralelo com o carregamento da página, para que o
+     primeiro pedido não tenha de esperar por DNS + TLS (poupa ~200ms no arranque). -->
+<link rel="preconnect" href="https://kzcdaxbqnfsuufnkdkfx.supabase.co" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -738,7 +741,11 @@ function computeEaster(year){
   const day = ((h + l - 7*m + 114) % 31) + 1;
   return new Date(year, monthNum-1, day);
 }
+const _holidayCache = {};
 function computedHolidaysForYear(year){
+  // Chamada ~340x por cada desenho da grelha, sempre com os mesmos 2 ou 3 anos —
+  // guardar o resultado poupa recalcular a Páscoa e 14 datas de cada vez.
+  if(_holidayCache[year]) return _holidayCache[year];
   const easter = computeEaster(year);
   const map = {};
   map[weekKey(new Date(year,0,1))]  = "Ano Novo";
@@ -755,6 +762,7 @@ function computedHolidaysForYear(year){
   map[weekKey(new Date(year,11,1))] = "Restauração da Independência";
   map[weekKey(new Date(year,11,8))] = "Imaculada Conceição";
   map[weekKey(new Date(year,11,25))]= "Natal";
+  _holidayCache[year] = map;
   return map;
 }
 function getHolidayLabel(iso){
@@ -1876,7 +1884,41 @@ function renderContabilidadeAny(){
     renderContabilidade();
   }
 }
+// Estado visual de uma linha da Contabilidade (trancada vs. em edição). Igual ao que o
+// render completo produz — está numa função só para os dois caminhos não divergirem.
+let contabFinalTotalTd = null;
+// Ao nível do módulo de propósito: se um campo desta tabela provocar um render novo,
+// os botões têm de encontrar as referências ATUAIS e não as da tabela já substituída —
+// caso contrário trancavam os dados mas pintavam linhas que já não estão no ecrã.
+let contabRowRefs = [];
+function applyContabRowLockState(ref){
+  const locked = ref.isLocked;
+  ref.inputs.forEach(inp=> inp.disabled = locked);
+  ref.lockBtn.textContent = locked ? "🔒" : "🔓";
+  ref.lockBtn.title = locked
+    ? "Desbloquear " + ref.person.nome + " para poder editar outra vez"
+    : "Bloquear " + ref.person.nome + " (fixa os valores e permite imprimir)";
+  ref.lockBtn.classList.toggle("saved", locked);
+  ref.printBtn.disabled = !locked;
+  ref.printBtn.title = locked
+    ? "Imprimir o relatório de " + ref.person.nome
+    : "Bloqueia esta linha primeiro para poderes imprimir";
+  ref.printBtn.style.opacity = locked ? "1" : "0.35";
+  ref.printBtn.style.cursor = locked ? "pointer" : "not-allowed";
+  ref.tr.classList.toggle("contab-row-complete", locked);
+  ref.tr.classList.toggle("contab-row-incomplete", !locked);
+}
+function updateContabFinalTotal(refs){
+  if(!contabFinalTotalTd) return;
+  let tot = 0;
+  refs.forEach(r=>{
+    const v = state.salarioFinal[r.pKey];
+    tot += (v !== undefined && v !== null) ? v : (r.estApp !== null ? r.estApp : 0);
+  });
+  contabFinalTotalTd.textContent = tot.toFixed(2).replace(".", ",") + " €";
+}
 function renderContabilidadeAccountant(){
+  contabFinalTotalTd = null;
   contabPrefill(false);
   const start = new Date(document.getElementById("contabStart").value + "T00:00:00");
   const end = new Date(document.getElementById("contabEnd").value + "T00:00:00");
@@ -1898,7 +1940,7 @@ function renderContabilidadeAccountant(){
     '<th>Estimativa (ponto) €</th><th>Estimativa (app) €</th><th>Salário a pagar</th><th></th></tr></thead>';
   const tbody = document.createElement("tbody");
   let totU = 0, totF = 0, totFeitas = 0, totEstApp = 0, totEstPonto = 0, anyEstPonto = false, totFinal = 0;
-  const contabRowRefs = [];
+  contabRowRefs = [];
   state.staff.filter(pp=>isSchedulableTipo(pp.tipo) && !pp.principal).forEach(person=>{
     let hU=0, hF=0;
     for(let d = new Date(start); d <= end; d = addDays(d, 1)){
@@ -2019,11 +2061,19 @@ function renderContabilidadeAccountant(){
       : "Bloquear " + person.nome + " (fixa os valores e permite imprimir)";
     lockBtn.textContent = isLocked ? "🔒" : "🔓";
     lockBtn.classList.toggle("saved", isLocked);
+    // Trancar/destrancar altera só esta linha (campos, ícones, tom de fundo) e o total
+    // do "Salário a pagar". Atualizamos isso em vez de reconstruir a tabela inteira —
+    // além de ser mais rápido, evita que o botão desapareça debaixo do rato quando se
+    // clica nele vindo diretamente de um campo ainda em edição.
     lockBtn.addEventListener("click", ()=>{
-      if(!isLocked) commitFinal();
-      state.salarioLocked[pKey] = !isLocked;
+      const ref = contabRowRefs.find(r=> r.pKey === pKey);
+      if(!ref){ renderContabilidadeAccountant(); return; }
+      if(!ref.isLocked) ref.commitFinal();
+      ref.isLocked = !ref.isLocked;
+      state.salarioLocked[pKey] = ref.isLocked;
+      applyContabRowLockState(ref);
+      updateContabFinalTotal(contabRowRefs);
       scheduleSave();
-      renderContabilidadeAccountant();
     });
     const printBtn = document.createElement("button");
     printBtn.type = "button";
@@ -2034,7 +2084,8 @@ function renderContabilidadeAccountant(){
     printBtn.style.opacity = isLocked ? "1" : "0.35";
     printBtn.style.cursor = isLocked ? "pointer" : "not-allowed";
     printBtn.addEventListener("click", ()=>{
-      if(!isLocked) return;
+      const ref = contabRowRefs.find(r=> r.pKey === pKey);
+      if(!ref || !ref.isLocked) return;
       printOnePersonReport(person, start, end);
     });
     tdActions.appendChild(lockBtn);
@@ -2043,7 +2094,10 @@ function renderContabilidadeAccountant(){
     // Linha fica mais clara enquanto não estiver bloqueada, e escurece assim que
     // bloqueares (🔒) os valores desta pessoa.
     tr.classList.add(isLocked ? "contab-row-complete" : "contab-row-incomplete");
-    contabRowRefs.push({person, finalInp, commitFinal, isLocked});
+    contabRowRefs.push({
+      person, pKey, finalInp, commitFinal, isLocked, estApp, tr, lockBtn, printBtn,
+      inputs: [rHInp, rFInp, estPontoInp, finalInp]
+    });
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
@@ -2056,6 +2110,7 @@ function renderContabilidadeAccountant(){
     '<td style="font-weight:700;">' + totEstApp.toFixed(2).replace(".", ",") + ' €</td>' +
     '<td style="font-weight:700;">' + totFinal.toFixed(2).replace(".", ",") + ' €</td><td></td></tr>';
   table.appendChild(tfoot);
+  contabFinalTotalTd = tfoot.rows[0].cells[8];
   wrap.appendChild(table);
   const bulkBar = document.createElement("div");
   bulkBar.className = "exc-row sans no-print";
@@ -2616,7 +2671,101 @@ function renderPrintLegendTable(){
   html += '</tbody></table>';
   wrap.innerHTML = html;
 }
+// ---------- ATUALIZAÇÃO CIRÚRGICA DA GRELHA ----------
+// Mudar um turno só pode afetar: (1) a própria célula, (2) os conflitos das outras
+// células da MESMA pessoa — as regras de descanso e de dias consecutivos são todas
+// por pessoa, nunca cruzam pessoas — (3) o total de horas dessa linha e (4) a
+// contagem de enfermeiros da coluna alterada. Em vez de destruir e reconstruir as
+// ~310 células do mês a cada clique, mexemos só nisso. O resultado no ecrã é
+// exatamente o mesmo; a diferença é que deixa de haver o salto da grelha inteira.
+let gridRowRefs = [];
+let gridFootRefs = [];
+// Estado visual de uma célula editável. Usada pelo render completo E pela atualização
+// cirúrgica, de propósito: se um dia mudarem as regras, mudam num sítio só.
+function applyCellSelectState(select, person, date, current){
+  const iso = weekKey(date);
+  const dayLocked = !!state.lockedDays[iso];
+  const options = buildOptionsForCell(person, date, current);
+  select.innerHTML = "";
+  options.forEach(code=>{
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = code || "–";
+    select.appendChild(opt);
+  });
+  select.value = current;
+  const submitted = submittedAvailableCodes(person.id, iso);
+  const noSubmissionYet = submitted === null && isRvLike(person.tipo);
+  const explicitlyUnavailable = submitted !== null && submitted.length===0;
+  const patternOff = !isRvLike(person.tipo) && isOff(person, date);
+  select.disabled = false;
+  if((noSubmissionYet || explicitlyUnavailable) && !current) select.disabled = true;
+  if(dayLocked) select.disabled = true;
+  select.classList.remove("conflict");
+  if(current){
+    const st = shiftType(current);
+    select.style.background = st.color;
+    select.style.color = "white";
+    select.style.borderColor = st.color;
+    if(hasAnyConflict(person.id, date, current)) select.classList.add("conflict");
+    select.title = st.label;
+  } else if(explicitlyUnavailable){
+    select.style.background = "var(--rest-bad)";
+    select.style.color = "var(--ink)";
+    select.style.borderColor = "";
+    select.title = "Marcou este dia como indisponível para todos os turnos";
+  } else if(noSubmissionYet){
+    select.style.background = "var(--rest-bad)";
+    select.style.color = "var(--ink)";
+    select.style.borderColor = "";
+    select.title = "Ainda não submeteu disponibilidade para este dia — sem turnos para escolher até o fazer";
+  } else if(patternOff){
+    const isFerias = person.exceptions && person.exceptions[iso] === "ferias";
+    select.style.background = isFerias ? "#FCE7F3" : "var(--weekend-bg)";
+    select.style.color = isFerias ? "#9D174D" : "var(--ink)";
+    select.style.borderColor = "";
+    select.title = isFerias
+      ? "Em férias — mas podes na mesma atribuir-lhe um turno se precisares"
+      : "Por padrão, esta pessoa descansa neste dia — mas podes na mesma atribuir-lhe um turno ou DC/DO";
+  } else {
+    select.style.background = "var(--panel)";
+    select.style.color = "var(--ink)";
+    select.style.borderColor = "";
+    select.title = submitted ? "Disponível: " + submitted.join(", ") : "";
+  }
+  if(dayLocked) select.title = (select.title ? select.title + " — " : "") + "Dia bloqueado pela gestão";
+}
+function updateGridAfterCellChange(personId, changedDi){
+  const row = gridRowRefs.find(r=> r.person.id === personId);
+  // Se por alguma razão a linha não estiver registada, cai no render completo —
+  // mais lento, mas nunca deixa a grelha dessincronizada dos dados.
+  if(!row || !row.cells.length){ renderExcelGrid(); return; }
+  let monthHours = 0;
+  row.cells.forEach(cell=>{
+    const current = getPersonShiftForDate(row.person.id, cell.date);
+    if(cell.di === changedDi){
+      applyCellSelectState(cell.select, row.person, cell.date, current);
+    } else if(current){
+      // nas restantes células da linha só o aviso de conflito pode ter mudado
+      if(hasAnyConflict(row.person.id, cell.date, current)) cell.select.classList.add("conflict");
+      else cell.select.classList.remove("conflict");
+    }
+    if(current) monthHours += effectiveShiftHours(row.person, current);
+  });
+  if(row.totalTd) row.totalTd.textContent = monthHours + "h";
+  const foot = gridFootRefs[changedDi];
+  if(foot && foot.countable){
+    let n = 0;
+    state.staff.filter(p=>isSchedulableTipo(p.tipo)).forEach(p=>{
+      const c = getPersonShiftForDate(p.id, foot.date);
+      if(c){ const st = shiftType(c); if(!st || !st.isRest) n++; }
+    });
+    foot.td.textContent = n;
+  }
+}
 function renderExcelGrid(){
+  gridRowRefs = [];
+  gridFootRefs = [];
   const gridScroller = document.querySelector("#section-horario .grid-scroll");
   const keepLeft = gridScroller ? gridScroller.scrollLeft : 0;
   const keepTop = gridScroller ? gridScroller.scrollTop : 0;
@@ -2728,6 +2877,7 @@ function renderExcelGrid(){
     const canEditRow = isGestor || (gridViewer && Array.isArray(gridViewer.editHorarioIds) && gridViewer.editHorarioIds.includes(person.id));
     const isPrincipalRow = person.principal === true;
     let monthHours = 0;
+    const rowCells = [];
     dates.forEach((date, di)=>{
       const td = document.createElement("td");
       if(isWeekendDay(date)) td.classList.add("weekend-col");
@@ -2772,56 +2922,15 @@ function renderExcelGrid(){
       }
       const select = document.createElement("select");
       select.className = "cell-select";
-      const options = buildOptionsForCell(person, date, current);
-      options.forEach(code=>{
-        const opt = document.createElement("option");
-        opt.value = code;
-        opt.textContent = code || "–";
-        select.appendChild(opt);
-      });
-      select.value = current;
-      const iso = weekKey(date);
-      const submitted = submittedAvailableCodes(person.id, iso);
-      const noSubmissionYet = submitted === null && isRvLike(person.tipo);
-      const explicitlyUnavailable = submitted !== null && submitted.length===0;
-      const patternOff = !isRvLike(person.tipo) && isOff(person, date);
-      if((noSubmissionYet || explicitlyUnavailable) && !current) select.disabled = true;
-      if(dayLocked) select.disabled = true;
-      if(current){
-        const st = shiftType(current);
-        select.style.background = st.color;
-        select.style.color = "white";
-        select.style.borderColor = st.color;
-        if(hasAnyConflict(person.id, date, current)) select.classList.add("conflict");
-        select.title = st.label;
-      } else if(explicitlyUnavailable){
-        select.style.background = "var(--rest-bad)";
-        select.style.color = "var(--ink)";
-        select.title = "Marcou este dia como indisponível para todos os turnos";
-      } else if(noSubmissionYet){
-        select.style.background = "var(--rest-bad)";
-        select.style.color = "var(--ink)";
-        select.title = "Ainda não submeteu disponibilidade para este dia — sem turnos para escolher até o fazer";
-      } else if(patternOff){
-        const isFerias = person.exceptions && person.exceptions[iso] === "ferias";
-        select.style.background = isFerias ? "#FCE7F3" : "var(--weekend-bg)";
-        select.style.color = isFerias ? "#9D174D" : "var(--ink)";
-        select.title = isFerias
-          ? "Em férias — mas podes na mesma atribuir-lhe um turno se precisares"
-          : "Por padrão, esta pessoa descansa neste dia — mas podes na mesma atribuir-lhe um turno ou DC/DO";
-      } else {
-        select.style.background = "var(--panel)";
-        select.style.color = "var(--ink)";
-        select.title = submitted ? "Disponível: " + submitted.join(", ") : "";
-      }
-      if(dayLocked) select.title = (select.title ? select.title + " — " : "") + "Dia bloqueado pela gestão";
+      applyCellSelectState(select, person, date, current);
       select.addEventListener("change", e=>{
         setPersonShiftForDate(person.id, date, e.target.value);
-        renderExcelGrid();
+        updateGridAfterCellChange(person.id, di);
         scheduleSave();
       });
       td.appendChild(select);
       tr.appendChild(td);
+      rowCells.push({ select, date, di });
     });
     const tdHours = document.createElement("td");
     tdHours.className = "sans";
@@ -2829,6 +2938,7 @@ function renderExcelGrid(){
     tdHours.textContent = monthHours + "h";
     tr.appendChild(tdHours);
     body.appendChild(tr);
+    gridRowRefs.push({ person, cells: rowCells, totalTd: tdHours });
   });
   const foot = document.getElementById("excelFoot");
   foot.innerHTML = "";
@@ -2843,8 +2953,10 @@ function renderExcelGrid(){
     td.style.fontWeight = "700";
     const dIsoFoot = weekKey(date);
     const dLockedFoot = !!state.lockedDays[dIsoFoot];
-    td.textContent = (isGestor || dLockedFoot) ? dailyCounts[di] : "·";
+    const countable = (isGestor || dLockedFoot);
+    td.textContent = countable ? dailyCounts[di] : "·";
     trf.appendChild(td);
+    gridFootRefs[di] = { td, date, countable };
   });
   const tdCorner = document.createElement("td");
   trf.appendChild(tdCorner);
