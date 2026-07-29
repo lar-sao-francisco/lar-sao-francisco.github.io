@@ -2060,14 +2060,6 @@ function renderContabilidadeAccountant(){
   const bulkBar = document.createElement("div");
   bulkBar.className = "exc-row sans no-print";
   bulkBar.style.cssText = "margin-top:12px; gap:10px;";
-  const saveAllBtn = document.createElement("button");
-  saveAllBtn.className = "exc-add-btn";
-  saveAllBtn.textContent = "💾 Gravar todos";
-  saveAllBtn.addEventListener("click", ()=>{
-    contabRowRefs.forEach(r=> r.commitFinal());
-    scheduleSave();
-    renderContabilidadeAccountant();
-  });
   const printAllBtn = document.createElement("button");
   printAllBtn.className = "exc-add-btn";
   printAllBtn.textContent = "🖨️ Imprimir todos (bloqueados)";
@@ -2076,7 +2068,6 @@ function renderContabilidadeAccountant(){
     if(!locked.length){ alert("Bloqueia (🔒) pelo menos uma pessoa antes de imprimir."); return; }
     printAllPersonReports(locked.map(r=>r.person), start, end);
   });
-  bulkBar.appendChild(saveAllBtn);
   bulkBar.appendChild(printAllBtn);
   wrap.appendChild(bulkBar);
 }
