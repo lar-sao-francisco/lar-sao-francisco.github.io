@@ -308,6 +308,8 @@
       font-family:"Plus Jakarta Sans","Manrope",sans-serif;
     }
     #section-dispequipa .print-footer{ justify-content:flex-end; }
+    #section-dispequipa .disp-person-block{ page-break-inside:avoid; break-inside:avoid; page-break-after:always; break-after:page; }
+    #section-dispequipa .disp-person-block:last-of-type{ page-break-after:auto; break-after:auto; }
     table.print-legend{ border-collapse:collapse; font-size:9px; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
     table.print-legend th, table.print-legend td{ border:0.5px solid #c8d3ce; padding:3px 11px; text-align:left; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     table.print-legend thead th{ text-align:center; font-size:11px; font-weight:700; background:var(--sage-deep); color:#fff; font-family:"Space Grotesk",sans-serif; letter-spacing:0.3px; padding:5px 10px; }
@@ -507,20 +509,7 @@
     <div class="panel">
       <h2>Disponibilidades da equipa — <span id="teamDispMonthLabel"></span></h2>
       <div id="teamAvailabilityList"></div>
-      <p class="note">Isto é o que cada recibo verde marcou como disponível na vista "Disponibilidades", para o mês em exibição. Usa as setas no topo para mudar de mês. Já se aplica automaticamente à grelha do Horário.</p>
-      <div class="print-footer">
-        <div class="print-side">
-          <div class="obs-line">
-            <span class="obs-line-label">Obs:</span>
-            <span class="obs-line-fill"></span>
-          </div>
-          <div class="sign-block">
-            <span class="sign-date">Data: ____ / ____ / ________</span>
-            <span class="sign-fill"></span>
-            <span class="sign-caption">A direção</span>
-          </div>
-        </div>
-      </div>
+      <p class="note">Isto é o que cada recibo verde marcou como disponível na vista "Disponibilidades", para o mês em exibição. Usa as setas no topo para mudar de mês. Já se aplica automaticamente à grelha do Horário. Na impressão, cada pessoa sai numa página própria, já com o campo de Obs e a assinatura da direção.</p>
       <div class="print-doc-footer">Lar de São Francisco — Escala de Enfermagem · documento gerado em <span id="printGenTimeDisp"></span></div>
     </div>
   </div>
@@ -1809,12 +1798,13 @@ function renderContabilidadeAccountant(){
   const table = document.createElement("table");
   table.className = "excel sans";
   table.style.width = "100%";
-  table.innerHTML = '<thead><tr><th class="name-col">Pessoa</th><th>€/h útil</th><th>€/h f.s.</th><th>Horas feitas</th><th>Horas do ponto</th><th>Estimativa salário</th></tr></thead>';
+  table.innerHTML = '<thead><tr><th class="name-col">Pessoa</th><th>€/h útil</th><th>€/h f.s.</th><th>Horas na semana</th><th>Horas fim de semana</th><th>Horas feitas</th><th>Horas do ponto</th><th>Salário a pagar</th></tr></thead>';
   const tbody = document.createElement("tbody");
-  let totFeitas = 0, totPonto = 0, anyPonto = false, totEst = 0;
+  let totU = 0, totF = 0, totFeitas = 0, totPonto = 0, anyPonto = false, totEst = 0;
   state.staff.filter(pp=>isSchedulableTipo(pp.tipo)).forEach(person=>{
     let hU=0, hF=0;
     for(let d = new Date(start); d <= end; d = addDays(d, 1)){
+      if(!state.lockedDays[weekKey(d)]) continue; // só conta o que já está bloqueado/publicado — nada que ainda possa mudar
       const code = getPersonShiftForDate(person.id, d);
       if(!code) continue;
       const h = effectiveShiftHours(person, code);
@@ -1822,7 +1812,7 @@ function renderContabilidadeAccountant(){
       if(isWeekendDay(d)) hF += h; else hU += h;
     }
     const feitas = hU + hF;
-    totFeitas += feitas;
+    totU += hU; totF += hF; totFeitas += feitas;
     const tr = document.createElement("tr");
     const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
     const nameTd = document.createElement("td");
@@ -1849,6 +1839,14 @@ function renderContabilidadeAccountant(){
       renderContabilidadeAccountant();
     });
     const tdRF = document.createElement("td"); tdRF.appendChild(rFInp); tr.appendChild(tdRF);
+    const tdU = document.createElement("td");
+    tdU.style.cssText = "padding:6px 10px;";
+    tdU.textContent = hU + "h";
+    tr.appendChild(tdU);
+    const tdF = document.createElement("td");
+    tdF.style.cssText = "padding:6px 10px;";
+    tdF.textContent = hF + "h";
+    tr.appendChild(tdF);
     const tdFeitas = document.createElement("td");
     tdFeitas.style.cssText = "padding:6px 10px; font-weight:600;";
     tdFeitas.textContent = feitas + "h";
@@ -1875,7 +1873,7 @@ function renderContabilidadeAccountant(){
       tdEst.textContent = est.toFixed(2).replace(".", ",") + " €";
     } else {
       tdEst.textContent = "—";
-      tdEst.title = "Define o €/hora desta pessoa para veres a estimativa.";
+      tdEst.title = "Define o €/hora desta pessoa para veres o salário a pagar.";
     }
     tr.appendChild(tdEst);
     tbody.appendChild(tr);
@@ -1883,6 +1881,8 @@ function renderContabilidadeAccountant(){
   table.appendChild(tbody);
   const tfoot = document.createElement("tfoot");
   tfoot.innerHTML = '<tr><td class="name-col" style="font-weight:700;">Total</td><td></td><td></td>' +
+    '<td style="font-weight:700;">' + totU + 'h</td>' +
+    '<td style="font-weight:700;">' + totF + 'h</td>' +
     '<td style="font-weight:700;">' + totFeitas + 'h</td>' +
     '<td style="font-weight:700;">' + (anyPonto ? totPonto + 'h' : '—') + '</td>' +
     '<td style="font-weight:700;">' + totEst.toFixed(2).replace(".", ",") + ' €</td></tr>';
@@ -1890,7 +1890,7 @@ function renderContabilidadeAccountant(){
   const periodo = document.createElement("p");
   periodo.className = "note";
   periodo.style.marginTop = "0";
-  periodo.textContent = "Período: " + fmtDate(start) + " a " + fmtDate(end) + " (inclusive). \"Horas feitas\" vêm da grelha do Horário (a estimativa de salário usa estas horas). \"Horas do ponto\" são as que confirmas no sistema de picagem — preenche à mão para comparar com as horas feitas.";
+  periodo.textContent = "Período: " + fmtDate(start) + " a " + fmtDate(end) + " (inclusive). Só entram dias de semanas já bloqueadas/publicadas — o que ainda está por bloquear pode mudar e não conta. \"Horas do ponto\" são as que confirmas no sistema de picagem — preenche à mão para comparar com as horas feitas. \"Salário a pagar\" = horas na semana × €/h útil + horas de fim de semana × €/h f.s.";
   wrap.appendChild(periodo);
   wrap.appendChild(table);
 }
@@ -2171,6 +2171,8 @@ function renderTeamAvailability(){
   const isAfternoon = code => { const st = shiftType(code); return !!(st && st.blocks.some(b=>b[0] >= 13)); };
   const mk = arr => arr.length ? arr.join(", ") : "—";
   rvStaff.forEach(person=>{
+    const block = document.createElement("div");
+    block.className = "disp-person-block";
     const buckets = { uM:[], uT:[], sM:[], sT:[], dM:[], dT:[] };
     let total = 0, weekend = 0;
     for(let day=1; day<=nDays; day++){
@@ -2201,7 +2203,7 @@ function renderTeamAvailability(){
       headHtml += '<span class="blk-label">ainda não guardou este mês</span>';
     }
     head.innerHTML = headHtml;
-    wrap.appendChild(head);
+    block.appendChild(head);
     const t = document.createElement("table");
     t.className = "excel sans";
     t.style.cssText = "width:100%; max-width:620px; margin:6px 0 2px;";
@@ -2215,7 +2217,23 @@ function renderTeamAvailability(){
       '<tr><td rowspan="2" ' + gcell + '>Domingos</td><td ' + cell + '>Manhã</td><td ' + cell + '>' + mk(buckets.dM) + '</td></tr>' +
       '<tr><td ' + cell + '>Tarde</td><td ' + cell + '>' + mk(buckets.dT) + '</td></tr>' +
       '</tbody>';
-    wrap.appendChild(t);
+    block.appendChild(t);
+    const footer = document.createElement("div");
+    footer.className = "print-footer";
+    footer.innerHTML =
+      '<div class="print-side">' +
+        '<div class="obs-line">' +
+          '<span class="obs-line-label">Obs:</span>' +
+          '<span class="obs-line-fill"></span>' +
+        '</div>' +
+        '<div class="sign-block">' +
+          '<span class="sign-date">Data: ____ / ____ / ________</span>' +
+          '<span class="sign-fill"></span>' +
+          '<span class="sign-caption">A direção</span>' +
+        '</div>' +
+      '</div>';
+    block.appendChild(footer);
+    wrap.appendChild(block);
   });
 }
 function renderAvailabilityInto(wrap){
