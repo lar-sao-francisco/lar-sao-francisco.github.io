@@ -851,6 +851,7 @@ function applyLoadedState(raw){
         parsed.ctbSeeded = true;
       }
       if(!parsed.pontoHours) parsed.pontoHours = {};
+      if(!parsed.salarioFinal) parsed.salarioFinal = {};
       if(!parsed.schedules) parsed.schedules = {};
       if(!parsed.availabilityRequests) parsed.availabilityRequests = {};
       if(!parsed.availabilityMeta) parsed.availabilityMeta = {};
@@ -1793,14 +1794,22 @@ function renderContabilidadeAccountant(){
   wrap.innerHTML = "";
   if(!(start <= end)){ wrap.innerHTML = '<p class="note">Período inválido — a data de início tem de ser anterior à de fim.</p>'; return; }
   if(!state.pontoHours) state.pontoHours = {};
+  if(!state.salarioFinal) state.salarioFinal = {};
   const periodKey = weekKey(start) + "_" + weekKey(end);
   const inpCss = "width:72px; padding:5px 6px; border:1px solid var(--line); border-radius:6px; font-family:sans-serif; font-size:12.5px;";
+  const narrowInpCss = "width:52px; padding:5px 6px; border:1px solid var(--line); border-radius:6px; font-family:sans-serif; font-size:12.5px;";
+  const finalInpCss = "width:82px; padding:5px 6px; border:1.5px solid var(--sage-deep); border-radius:6px; font-family:sans-serif; font-size:12.5px; font-weight:700;";
+  const narrowTdCss = "padding:6px 6px;";
+  const PONTO_TOLERANCE = 0.25; // diferença (horas) a partir da qual avisamos que ponto e app não coincidem
   const table = document.createElement("table");
   table.className = "excel sans";
   table.style.width = "100%";
-  table.innerHTML = '<thead><tr><th class="name-col">Pessoa</th><th>€/h útil</th><th>€/h f.s.</th><th>Horas na semana</th><th>Horas fim de semana</th><th>Horas feitas</th><th>Horas do ponto</th><th>Salário a pagar</th></tr></thead>';
+  table.innerHTML = '<thead><tr><th class="name-col">Pessoa</th><th>€/h útil</th><th>€/h f.s.</th>' +
+    '<th style="' + narrowTdCss + '">H semana</th><th style="' + narrowTdCss + '">H fim de semana</th>' +
+    '<th>Horas feitas</th><th>Horas do ponto</th>' +
+    '<th>Estimativa (ponto)</th><th>Estimativa (app)</th><th>Salário a pagar</th></tr></thead>';
   const tbody = document.createElement("tbody");
-  let totU = 0, totF = 0, totFeitas = 0, totPonto = 0, anyPonto = false, totEst = 0;
+  let totU = 0, totF = 0, totFeitas = 0, totPonto = 0, anyPonto = false, totEstApp = 0, totEstPonto = 0, anyEstPonto = false, totFinal = 0;
   state.staff.filter(pp=>isSchedulableTipo(pp.tipo)).forEach(person=>{
     let hU=0, hF=0;
     for(let d = new Date(start); d <= end; d = addDays(d, 1)){
@@ -1830,8 +1839,9 @@ function renderContabilidadeAccountant(){
     });
     const tdRH = document.createElement("td"); tdRH.appendChild(rHInp); tr.appendChild(tdRH);
     const rFInp = document.createElement("input");
-    rFInp.type = "number"; rFInp.min = "0"; rFInp.step = "0.5"; rFInp.inputMode = "decimal"; rFInp.placeholder = "= útil";
+    rFInp.type = "number"; rFInp.min = "0"; rFInp.step = "0.5"; rFInp.inputMode = "decimal"; rFInp.placeholder = "0,00";
     rFInp.style.cssText = inpCss;
+    rFInp.title = "Deixa em branco para usar o mesmo valor do €/h útil ao fim de semana.";
     if(person.rateFds !== undefined && person.rateFds !== null && person.rateFds !== "") rFInp.value = person.rateFds;
     rFInp.addEventListener("change", ()=>{
       person.rateFds = rFInp.value === "" ? undefined : parseFloat(rFInp.value);
@@ -1840,11 +1850,11 @@ function renderContabilidadeAccountant(){
     });
     const tdRF = document.createElement("td"); tdRF.appendChild(rFInp); tr.appendChild(tdRF);
     const tdU = document.createElement("td");
-    tdU.style.cssText = "padding:6px 10px;";
+    tdU.style.cssText = narrowTdCss;
     tdU.textContent = hU + "h";
     tr.appendChild(tdU);
     const tdF = document.createElement("td");
-    tdF.style.cssText = "padding:6px 10px;";
+    tdF.style.cssText = narrowTdCss;
     tdF.textContent = hF + "h";
     tr.appendChild(tdF);
     const tdFeitas = document.createElement("td");
@@ -1855,27 +1865,70 @@ function renderContabilidadeAccountant(){
     const pontoInp = document.createElement("input");
     pontoInp.type = "number"; pontoInp.min = "0"; pontoInp.step = "0.25"; pontoInp.inputMode = "decimal"; pontoInp.placeholder = "—";
     pontoInp.style.cssText = inpCss;
-    if(state.pontoHours[pKey] !== undefined && state.pontoHours[pKey] !== null) pontoInp.value = state.pontoHours[pKey];
+    const pontoVal = state.pontoHours[pKey];
+    if(pontoVal !== undefined && pontoVal !== null) pontoInp.value = pontoVal;
     pontoInp.addEventListener("change", ()=>{
       if(pontoInp.value === ""){ delete state.pontoHours[pKey]; }
       else { state.pontoHours[pKey] = parseFloat(pontoInp.value); }
       scheduleSave();
+      renderContabilidadeAccountant();
     });
-    const tdPonto = document.createElement("td"); tdPonto.appendChild(pontoInp); tr.appendChild(tdPonto);
-    if(state.pontoHours[pKey] !== undefined){ totPonto += state.pontoHours[pKey]; anyPonto = true; }
+    const tdPonto = document.createElement("td");
+    tdPonto.appendChild(pontoInp);
+    if(pontoVal !== undefined && pontoVal !== null && Math.abs(pontoVal - feitas) > PONTO_TOLERANCE){
+      const warn = document.createElement("span");
+      warn.textContent = " ⚠";
+      warn.style.cssText = "color:#c0392b; font-weight:700; cursor:help;";
+      warn.title = "Ponto (" + pontoVal + "h) não coincide com as horas feitas na app (" + feitas + "h) — diferença de " + Math.abs(pontoVal - feitas).toFixed(2).replace(".", ",") + "h. Confirma qual das duas está certa antes de fechares o salário.";
+      tdPonto.appendChild(warn);
+    }
+    tr.appendChild(tdPonto);
+    if(pontoVal !== undefined && pontoVal !== null){ totPonto += pontoVal; anyPonto = true; }
     const rH = (person.rateHora === undefined || person.rateHora === null || person.rateHora === "") ? NaN : parseFloat(person.rateHora);
     const rF = (person.rateFds === undefined || person.rateFds === null || person.rateFds === "") ? rH : parseFloat(person.rateFds);
-    const tdEst = document.createElement("td");
-    tdEst.style.cssText = "padding:6px 10px; font-weight:700;";
-    if(!isNaN(rH) && rH > 0){
-      const est = hU*rH + hF*(isNaN(rF) ? rH : rF);
-      totEst += est;
-      tdEst.textContent = est.toFixed(2).replace(".", ",") + " €";
+    // Estimativa (ponto): aplica às horas do ponto uma taxa média, ponderada pela proporção
+    // semana/fim de semana que a app já conhece deste período (a app não sabe como as horas do
+    // ponto se dividem entre semana e fim de semana, só o total).
+    const blendedRate = (feitas > 0 && !isNaN(rH)) ? (hU*rH + hF*(isNaN(rF)?rH:rF)) / feitas : rH;
+    const tdEstPonto = document.createElement("td");
+    tdEstPonto.style.cssText = "padding:6px 10px;";
+    if(pontoVal !== undefined && pontoVal !== null && !isNaN(blendedRate) && blendedRate > 0){
+      const estPonto = pontoVal * blendedRate;
+      totEstPonto += estPonto; anyEstPonto = true;
+      tdEstPonto.textContent = estPonto.toFixed(2).replace(".", ",") + " €";
+      tdEstPonto.title = "Horas do ponto × taxa média (" + blendedRate.toFixed(2).replace(".",",") + " €/h, calculada a partir da proporção semana/fim de semana da app).";
     } else {
-      tdEst.textContent = "—";
-      tdEst.title = "Define o €/hora desta pessoa para veres o salário a pagar.";
+      tdEstPonto.textContent = "—";
     }
-    tr.appendChild(tdEst);
+    tr.appendChild(tdEstPonto);
+    const tdEstApp = document.createElement("td");
+    tdEstApp.style.cssText = "padding:6px 10px;";
+    let estApp = null;
+    if(!isNaN(rH) && rH > 0){
+      estApp = hU*rH + hF*(isNaN(rF) ? rH : rF);
+      totEstApp += estApp;
+      tdEstApp.textContent = estApp.toFixed(2).replace(".", ",") + " €";
+    } else {
+      tdEstApp.textContent = "—";
+      tdEstApp.title = "Define o €/hora desta pessoa para veres a estimativa.";
+    }
+    tr.appendChild(tdEstApp);
+    // Salário a pagar: campo final, editável à mão — para quando o ponto e a app não coincidem
+    // e é preciso decidir/registar o valor que realmente vai ser pago.
+    const finalInp = document.createElement("input");
+    finalInp.type = "number"; finalInp.min = "0"; finalInp.step = "0.01"; finalInp.inputMode = "decimal";
+    finalInp.placeholder = estApp !== null ? estApp.toFixed(2).replace(".", ",") : "0,00";
+    finalInp.style.cssText = finalInpCss;
+    const finalVal = state.salarioFinal[pKey];
+    if(finalVal !== undefined && finalVal !== null) finalInp.value = finalVal;
+    finalInp.addEventListener("change", ()=>{
+      if(finalInp.value === ""){ delete state.salarioFinal[pKey]; }
+      else { state.salarioFinal[pKey] = parseFloat(finalInp.value); }
+      scheduleSave();
+      renderContabilidadeAccountant();
+    });
+    const tdFinal = document.createElement("td"); tdFinal.appendChild(finalInp); tr.appendChild(tdFinal);
+    totFinal += (finalVal !== undefined && finalVal !== null) ? finalVal : (estApp !== null ? estApp : 0);
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
@@ -1885,12 +1938,17 @@ function renderContabilidadeAccountant(){
     '<td style="font-weight:700;">' + totF + 'h</td>' +
     '<td style="font-weight:700;">' + totFeitas + 'h</td>' +
     '<td style="font-weight:700;">' + (anyPonto ? totPonto + 'h' : '—') + '</td>' +
-    '<td style="font-weight:700;">' + totEst.toFixed(2).replace(".", ",") + ' €</td></tr>';
+    '<td style="font-weight:700;">' + (anyEstPonto ? totEstPonto.toFixed(2).replace(".", ",") + ' €' : '—') + '</td>' +
+    '<td style="font-weight:700;">' + totEstApp.toFixed(2).replace(".", ",") + ' €</td>' +
+    '<td style="font-weight:700;">' + totFinal.toFixed(2).replace(".", ",") + ' €</td></tr>';
   table.appendChild(tfoot);
   const periodo = document.createElement("p");
   periodo.className = "note";
   periodo.style.marginTop = "0";
-  periodo.textContent = "Período: " + fmtDate(start) + " a " + fmtDate(end) + " (inclusive). Só entram dias de semanas já bloqueadas/publicadas — o que ainda está por bloquear pode mudar e não conta. \"Horas do ponto\" são as que confirmas no sistema de picagem — preenche à mão para comparar com as horas feitas. \"Salário a pagar\" = horas na semana × €/h útil + horas de fim de semana × €/h f.s.";
+  periodo.innerHTML = "Período: " + fmtDate(start) + " a " + fmtDate(end) + " (inclusive). Só entram dias de semanas já bloqueadas/publicadas — o que ainda está por bloquear pode mudar e não conta.<br>" +
+    "<strong>Horas do ponto</strong>: escreves à mão o que o sistema de picagem confirma. Quando não bate certo com as horas feitas na app (diferença acima de " + PONTO_TOLERANCE + "h), aparece um ⚠ a avisar.<br>" +
+    "<strong>Estimativa (ponto)</strong> e <strong>Estimativa (app)</strong> são duas contas separadas — a primeira usa as horas do ponto, a segunda as horas calculadas pela app. Servem para comparares.<br>" +
+    "<strong>Salário a pagar</strong> é o valor final, para escreveres à mão depois de decidires qual das duas estimativas (ou outro valor) está correto — fica gravado. Enquanto não o preencheres, mostra como sugestão a Estimativa (app).";
   wrap.appendChild(periodo);
   wrap.appendChild(table);
 }
