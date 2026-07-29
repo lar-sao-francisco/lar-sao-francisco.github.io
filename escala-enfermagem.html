@@ -552,7 +552,6 @@
     <span class="back-link" data-back>← Voltar ao início</span>
     <div class="toolbar">
       <button class="btn btn-ghost" id="printReportBtn">Imprimir relatório do mês</button>
-      <button class="btn btn-ghost" id="printContabBtn">Imprimir contabilidade</button>
     </div>
     <div class="panel" id="reportPanel">
       <h2>Relatório do mês — <span id="reportMonthLabel"></span></h2>
@@ -1253,7 +1252,6 @@ function showSection(name){
     document.getElementById("reportPanel").style.display = podeRel ? "" : "none";
     document.getElementById("contabPanel").style.display = podeCtb ? "" : "none";
     document.getElementById("printReportBtn").style.display = podeRel ? "" : "none";
-    document.getElementById("printContabBtn").style.display = podeCtb ? "" : "none";
     if(podeRel) renderRelatorios();
     if(podeCtb) renderContabilidadeAny();
   }
@@ -2022,7 +2020,6 @@ function renderContabilidadeAccountant(){
 document.getElementById("contabStart").addEventListener("change", renderContabilidadeAny);
 document.getElementById("contabEnd").addEventListener("change", renderContabilidadeAny);
 document.getElementById("contabResetBtn").addEventListener("click", ()=>{ contabPrefill(true); renderContabilidadeAny(); });
-document.getElementById("printContabBtn").addEventListener("click", ()=> printOnly("reportPanel"));
 // ---------- RELATÓRIO INDIVIDUAL DE CONTABILIDADE (só na vista da contabilista) ----------
 // Já não há um seletor de pessoa/período à parte — cada linha da tabela tem os seus próprios
 // ícones de gravar/imprimir, e há um botão "Imprimir todos" para todas de uma vez.
