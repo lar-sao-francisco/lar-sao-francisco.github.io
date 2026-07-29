@@ -661,14 +661,14 @@ function defaultShiftTypes(){
 }
 let state = {
   staff: [
-    {id:"s1", nome:"Catia", tipo:"efetivo", off:[5,6], principal:true, isManager:true, exceptions:{}, allowedWeekday:["M","T","DC","DO","Fe"], allowedWeekend:["M1","T1","DC","DO","Fe"], pin:"9999"},
-    {id:"s7", nome:"Luis", tipo:"rv_gestao", off:[], principal:false, isManager:true, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"6666"},
-    {id:"s2", nome:"Catarina", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"1111"},
-    {id:"s3", nome:"Diana", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"2222"},
-    {id:"s4", nome:"Francisco", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"3333"},
-    {id:"s5", nome:"Igor", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"4444"},
-    {id:"s6", nome:"Joanna", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"5555"},
-    {id:"s8", nome:"Sandra", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:"7777"},
+    {id:"s1", nome:"Catia", tipo:"efetivo", off:[5,6], principal:true, isManager:true, exceptions:{}, allowedWeekday:["M","T","DC","DO","Fe"], allowedWeekend:["M1","T1","DC","DO","Fe"], pin:""},
+    {id:"s7", nome:"Luis", tipo:"rv_gestao", off:[], principal:false, isManager:true, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:""},
+    {id:"s2", nome:"Catarina", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:""},
+    {id:"s3", nome:"Diana", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:""},
+    {id:"s4", nome:"Francisco", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:""},
+    {id:"s5", nome:"Igor", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:""},
+    {id:"s6", nome:"Joanna", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:""},
+    {id:"s8", nome:"Sandra", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:""},
   ],
   shiftTypes: defaultShiftTypes(),
   rules: { restHours:11, maxShifts:5, maxConsecutive:5 },
@@ -767,41 +767,53 @@ function getHolidayLabel(iso){
 // 2) Em Settings -> API, copia o "Project URL" e a chave "anon public" e cola aqui:
 const SUPABASE_URL = "https://kzcdaxbqnfsuufnkdkfx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6Y2RheGJxbmZzdXVmbmtka2Z4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1OTc2ODYsImV4cCI6MjA5OTE3MzY4Nn0.1H7KwxxCP4m70L_RwJTiJNG3qtCoprKb8L-HGMstbB8";
-const STATE_KEY = "lar-enfermeiros-state";
-const REV_KEY = "lar-enfermeiros-rev";
 const OWNER_ID = "s7"; // Luis — conta fundadora, protegida
-let dataRev = 0;
+let dataRev = "0";
 let loadFailed = false;
+let authToken = null;
+let authFlags = { isManager:false, canViewTeamDisp:false, canViewReports:false, canViewContab:false, canEditContab:false };
+let loginRoster = [];
 function supabaseConfigured(){
   return SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length > 20;
 }
-async function storageSet(value, key){
+// Todo o acesso a dados passa por funções (RPC) validadas no servidor — o browser
+// nunca lê nem escreve a tabela diretamente, e nunca vê PINs de outras pessoas
+// (só o dono os vê; a contabilista vê valores de contabilidade, mais ninguém).
+async function rpc(name, params){
   if(!supabaseConfigured()) throw new Error("A app ainda nao esta ligada a base de dados - edita SUPABASE_URL e SUPABASE_ANON_KEY no topo do <script> do index.html.");
-  const res = await fetch(SUPABASE_URL + "/rest/v1/app_state?on_conflict=key", {
+  const res = await fetch(SUPABASE_URL + "/rest/v1/rpc/" + name, {
     method: "POST",
     headers: {
       "apikey": SUPABASE_ANON_KEY,
       "Authorization": "Bearer " + SUPABASE_ANON_KEY,
-      "Content-Type": "application/json",
-      "Prefer": "resolution=merge-duplicates"
+      "Content-Type": "application/json"
     },
-    body: JSON.stringify({ key: key || STATE_KEY, value: value })
+    body: JSON.stringify(params || {})
   });
-  if(!res.ok) throw new Error("Erro Supabase " + res.status + ": " + await res.text());
+  if(!res.ok) throw new Error("Erro do servidor (" + res.status + ")");
+  return await res.json();
 }
-async function storageGet(key){
-  if(!supabaseConfigured()) throw new Error("Supabase ainda nao configurado.");
-  const res = await fetch(SUPABASE_URL + "/rest/v1/app_state?key=eq." + (key || STATE_KEY) + "&select=value", {
-    headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY }
-  });
-  if(!res.ok) throw new Error("Erro Supabase " + res.status);
-  const rows = await res.json();
-  return rows.length ? { value: rows[0].value } : null;
+async function doLogin(personId, pin){
+  return await rpc("app_login", { p_person_id: personId, p_pin: pin });
+}
+async function doChangePin(oldPin, newPin){
+  return await rpc("app_change_pin", { p_token: authToken, p_old_pin: oldPin, p_new_pin: newPin });
+}
+async function doSetPin(targetId, newPin){
+  return await rpc("app_set_pin", { p_token: authToken, p_target_person_id: targetId, p_new_pin: newPin });
+}
+async function fetchAndApplyState(){
+  const r = await rpc("app_get_state", { p_token: authToken });
+  if(!r.ok) throw new Error(r.error || "load_failed");
+  applyLoadedState(r.value);
+  dataRev = r.rev;
+  authFlags = r.session || authFlags;
 }
 let saveTimer = null;
 let lastSaveError = null;
 let savePending = false;
 function scheduleSave(){
+  if(!authToken) return;
   savePending = true;
   const statusEl = document.getElementById("saveStatus");
   if(statusEl) statusEl.textContent = "A guardar...";
@@ -812,12 +824,14 @@ async function doSave(){
   const statusEl = document.getElementById("saveStatus");
   try{
     if(loadFailed) throw new Error("Os dados iniciais não carregaram — recarrega a página antes de editar.");
-    const revRow = await storageGet(REV_KEY);
-    const cur = revRow ? (parseInt(revRow.value)||0) : 0;
-    if(cur !== dataRev) throw new Error("Os dados foram alterados noutro dispositivo depois de abrires esta página. Recarrega a página (F5) para veres a versão mais recente — as últimas alterações feitas aqui não foram gravadas.");
-    await storageSet(JSON.stringify(state));
-    dataRev = cur + 1;
-    await storageSet(String(dataRev), REV_KEY);
+    if(!authToken) throw new Error("A tua sessão expirou. Recarrega a página e entra outra vez.");
+    const r = await rpc("app_save_state", { p_token: authToken, p_new_state: state, p_expected_rev: String(dataRev) });
+    if(!r.ok){
+      if(r.error === "stale_rev") throw new Error("Os dados foram alterados noutro dispositivo depois de abrires esta página. Recarrega a página (F5) para veres a versão mais recente — as últimas alterações feitas aqui não foram gravadas.");
+      if(r.error === "session_expired") throw new Error("A tua sessão expirou. Recarrega a página e entra outra vez.");
+      throw new Error(r.error || "Erro ao gravar.");
+    }
+    dataRev = r.rev;
     if(statusEl){
       statusEl.textContent = "Guardado ✓";
       setTimeout(()=>{ if(statusEl.textContent==="Guardado ✓") statusEl.textContent=""; }, 1500);
@@ -883,7 +897,7 @@ function applyLoadedState(raw){
         if(!(parsed.staff||[]).some(pp=>pp.id==="s9")){
           (parsed.staff||[]).push({
             id:"s9", nome:"Catarina (Contabilidade)", tipo:"guest", off:[], principal:false, isManager:false,
-            exceptions:{}, allowedWeekday:[], allowedWeekend:[], pin:"8888", editHorarioIds:[],
+            exceptions:{}, allowedWeekday:[], allowedWeekend:[], pin:"", editHorarioIds:[],
             canViewTeamDisp:true, canViewReports:false, canViewContab:true, canEditContab:true
           });
         }
@@ -937,35 +951,37 @@ function applyLoadedState(raw){
 }
 async function loadState(){
   try{
-    const revRow = await storageGet(REV_KEY);
-    dataRev = revRow ? (parseInt(revRow.value)||0) : 0;
-    const res = await storageGet();
-    if(res && res.value){ applyLoadedState(res.value); }
+    const r = await rpc("app_bootstrap", {});
+    loginRoster = r || [];
   }catch(e){
     loadFailed = true;
     console.error(e);
-    document.getElementById("appLoginGate").style.display = "none";
     document.getElementById("globalErrorBanner").style.display = "flex";
     document.getElementById("globalErrorText").textContent = !supabaseConfigured()
       ? "A app ainda não está ligada à base de dados — edita SUPABASE_URL e SUPABASE_ANON_KEY no topo do index.html."
-      : "Não foi possível carregar os dados (" + (e && e.message ? e.message : String(e)) + "). Verifica a ligação à internet e recarrega a página. Por segurança, nada será gravado até os dados carregarem.";
+      : "Não foi possível carregar os dados (" + (e && e.message ? e.message : String(e)) + "). Verifica a ligação à internet e recarrega a página.";
   }
 }
 async function refreshFromServer(){
   try{
+    if(!authToken){
+      if(document.getElementById("appLoginGate").style.display !== "none"){
+        const r = await rpc("app_bootstrap", {});
+        loginRoster = r || [];
+        populateAppLoginSelect();
+      }
+      return;
+    }
     if(loadFailed || savePending || lastSaveError || nurseEditing || nurseDraft) return;
     if(document.hidden) return;
     if(document.getElementById("section-config").style.display !== "none") return;
-    const revRow = await storageGet(REV_KEY);
-    const cur = revRow ? (parseInt(revRow.value)||0) : 0;
-    if(cur === dataRev) return;
-    const res = await storageGet();
-    if(!res || !res.value) return;
-    applyLoadedState(res.value);
-    dataRev = cur;
+    const r = await rpc("app_get_state", { p_token: authToken });
+    if(!r.ok || r.rev === dataRev) return;
+    applyLoadedState(r.value);
+    dataRev = r.rev;
+    authFlags = r.session || authFlags;
     refreshVisibleSection();
     renderOwnerNotifications();
-    if(document.getElementById("appLoginGate").style.display !== "none") populateAppLoginSelect();
   }catch(e){ /* sem rede: tenta outra vez no próximo ciclo */ }
 }
 setInterval(refreshFromServer, 45000);
@@ -1149,7 +1165,7 @@ function hasAnyConflict(personId, date, code){
 function populateAppLoginSelect(){
   const sel = document.getElementById("appLoginSelect");
   sel.innerHTML = "";
-  state.staff.forEach(p=>{
+  loginRoster.forEach(p=>{
     const opt = document.createElement("option");
     opt.value = p.id;
     opt.textContent = p.nome;
@@ -1177,12 +1193,16 @@ function enterApp(){
   }
   renderOwnerNotifications();
   renderMyStats();
+  const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+  document.getElementById("monthLabel").textContent = label;
+  ensureMonthlyBackup();
 }
 function logoutApp(){
   horarioFilterId = null;
   contabFilterId = null;
   authRole = null;
   authNurseId = null;
+  authToken = null;
   nursePersonId = null;
   nurseDraft = null;
   nurseEditing = false;
@@ -1201,21 +1221,39 @@ function logoutApp(){
   populateAppLoginSelect();
   document.getElementById("appLoginGate").style.display = "";
 }
-document.getElementById("appLoginBtn").addEventListener("click", ()=>{
+document.getElementById("appLoginBtn").addEventListener("click", async ()=>{
   const sel = document.getElementById("appLoginSelect");
   const pin = document.getElementById("appLoginPin").value.trim();
   const errEl = document.getElementById("appLoginError");
+  const btn = document.getElementById("appLoginBtn");
   errEl.textContent = "";
-  const person = staffById(sel.value);
-  if(!person || pin === "" || pin !== person.pin){
+  if(!sel.value || pin === ""){
     errEl.textContent = "PIN incorreto.";
     return;
   }
-  authNurseId = person.id;
-  authRole = person.isManager ? "gestor" : null;
-  nursePersonId = isRvLike(person.tipo) ? person.id : null;
-  document.getElementById("appLoginPin").value = "";
-  enterApp();
+  btn.disabled = true;
+  try{
+    const r = await doLogin(sel.value, pin);
+    if(!r.ok){
+      errEl.textContent = r.error === "locked"
+        ? "Demasiadas tentativas erradas. Tenta outra vez daqui a uns minutos."
+        : "PIN incorreto.";
+      return;
+    }
+    authToken = r.token;
+    authNurseId = r.personId;
+    await fetchAndApplyState();
+    authRole = authFlags.isManager ? "gestor" : null;
+    const person = staffById(authNurseId);
+    nursePersonId = (person && isRvLike(person.tipo)) ? person.id : null;
+    document.getElementById("appLoginPin").value = "";
+    enterApp();
+  }catch(e){
+    console.error(e);
+    errEl.textContent = "Erro de ligação. Verifica a internet e tenta outra vez.";
+  }finally{
+    btn.disabled = false;
+  }
 });
 document.getElementById("gestorLogoutLink").addEventListener("click", logoutApp);
 document.getElementById("nurseBadgeLogoutLink").addEventListener("click", logoutApp);
@@ -1396,7 +1434,15 @@ function renderStaff(){
     pinInput.style.cssText = "width:70px; padding:5px 7px; border:1px solid var(--line); border-radius:6px; font-family:sans-serif; font-size:12.5px;";
     pinInput.value = person.pin || "";
     pinInput.placeholder = "----";
-    pinInput.addEventListener("input", e=>{ person.pin = e.target.value.trim(); scheduleSave(); });
+    pinInput.addEventListener("change", async e=>{
+      const val = e.target.value.trim();
+      if(!val || val.length < 4){ e.target.value = person.pin || ""; alert("O PIN deve ter pelo menos 4 caracteres."); return; }
+      try{
+        const r = await doSetPin(person.id, val);
+        if(!r.ok){ e.target.value = person.pin || ""; alert("Não foi possível definir o PIN."); return; }
+        if(authNurseId === OWNER_ID) person.pin = val;
+      }catch(err){ e.target.value = person.pin || ""; alert("Erro de ligação ao definir o PIN."); }
+    });
     pinLbl.appendChild(pinInput);
     const removeBtn = document.createElement("button");
     removeBtn.className = "remove-x";
@@ -2153,7 +2199,7 @@ document.getElementById("restoreFile").addEventListener("change", (e)=>{
 });
 async function ensureMonthlyBackup(){
   try{
-    if(loadFailed) return;
+    if(loadFailed || !authToken) return;
     const now = new Date();
     const lastDay = daysInMonth(new Date(now.getFullYear(), now.getMonth(), 1));
     const jobs = [];
@@ -2163,29 +2209,29 @@ async function ensureMonthlyBackup(){
       jobs.push(prev.getFullYear() + "-" + pad2(prev.getMonth()+1));
     }
     for(const ym of jobs){
-      const k = "backup-" + ym;
-      const existing = await storageGet(k);
-      if(!existing) await storageSet(JSON.stringify(state), k);
+      await rpc("app_backup_ensure", { p_token: authToken, p_key: "backup-" + ym });
     }
   }catch(e){ /* silencioso */ }
 }
 async function renderBackupList(){
   const wrap = document.getElementById("backupList");
   if(!wrap) return;
+  if(authNurseId !== OWNER_ID){
+    wrap.innerHTML = '<span class="blk-label">Só o dono da conta pode ver as cópias de segurança (contêm dados sensíveis de toda a equipa).</span>';
+    return;
+  }
   wrap.innerHTML = '<span class="blk-label">A procurar cópias automáticas...</span>';
   try{
-    const res = await fetch(SUPABASE_URL + "/rest/v1/app_state?key=like.backup-%25&select=key&order=key.desc", {
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + SUPABASE_ANON_KEY }
-    });
-    if(!res.ok) throw new Error(res.status);
-    const rows = await res.json();
+    const res = await rpc("app_backup_list", { p_token: authToken });
+    if(!res.ok) throw new Error(res.error || "erro");
+    const keys = res.keys || [];
     wrap.innerHTML = "";
-    if(!rows.length){
+    if(!keys.length){
       wrap.innerHTML = '<span class="blk-label">Ainda não existem cópias automáticas — a primeira é criada no último dia do mês.</span>';
       return;
     }
-    rows.forEach(r=>{
-      const ym = r.key.replace("backup-","");
+    keys.forEach(key=>{
+      const ym = key.replace("backup-","");
       const d = new Date(parseInt(ym.slice(0,4)), parseInt(ym.slice(5,7))-1, 1);
       const nomeMes = d.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
       const line = document.createElement("div");
@@ -2199,30 +2245,28 @@ async function renderBackupList(){
       dl.className = "exc-add-btn";
       dl.textContent = "Descarregar";
       dl.addEventListener("click", async ()=>{
-        const row = await storageGet(r.key);
-        if(!row){ alert("Cópia não encontrada."); return; }
+        const row = await rpc("app_backup_get", { p_token: authToken, p_key: key });
+        if(!row.ok){ alert("Cópia não encontrada."); return; }
         const blob = new Blob([row.value], {type:"application/json"});
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "escala-enfermagem-" + r.key + ".json";
+        a.download = "escala-enfermagem-" + key + ".json";
         a.click();
         URL.revokeObjectURL(a.href);
       });
       line.appendChild(dl);
-      if(authNurseId === OWNER_ID){
-        const rst = document.createElement("button");
-        rst.className = "exc-add-btn";
-        rst.textContent = "Repor esta cópia";
-        rst.addEventListener("click", async ()=>{
-          if(!confirm("Repor a cópia de " + nomeMes + "? Substitui TODOS os dados atuais.")) return;
-          const row = await storageGet(r.key);
-          if(!row){ alert("Cópia não encontrada."); return; }
-          applyLoadedState(row.value);
-          scheduleSave();
-          renderConfigSection();
-        });
-        line.appendChild(rst);
-      }
+      const rst = document.createElement("button");
+      rst.className = "exc-add-btn";
+      rst.textContent = "Repor esta cópia";
+      rst.addEventListener("click", async ()=>{
+        if(!confirm("Repor a cópia de " + nomeMes + "? Substitui TODOS os dados atuais.")) return;
+        const row = await rpc("app_backup_get", { p_token: authToken, p_key: key });
+        if(!row.ok){ alert("Cópia não encontrada."); return; }
+        applyLoadedState(row.value);
+        scheduleSave();
+        renderConfigSection();
+      });
+      line.appendChild(rst);
       wrap.appendChild(line);
     });
   }catch(e){
@@ -3118,24 +3162,29 @@ document.getElementById("showChangePinLink").addEventListener("click", ()=>{
   document.getElementById("changePinError").textContent = "";
   document.getElementById("changePinSuccess").textContent = "";
 });
-document.getElementById("changePinBtn").addEventListener("click", ()=>{
+document.getElementById("changePinBtn").addEventListener("click", async ()=>{
   const errEl = document.getElementById("changePinError");
   const okEl = document.getElementById("changePinSuccess");
   errEl.textContent = ""; okEl.textContent = "";
-  const person = staffById(authNurseId);
-  if(!person){ errEl.textContent = "Sessão inválida, entra outra vez."; return; }
+  if(!authToken){ errEl.textContent = "Sessão inválida, entra outra vez."; return; }
   const oldPin = document.getElementById("oldPinInput").value.trim();
   const newPin = document.getElementById("newPinInput").value.trim();
   const newPin2 = document.getElementById("newPinInput2").value.trim();
-  if(oldPin !== person.pin){ errEl.textContent = "O PIN atual está incorreto."; return; }
   if(!newPin || newPin.length < 4){ errEl.textContent = "O novo PIN deve ter pelo menos 4 caracteres."; return; }
   if(newPin !== newPin2){ errEl.textContent = "Os dois PINs novos não coincidem."; return; }
-  person.pin = newPin;
-  scheduleSave();
-  document.getElementById("oldPinInput").value = "";
-  document.getElementById("newPinInput").value = "";
-  document.getElementById("newPinInput2").value = "";
-  okEl.textContent = "PIN alterado com sucesso.";
+  try{
+    const r = await doChangePin(oldPin, newPin);
+    if(!r.ok){
+      errEl.textContent = r.error === "old_pin_invalid" ? "O PIN atual está incorreto." : "Não foi possível mudar o PIN. Tenta outra vez.";
+      return;
+    }
+    document.getElementById("oldPinInput").value = "";
+    document.getElementById("newPinInput").value = "";
+    document.getElementById("newPinInput2").value = "";
+    okEl.textContent = "PIN alterado com sucesso.";
+  }catch(e){
+    errEl.textContent = "Erro de ligação. Tenta outra vez.";
+  }
 });
 function renderNurseView(){
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
@@ -3372,10 +3421,7 @@ function printOnly(hideId){
 document.getElementById("printReportBtn").addEventListener("click", ()=> printOnly("contabPanel"));
 document.getElementById("printTeamDispBtn").addEventListener("click", ()=> window.print());
 loadState().then(()=>{
-  const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
-  document.getElementById("monthLabel").textContent = label;
   populateAppLoginSelect();
-  ensureMonthlyBackup();
 });
 </script>
 
