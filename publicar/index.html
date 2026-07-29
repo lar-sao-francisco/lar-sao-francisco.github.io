@@ -850,7 +850,8 @@ function applyLoadedState(raw){
         }
         parsed.ctbSeeded = true;
       }
-      if(!parsed.pontoHours) parsed.pontoHours = {};
+      if(!parsed.pontoHours) parsed.pontoHours = {}; // já não é usado na UI, mantido por compatibilidade
+      if(!parsed.estimativaPonto) parsed.estimativaPonto = {};
       if(!parsed.salarioFinal) parsed.salarioFinal = {};
       if(!parsed.schedules) parsed.schedules = {};
       if(!parsed.availabilityRequests) parsed.availabilityRequests = {};
@@ -1793,23 +1794,21 @@ function renderContabilidadeAccountant(){
   const wrap = document.getElementById("contabTableWrap");
   wrap.innerHTML = "";
   if(!(start <= end)){ wrap.innerHTML = '<p class="note">Período inválido — a data de início tem de ser anterior à de fim.</p>'; return; }
-  if(!state.pontoHours) state.pontoHours = {};
+  if(!state.estimativaPonto) state.estimativaPonto = {};
   if(!state.salarioFinal) state.salarioFinal = {};
   const periodKey = weekKey(start) + "_" + weekKey(end);
   const inpCss = "width:72px; padding:5px 6px; border:1px solid var(--line); border-radius:6px; font-family:sans-serif; font-size:12.5px;";
-  const narrowInpCss = "width:52px; padding:5px 6px; border:1px solid var(--line); border-radius:6px; font-family:sans-serif; font-size:12.5px;";
   const finalInpCss = "width:82px; padding:5px 6px; border:1.5px solid var(--sage-deep); border-radius:6px; font-family:sans-serif; font-size:12.5px; font-weight:700;";
   const narrowTdCss = "padding:6px 6px;";
-  const PONTO_TOLERANCE = 0.25; // diferença (horas) a partir da qual avisamos que ponto e app não coincidem
   const table = document.createElement("table");
   table.className = "excel sans";
   table.style.width = "100%";
   table.innerHTML = '<thead><tr><th class="name-col">Pessoa</th><th>€/h útil</th><th>€/h f.s.</th>' +
     '<th style="' + narrowTdCss + '">H semana</th><th style="' + narrowTdCss + '">H fim de semana</th>' +
-    '<th>Horas feitas</th><th>Horas do ponto</th>' +
+    '<th>Horas feitas</th>' +
     '<th>Estimativa (ponto)</th><th>Estimativa (app)</th><th>Salário a pagar</th></tr></thead>';
   const tbody = document.createElement("tbody");
-  let totU = 0, totF = 0, totFeitas = 0, totPonto = 0, anyPonto = false, totEstApp = 0, totEstPonto = 0, anyEstPonto = false, totFinal = 0;
+  let totU = 0, totF = 0, totFeitas = 0, totEstApp = 0, totEstPonto = 0, anyEstPonto = false, totFinal = 0;
   state.staff.filter(pp=>isSchedulableTipo(pp.tipo)).forEach(person=>{
     let hU=0, hF=0;
     for(let d = new Date(start); d <= end; d = addDays(d, 1)){
@@ -1862,45 +1861,25 @@ function renderContabilidadeAccountant(){
     tdFeitas.textContent = feitas + "h";
     tr.appendChild(tdFeitas);
     const pKey = person.id + "|" + periodKey;
-    const pontoInp = document.createElement("input");
-    pontoInp.type = "number"; pontoInp.min = "0"; pontoInp.step = "0.25"; pontoInp.inputMode = "decimal"; pontoInp.placeholder = "—";
-    pontoInp.style.cssText = inpCss;
-    const pontoVal = state.pontoHours[pKey];
-    if(pontoVal !== undefined && pontoVal !== null) pontoInp.value = pontoVal;
-    pontoInp.addEventListener("change", ()=>{
-      if(pontoInp.value === ""){ delete state.pontoHours[pKey]; }
-      else { state.pontoHours[pKey] = parseFloat(pontoInp.value); }
+    const rH = (person.rateHora === undefined || person.rateHora === null || person.rateHora === "") ? NaN : parseFloat(person.rateHora);
+    const rF = (person.rateFds === undefined || person.rateFds === null || person.rateFds === "") ? rH : parseFloat(person.rateFds);
+    // Estimativa (ponto): escrita à mão por ti, a partir do que confirmas no sistema de picagem
+    // (a app não sabe as horas reais de entrada/saída, por isso não tenta calcular isto sozinha).
+    const estPontoInp = document.createElement("input");
+    estPontoInp.type = "number"; estPontoInp.min = "0"; estPontoInp.step = "0.01"; estPontoInp.inputMode = "decimal"; estPontoInp.placeholder = "0,00";
+    estPontoInp.style.cssText = inpCss;
+    const estPontoVal = state.estimativaPonto[pKey];
+    if(estPontoVal !== undefined && estPontoVal !== null) estPontoInp.value = estPontoVal;
+    estPontoInp.addEventListener("change", ()=>{
+      if(estPontoInp.value === ""){ delete state.estimativaPonto[pKey]; }
+      else { state.estimativaPonto[pKey] = parseFloat(estPontoInp.value); }
       scheduleSave();
       renderContabilidadeAccountant();
     });
-    const tdPonto = document.createElement("td");
-    tdPonto.appendChild(pontoInp);
-    if(pontoVal !== undefined && pontoVal !== null && Math.abs(pontoVal - feitas) > PONTO_TOLERANCE){
-      const warn = document.createElement("span");
-      warn.textContent = " ⚠";
-      warn.style.cssText = "color:#c0392b; font-weight:700; cursor:help;";
-      warn.title = "Ponto (" + pontoVal + "h) não coincide com as horas feitas na app (" + feitas + "h) — diferença de " + Math.abs(pontoVal - feitas).toFixed(2).replace(".", ",") + "h. Confirma qual das duas está certa antes de fechares o salário.";
-      tdPonto.appendChild(warn);
-    }
-    tr.appendChild(tdPonto);
-    if(pontoVal !== undefined && pontoVal !== null){ totPonto += pontoVal; anyPonto = true; }
-    const rH = (person.rateHora === undefined || person.rateHora === null || person.rateHora === "") ? NaN : parseFloat(person.rateHora);
-    const rF = (person.rateFds === undefined || person.rateFds === null || person.rateFds === "") ? rH : parseFloat(person.rateFds);
-    // Estimativa (ponto): aplica às horas do ponto uma taxa média, ponderada pela proporção
-    // semana/fim de semana que a app já conhece deste período (a app não sabe como as horas do
-    // ponto se dividem entre semana e fim de semana, só o total).
-    const blendedRate = (feitas > 0 && !isNaN(rH)) ? (hU*rH + hF*(isNaN(rF)?rH:rF)) / feitas : rH;
     const tdEstPonto = document.createElement("td");
-    tdEstPonto.style.cssText = "padding:6px 10px;";
-    if(pontoVal !== undefined && pontoVal !== null && !isNaN(blendedRate) && blendedRate > 0){
-      const estPonto = pontoVal * blendedRate;
-      totEstPonto += estPonto; anyEstPonto = true;
-      tdEstPonto.textContent = estPonto.toFixed(2).replace(".", ",") + " €";
-      tdEstPonto.title = "Horas do ponto × taxa média (" + blendedRate.toFixed(2).replace(".",",") + " €/h, calculada a partir da proporção semana/fim de semana da app).";
-    } else {
-      tdEstPonto.textContent = "—";
-    }
+    tdEstPonto.appendChild(estPontoInp);
     tr.appendChild(tdEstPonto);
+    if(estPontoVal !== undefined && estPontoVal !== null){ totEstPonto += estPontoVal; anyEstPonto = true; }
     const tdEstApp = document.createElement("td");
     tdEstApp.style.cssText = "padding:6px 10px;";
     let estApp = null;
@@ -1937,7 +1916,6 @@ function renderContabilidadeAccountant(){
     '<td style="font-weight:700;">' + totU + 'h</td>' +
     '<td style="font-weight:700;">' + totF + 'h</td>' +
     '<td style="font-weight:700;">' + totFeitas + 'h</td>' +
-    '<td style="font-weight:700;">' + (anyPonto ? totPonto + 'h' : '—') + '</td>' +
     '<td style="font-weight:700;">' + (anyEstPonto ? totEstPonto.toFixed(2).replace(".", ",") + ' €' : '—') + '</td>' +
     '<td style="font-weight:700;">' + totEstApp.toFixed(2).replace(".", ",") + ' €</td>' +
     '<td style="font-weight:700;">' + totFinal.toFixed(2).replace(".", ",") + ' €</td></tr>';
@@ -1946,8 +1924,7 @@ function renderContabilidadeAccountant(){
   periodo.className = "note";
   periodo.style.marginTop = "0";
   periodo.innerHTML = "Período: " + fmtDate(start) + " a " + fmtDate(end) + " (inclusive). Só entram dias de semanas já bloqueadas/publicadas — o que ainda está por bloquear pode mudar e não conta.<br>" +
-    "<strong>Horas do ponto</strong>: escreves à mão o que o sistema de picagem confirma. Quando não bate certo com as horas feitas na app (diferença acima de " + PONTO_TOLERANCE + "h), aparece um ⚠ a avisar.<br>" +
-    "<strong>Estimativa (ponto)</strong> e <strong>Estimativa (app)</strong> são duas contas separadas — a primeira usa as horas do ponto, a segunda as horas calculadas pela app. Servem para comparares.<br>" +
+    "<strong>Estimativa (ponto)</strong>: escreves tu à mão, com base no que confirmas no sistema de picagem. <strong>Estimativa (app)</strong> é calculada automaticamente pelas horas da grelha. Compara as duas.<br>" +
     "<strong>Salário a pagar</strong> é o valor final, para escreveres à mão depois de decidires qual das duas estimativas (ou outro valor) está correto — fica gravado. Enquanto não o preencheres, mostra como sugestão a Estimativa (app).";
   wrap.appendChild(periodo);
   wrap.appendChild(table);
