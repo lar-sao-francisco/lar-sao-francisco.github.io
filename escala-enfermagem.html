@@ -351,6 +351,23 @@
     #section-relatorios .contab-print-all-block{ page-break-inside:avoid; break-inside:avoid; page-break-after:always; break-after:page; }
     #section-relatorios .contab-print-all-block:last-of-type{ page-break-after:auto; break-after:auto; }
     .print-doc-footer{ display:block !important; margin-top:14px; font-size:8.5px; color:#8a978f; text-align:right; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
+    /* Impressão de fichas de contabilidade (uma pessoa, ou todas as bloqueadas).
+       Isto tem de ser feito por CSS e não mexendo em style.display no JavaScript:
+       o window.print() devolve o controlo antes de o browser paginar a folha, por
+       isso qualquer "esconder agora, mostrar outra vez a seguir" era desfeito antes
+       de a página ser tirada — e saía a tabela toda em vez da ficha escolhida.
+       Como estas regras só existem em @media print, a classe no <body> nunca
+       altera nada do que se vê no ecrã. */
+    body.print-contab-doc #reportPanel,
+    body.print-contab-doc #contabPanel > .exc-row,
+    body.print-contab-doc #contabPanel > .note,
+    body.print-contab-doc #contabTableWrap{ display:none !important; }
+    body.print-contab-doc #contabPersonPrintArea{ display:block !important; }
+    body.print-relatorio-mes #contabPanel{ display:none !important; }
+    /* Impressão do Horário por período escolhido à mão: mostra a tabela do intervalo
+       em vez da grelha do mês. Mesmo motivo para ser por CSS e não por style.display. */
+    body.print-horario-periodo #section-horario .grid-scroll:not(#horarioPrintRangeWrap){ display:none !important; }
+    body.print-horario-periodo #horarioPrintRangeWrap{ display:block !important; }
   }
 </style>
 </head>
@@ -2179,26 +2196,36 @@ function buildContabPersonReportHtml(person, start, end, r){
   html += '</tbody></table></div>';
   return html;
 }
-function printOnePersonReport(person, start, end){
-  const periodKey = weekKey(start) + "_" + weekKey(end);
-  const r = computeContabPersonReport(person, start, end, periodKey);
-  const area = document.getElementById("contabPersonPrintArea");
-  area.innerHTML = buildContabPersonReportHtml(person, start, end, r) +
-    '<div class="print-footer">' +
+// Imprime o conteúdo já colocado em #contabPersonPrintArea. A visibilidade é toda
+// decidida pelo CSS de @media print (classe print-contab-doc), nunca por style.display,
+// porque o browser só pagina a folha depois de o window.print() ter devolvido o controlo.
+function printWithBodyClass(cls){
+  document.body.classList.add(cls);
+  const limpar = ()=>{
+    document.body.classList.remove(cls);
+    window.removeEventListener("afterprint", limpar);
+  };
+  window.addEventListener("afterprint", limpar);
+  window.print();
+  // Rede de segurança: se o afterprint não chegar (acontece em alguns browsers),
+  // a classe sai sozinha. Ficar lá não estraga nada no ecrã, mas evita acumular.
+  setTimeout(limpar, 60000);
+}
+function printContabDoc(){ printWithBodyClass("print-contab-doc"); }
+function contabPrintFooterHtml(){
+  return '<div class="print-footer">' +
       '<div class="print-side">' +
         '<div class="obs-line"><span class="obs-line-label">Obs:</span><span class="obs-line-fill"></span></div>' +
         '<div class="sign-block"><span class="sign-date">Data: ____ / ____ / ________</span><span class="sign-fill"></span><span class="sign-caption">A direção</span></div>' +
       '</div>' +
     '</div>';
-  const tableWrap = document.getElementById("contabTableWrap");
-  const dateRow = document.querySelector("#contabPanel > .exc-row");
-  const els = [tableWrap, dateRow];
-  const prevDisplay = els.map(el => el ? el.style.display : null);
-  els.forEach(el=>{ if(el) el.style.display = "none"; });
-  area.style.display = "block";
-  window.print();
-  els.forEach((el,i)=>{ if(el) el.style.display = prevDisplay[i] || ""; });
-  area.style.display = "none";
+}
+function printOnePersonReport(person, start, end){
+  const periodKey = weekKey(start) + "_" + weekKey(end);
+  const r = computeContabPersonReport(person, start, end, periodKey);
+  const area = document.getElementById("contabPersonPrintArea");
+  area.innerHTML = buildContabPersonReportHtml(person, start, end, r) + contabPrintFooterHtml();
+  printContabDoc();
 }
 function printAllPersonReports(people, start, end){
   const periodKey = weekKey(start) + "_" + weekKey(end);
@@ -2207,23 +2234,10 @@ function printAllPersonReports(people, start, end){
     const r = computeContabPersonReport(person, start, end, periodKey);
     return '<div class="contab-print-all-block">' +
       buildContabPersonReportHtml(person, start, end, r) +
-      '<div class="print-footer">' +
-        '<div class="print-side">' +
-          '<div class="obs-line"><span class="obs-line-label">Obs:</span><span class="obs-line-fill"></span></div>' +
-          '<div class="sign-block"><span class="sign-date">Data: ____ / ____ / ________</span><span class="sign-fill"></span><span class="sign-caption">A direção</span></div>' +
-        '</div>' +
-      '</div>' +
+      contabPrintFooterHtml() +
     '</div>';
   }).join("");
-  const tableWrap = document.getElementById("contabTableWrap");
-  const dateRow = document.querySelector("#contabPanel > .exc-row");
-  const els = [tableWrap, dateRow];
-  const prevDisplay = els.map(el => el ? el.style.display : null);
-  els.forEach(el=>{ if(el) el.style.display = "none"; });
-  area.style.display = "block";
-  window.print();
-  els.forEach((el,i)=>{ if(el) el.style.display = prevDisplay[i] || ""; });
-  area.style.display = "none";
+  printContabDoc();
 }
 // ---------- COPIA DE SEGURANCA ----------
 document.getElementById("backupBtn").addEventListener("click", ()=>{
@@ -3106,13 +3120,7 @@ document.getElementById("printHorarioRangeBtn").addEventListener("click", ()=>{
   const end = new Date(endI + "T00:00:00");
   if(start > end){ alert("A data de início tem de ser anterior (ou igual) à data de fim."); return; }
   buildHorarioPrintRangeTable(start, end);
-  const normalGrid = document.querySelector("#section-horario .grid-scroll:not(#horarioPrintRangeWrap)");
-  const rangeWrap = document.getElementById("horarioPrintRangeWrap");
-  if(normalGrid) normalGrid.style.display = "none";
-  rangeWrap.style.display = "";
-  window.print();
-  if(normalGrid) normalGrid.style.display = "";
-  rangeWrap.style.display = "none";
+  printWithBodyClass("print-horario-periodo");
 });
 // ---------- AUTO GENERATE (whole visible month, respeita máximo semanal) ----------
 function autoGenerate(){
@@ -3526,14 +3534,9 @@ function renderRelatorios(){
   table.appendChild(tfoot);
   wrap.appendChild(table);
 }
-function printOnly(hideId){
-  const el = document.getElementById(hideId);
-  const prev = el.style.display;
-  el.style.display = "none";
-  window.print();
-  el.style.display = prev;
-}
-document.getElementById("printReportBtn").addEventListener("click", ()=> printOnly("contabPanel"));
+// "Imprimir relatório do mês": esconde a Contabilidade, também por CSS de impressão
+// e pela mesma razão que a ficha individual (ver nota no @media print).
+document.getElementById("printReportBtn").addEventListener("click", ()=> printWithBodyClass("print-relatorio-mes"));
 document.getElementById("printTeamDispBtn").addEventListener("click", ()=> window.print());
 loadState().then(()=>{
   populateAppLoginSelect();
