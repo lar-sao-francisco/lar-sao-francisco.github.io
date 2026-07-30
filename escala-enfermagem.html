@@ -594,7 +594,7 @@
         <span class="blk-label" id="contabPeriodHint"></span>
       </div>
       <div class="grid-scroll" id="contabTableWrap"></div>
-      <p class="note">As horas vêm dos turnos atribuídos na grelha do Horário dentro do período escolhido (descansos DC/DO e Férias não contam). "Útil" = segunda a sexta; fim de semana = sábado e domingo (feriados em dia de semana contam como útil). Clica num nome para ver só essa pessoa.</p>
+      <p class="note">As horas vêm dos turnos atribuídos na grelha do Horário dentro do período escolhido (descansos DC/DO e Férias não contam). "Útil" = segunda a sexta; "fim de semana" = sábado, domingo e feriados — um feriado em dia de semana conta como fim de semana e é pago ao €/h de fim de semana. Clica num nome para ver só essa pessoa.</p>
       <div id="contabPersonPrintArea" style="display:none;"></div>
     </div>
   </div>
@@ -639,7 +639,7 @@
         <input type="text" id="holidayLabelInput" placeholder="Nome do feriado" style="padding:5px 8px; border:1px solid var(--line); border-radius:6px; font-family:sans-serif; font-size:12.5px; min-width:160px;">
         <button class="exc-add-btn" id="holidayAddBtn">+ Adicionar feriado</button>
       </div>
-      <p class="note">Os feriados nacionais de Portugal e o feriado municipal de Leiria (22 de maio) são calculados automaticamente todos os anos — incluindo a Páscoa e os feriados que dependem dela (Sexta-feira Santa, Corpo de Deus). Não precisas de os atualizar manualmente ano a ano. Podes adicionar feriados extra, ou esconder algum que o lar não observe, com o "✕". Aparecem na grelha do Horário como referência — não bloqueiam turnos automaticamente, já que o lar funciona todos os dias.</p>
+      <p class="note">Os feriados nacionais de Portugal e o feriado municipal de Leiria (22 de maio) são calculados automaticamente todos os anos — incluindo a Páscoa e os feriados que dependem dela (Sexta-feira Santa, Corpo de Deus). Não precisas de os atualizar manualmente ano a ano. Podes adicionar feriados extra, ou esconder algum que o lar não observe, com o "✕". Aparecem na grelha do Horário com 🎉 — não bloqueiam turnos, já que o lar funciona todos os dias, mas um feriado passa a funcionar como um domingo: valem os turnos de fim de semana e as horas contam (e são pagas) como horas de fim de semana.</p>
     </div>
     <div class="panel" id="availabilityPanel">
       <h2>Disponibilidades submetidas pelos recibos verdes</h2>
@@ -734,6 +734,11 @@ function hourToTime(h){ return pad2(Math.floor(h)) + ":" + pad2(Math.round((h%1)
 function timeToHour(t){ const [hh,mm]=t.split(":").map(Number); return hh + (mm||0)/60; }
 function dowIndex(date){ const d = date.getDay(); return d===0 ? 6 : d-1; }
 function isWeekendDay(date){ const d = date.getDay(); return d===0 || d===6; }
+function isHolidayDay(date){ return !!getHolidayLabel(weekKey(date)); }
+// Um feriado funciona como um domingo: para a Cátia valem os turnos de fim de semana (M1/T1
+// em vez de M/T), o dia é preenchido com a regra de fim de semana, e as horas contam como
+// horas de fim de semana na Contabilidade. A cor da coluna continua a ser a de feriado (🎉).
+function contaComoFimDeSemana(date){ return isWeekendDay(date) || isHolidayDay(date); }
 function absDayNum(date){ return Math.floor(date.getTime()/86400000); }
 function shiftType(code){ return state.shiftTypes.find(s=>s.code===code); }
 function staffById(id){ return state.staff.find(s=>s.id===id); }
@@ -1055,7 +1060,7 @@ function isOff(person, date){
   return person.off.includes(dowIndex(date));
 }
 function isShiftAllowed(person, date, code){
-  const list = isWeekendDay(date) ? person.allowedWeekend : person.allowedWeekday;
+  const list = contaComoFimDeSemana(date) ? person.allowedWeekend : person.allowedWeekday;
   if(!list || list.length===0) return true;
   return list.includes(code);
 }
@@ -1078,7 +1083,7 @@ function getNeededForShift(date, code){
   // M1 e a um T1 já preenchidos punha três pessoas onde bastam duas. Fica reservado para o
   // último recurso (dia sem ninguém disponível), tratado no fim de cada dia em autoGenerate().
   if(code === "MT1") return 0;
-  if(!isWeekendDay(date)){
+  if(!contaComoFimDeSemana(date)){
     const isWed = dowIndex(date) === 2; // Quarta-feira
     if(code === "M1"){
       // Quarta: M1 é sempre precisa. Outros dias: só se a principal não estiver a trabalhar.
@@ -1943,7 +1948,7 @@ function renderContabilidade(){
       const h = effectiveShiftHours(person, code);
       if(h <= 0) continue;
       if(code !== "Fe") turnos++;
-      if(isWeekendDay(d)) hF += h; else hU += h;
+      if(contaComoFimDeSemana(d)) hF += h; else hU += h;
     }
     totU += hU; totF += hF; totT += turnos;
     const dotClass = person.tipo==="efetivo" ? "efetivo" : "rv";
@@ -1985,7 +1990,7 @@ function renderContabilidade(){
       const st = shiftType(code);
       if(st && st.isRest) continue;
       const h = shiftHours(code);
-      if(isWeekendDay(d)) ohF += h; else ohU += h;
+      if(contaComoFimDeSemana(d)) ohF += h; else ohU += h;
     }
     const rH = state.payRates.gestorHora || 0;
     const rF = state.payRates.gestorFds || 0;
@@ -2092,7 +2097,7 @@ function renderContabilidadeAccountant(){
       if(!code) continue;
       const h = effectiveShiftHours(person, code);
       if(h <= 0) continue;
-      if(isWeekendDay(d)) hF += h; else hU += h;
+      if(contaComoFimDeSemana(d)) hF += h; else hU += h;
     }
     const feitas = hU + hF;
     totU += hU; totF += hF; totFeitas += feitas;
@@ -2304,7 +2309,7 @@ function computeContabPersonReport(person, start, end, periodKey){
     if(!code) continue;
     const h = effectiveShiftHours(person, code);
     if(h <= 0) continue;
-    if(isWeekendDay(d)) hF += h; else hU += h;
+    if(contaComoFimDeSemana(d)) hF += h; else hU += h;
   }
   const feitas = hU + hF;
   const rH = (person.rateHora === undefined || person.rateHora === null || person.rateHora === "") ? NaN : parseFloat(person.rateHora);
@@ -2510,7 +2515,7 @@ function renderMyStats(){
       const h = effectiveShiftHours(person, code);
       if(h > 0){
         feitas += h; if(code !== "Fe") turnos++;
-        if(isWeekendDay(date)) fds += h;
+        if(contaComoFimDeSemana(date)) fds += h;
       }
     }
   }
@@ -2632,9 +2637,11 @@ function renderTeamAvailability(){
   const sel = document.getElementById("teamDispPrintSelect");
   if(sel){
     const prevValue = sel.value;
+    // quem está a ver não aparece no seletor de impressão — as suas não vão para o papel
+    const paraImprimir = allRvStaff.filter(p=> p.id !== authNurseId);
     sel.innerHTML = '<option value="">Todas as pessoas</option>' +
-      allRvStaff.map(p=>'<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>').join("");
-    if(allRvStaff.some(p=>p.id===prevValue)) sel.value = prevValue;
+      paraImprimir.map(p=>'<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>').join("");
+    if(paraImprimir.some(p=>p.id===prevValue)) sel.value = prevValue;
     sel.onchange = renderTeamAvailability;
   }
   const wrap = document.getElementById("teamAvailabilityList");
@@ -2659,6 +2666,9 @@ function renderTeamAvailability(){
   rvStaff.forEach(person=>{
     const block = document.createElement("div");
     block.className = "disp-person-block";
+    // As disponibilidades de quem está a ver a página não entram na impressão: o documento
+    // é para as da restante equipa. Continuam visíveis no ecrã, só não vão para o papel.
+    if(person.id === authNurseId) block.classList.add("no-print");
     const buckets = { uM:[], uT:[], sM:[], sT:[], dM:[], dT:[] };
     let total = 0, weekend = 0;
     for(let day=1; day<=nDays; day++){
@@ -3678,7 +3688,7 @@ function renderRelatorios(){
         const h = effectiveShiftHours(person, code);
         if(h > 0){
           feitas += h; if(code !== "Fe") turnos++;
-          if(isWeekendDay(date)) fds += h;
+          if(contaComoFimDeSemana(date)) fds += h;
         }
       }
     }
@@ -3802,7 +3812,7 @@ loadState().then(()=>{
       a:"No Horário, carrega em \"Imprimir / Exportar PDF\". Na janela de impressão podes escolher uma impressora ou \"Guardar como PDF\". A escala sai em A4 ao baixo, pronta para afixar." },
     { keys:["feriado","feriados","🎉"],
       sug:"Como funcionam os feriados?",
-      a:"Os feriados nacionais e o feriado municipal de Leiria são calculados automaticamente todos os anos (incluindo Páscoa e derivados) e aparecem na grelha com 🎉. Não bloqueiam turnos — o lar funciona todos os dias. A gestão pode adicionar ou esconder feriados em Configurações → Feriados." },
+      a:"Os feriados nacionais e o feriado municipal de Leiria são calculados automaticamente todos os anos (incluindo Páscoa e derivados) e aparecem na grelha com 🎉. Não bloqueiam turnos — o lar funciona todos os dias — mas um feriado funciona como um domingo: valem os turnos de fim de semana e as horas contam como horas de fim de semana na Contabilidade. A gestão pode adicionar ou esconder feriados em Configurações → Feriados." },
     { keys:["ferias","férias","excecao","exceção","folga","descansa"],
       sug:"Como marco férias de alguém?",
       a:"(Só gestão) Em Configurações → Equipa, na linha da pessoa: usa \"Férias (intervalo)\" para marcar um período, ou \"+ Adicionar exceção\" para um dia específico (Trabalha / Descansa / Férias). O \"Padrão semanal\" define os dias fixos de descanso todas as semanas." },
