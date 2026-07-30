@@ -590,7 +590,8 @@
         <input type="date" id="contabStart">
         <span class="blk-label">até:</span>
         <input type="date" id="contabEnd">
-        <button class="exc-add-btn" id="contabResetBtn">Período 21 → 20 deste mês</button>
+        <button class="exc-add-btn" id="contabPeriodBtn">💾 Guardar período</button>
+        <span class="blk-label" id="contabPeriodHint"></span>
       </div>
       <div class="grid-scroll" id="contabTableWrap"></div>
       <p class="note">As horas vêm dos turnos atribuídos na grelha do Horário dentro do período escolhido (descansos DC/DO e Férias não contam). "Útil" = segunda a sexta; fim de semana = sábado e domingo (feriados em dia de semana contam como útil). Clica num nome para ver só essa pessoa.</p>
@@ -933,6 +934,7 @@ function applyLoadedState(raw){
       if(!parsed.estimativaPonto) parsed.estimativaPonto = {};
       if(!parsed.salarioFinal) parsed.salarioFinal = {};
       if(!parsed.salarioLocked) parsed.salarioLocked = {};
+      if(!parsed.contabPeriods) parsed.contabPeriods = {};
       migrateContabKeys(parsed);
       if(!parsed.schedules) parsed.schedules = {};
       if(!parsed.availabilityRequests) parsed.availabilityRequests = {};
@@ -1790,19 +1792,59 @@ document.getElementById("holidayAddBtn").addEventListener("click", ()=>{
 // ---------- CONTABILIDADE ----------
 function contabPrefill(force){
   const si = document.getElementById("contabStart"), ei = document.getElementById("contabEnd");
+  const guardado = contabSavedPeriod();
+  if(guardado){
+    // mês com período já fixado: os campos mostram sempre o que foi guardado
+    si.value = guardado.de;
+    ei.value = guardado.ate;
+    return;
+  }
   if(force || !si.value || !ei.value){
-    const m = state.monthStart;
-    si.value = weekKey(new Date(m.getFullYear(), m.getMonth()-1, 21));
-    ei.value = weekKey(new Date(m.getFullYear(), m.getMonth(), 20));
+    const d = contabDefaultPeriod();
+    si.value = d.de;
+    ei.value = d.ate;
+  }
+}
+// Estado do controlo do período: com o período fixado as datas ficam bloqueadas e o botão
+// passa a permitir desbloquear; sem período fixado, dá para escolher as datas e guardar.
+function updateContabPeriodControls(){
+  const guardado = contabSavedPeriod();
+  const si = document.getElementById("contabStart"), ei = document.getElementById("contabEnd");
+  const btn = document.getElementById("contabPeriodBtn");
+  const hint = document.getElementById("contabPeriodHint");
+  if(!si || !ei || !btn) return;
+  si.disabled = !!guardado;
+  ei.disabled = !!guardado;
+  btn.textContent = guardado ? "🔓 Alterar período" : "💾 Guardar período";
+  btn.title = guardado
+    ? "Desbloquear as datas para poder alterar o período deste mês"
+    : "Fixar este período para o mês — só depois de guardar é que se preenche a tabela";
+  if(hint){
+    hint.textContent = guardado
+      ? "🔒 Período fixado para este mês."
+      : "Escolhe as datas e carrega em Guardar período antes de preencher a tabela.";
   }
 }
 // Chave que identifica um período de contabilidade para guardar bloqueios e salários.
-// Usa o MÊS em que o período termina (o período 21/jun→20/jul é "o pagamento de julho"),
-// e não as datas exatas: assim um dia a mais ou a menos no período não faz aparecer um
-// conjunto de valores diferente, e o bloqueio não se perde ao navegar entre meses.
-function contabPeriodKey(start, end){
-  const d = (end instanceof Date && !isNaN(end)) ? end : state.monthStart;
-  return d.getFullYear() + "-" + pad2(d.getMonth()+1);
+// É o MÊS escolhido em cima (o período 21/jun→20/jul é "o pagamento de julho"), e não as
+// datas exatas: assim um dia a mais ou a menos no período não faz aparecer um conjunto de
+// valores diferente, e nada se perde ao navegar entre meses.
+function contabMonthKey(){
+  const m = state.monthStart;
+  return m.getFullYear() + "-" + pad2(m.getMonth()+1);
+}
+// Período sugerido quando o mês ainda não tem nenhum guardado: dia 21 do mês anterior
+// ao dia 20 deste mês.
+function contabDefaultPeriod(){
+  const m = state.monthStart;
+  return { de: weekKey(new Date(m.getFullYear(), m.getMonth()-1, 21)),
+           ate: weekKey(new Date(m.getFullYear(), m.getMonth(), 20)) };
+}
+// Período que a contabilista fixou para este mês (null se ainda não fixou nenhum).
+function contabSavedPeriod(){
+  if(!state.contabPeriods) state.contabPeriods = {};
+  const p = state.contabPeriods[contabMonthKey()];
+  return (p && p.de && p.ate) ? p : null;
 }
 // Converte chaves do formato antigo ("id|2026-06-21_2026-07-20") para o novo ("id|2026-07").
 // É idempotente — as chaves novas não têm o formato antigo, por isso não são tocadas.
@@ -1860,6 +1902,7 @@ function updateMonthLabel(){
 }
 function renderContabilidade(){
   contabPrefill(false);
+  updateContabPeriodControls();
   const start = new Date(document.getElementById("contabStart").value + "T00:00:00");
   const end = new Date(document.getElementById("contabEnd").value + "T00:00:00");
   const wrap = document.getElementById("contabTableWrap");
@@ -1975,7 +2018,11 @@ let contabFinalTotalTd = null;
 let contabRowRefs = [];
 function applyContabRowLockState(ref){
   const locked = ref.isLocked;
-  ref.inputs.forEach(inp=> inp.disabled = locked);
+  const fixado = !!contabSavedPeriod();
+  ref.inputs.forEach(inp=> inp.disabled = locked || !fixado);
+  ref.lockBtn.disabled = !fixado;
+  ref.lockBtn.style.opacity = fixado ? "1" : "0.35";
+  ref.lockBtn.style.cursor = fixado ? "pointer" : "not-allowed";
   ref.lockBtn.textContent = locked ? "🔒" : "🔓";
   ref.lockBtn.title = locked
     ? "Desbloquear " + ref.person.nome + " para poder editar outra vez"
@@ -2002,6 +2049,7 @@ function updateContabFinalTotal(refs){
 function renderContabilidadeAccountant(){
   contabFinalTotalTd = null;
   contabPrefill(false);
+  updateContabPeriodControls();
   const start = new Date(document.getElementById("contabStart").value + "T00:00:00");
   const end = new Date(document.getElementById("contabEnd").value + "T00:00:00");
   const wrap = document.getElementById("contabTableWrap");
@@ -2009,7 +2057,15 @@ function renderContabilidadeAccountant(){
   if(!(start <= end)){ wrap.innerHTML = '<p class="note">Período inválido — a data de início tem de ser anterior à de fim.</p>'; return; }
   if(!state.estimativaPonto) state.estimativaPonto = {};
   if(!state.salarioFinal) state.salarioFinal = {};
-  const periodKey = contabPeriodKey(start, end);
+  const periodoFixado = !!contabSavedPeriod();
+  if(!periodoFixado){
+    const aviso = document.createElement("p");
+    aviso.className = "note";
+    aviso.style.cssText = "background:var(--rest-bad); border-radius:10px; padding:9px 13px; margin:0 0 10px;";
+    aviso.textContent = "Começa por confirmar as datas do período aqui em cima e carregar em “💾 Guardar período”. A tabela só fica editável depois disso, para não se lançarem valores sobre um período que ainda pode mudar.";
+    wrap.appendChild(aviso);
+  }
+  const periodKey = contabMonthKey();
   const inpCss = "width:72px; padding:5px 6px; border:1px solid var(--line); border-radius:6px; font-family:sans-serif; font-size:12.5px;";
   const finalInpCss = "width:82px; padding:5px 6px; border:1.5px solid var(--sage-deep); border-radius:6px; font-family:sans-serif; font-size:12.5px; font-weight:700;";
   const narrowTdCss = "padding:6px 6px;";
@@ -2176,10 +2232,14 @@ function renderContabilidadeAccountant(){
     // Linha fica mais clara enquanto não estiver bloqueada, e escurece assim que
     // bloqueares (🔒) os valores desta pessoa.
     tr.classList.add(isLocked ? "contab-row-complete" : "contab-row-incomplete");
-    contabRowRefs.push({
+    const ref = {
       person, pKey, finalInp, commitFinal, isLocked, estApp, tr, lockBtn, printBtn,
       inputs: [rHInp, rFInp, estPontoInp, finalInp]
-    });
+    };
+    contabRowRefs.push(ref);
+    // aplica o estado visual pela mesma função que o botão usa, para não haver duas versões
+    // da regra (trancado, e período do mês ainda não fixado)
+    applyContabRowLockState(ref);
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
@@ -2210,7 +2270,24 @@ function renderContabilidadeAccountant(){
 }
 document.getElementById("contabStart").addEventListener("change", renderContabilidadeAny);
 document.getElementById("contabEnd").addEventListener("change", renderContabilidadeAny);
-document.getElementById("contabResetBtn").addEventListener("click", ()=>{ contabPrefill(true); renderContabilidadeAny(); });
+// Guardar / alterar o período do mês. Enquanto não estiver guardado a tabela fica por
+// preencher, para não se lançarem valores sobre um período que ainda pode mudar.
+document.getElementById("contabPeriodBtn").addEventListener("click", ()=>{
+  if(!state.contabPeriods) state.contabPeriods = {};
+  const k = contabMonthKey();
+  if(state.contabPeriods[k]){
+    delete state.contabPeriods[k];   // desbloquear para poder alterar
+  } else {
+    const si = document.getElementById("contabStart").value;
+    const ei = document.getElementById("contabEnd").value;
+    const s = new Date(si + "T00:00:00"), e = new Date(ei + "T00:00:00");
+    if(!si || !ei || isNaN(s) || isNaN(e)){ alert("Escolhe as duas datas do período antes de guardar."); return; }
+    if(s > e){ alert("A data de início tem de ser anterior (ou igual) à data de fim."); return; }
+    state.contabPeriods[k] = { de: si, ate: ei };
+  }
+  scheduleSave();
+  renderContabilidadeAny();
+});
 // ---------- RELATÓRIO INDIVIDUAL DE CONTABILIDADE (só na vista da contabilista) ----------
 // Já não há um seletor de pessoa/período à parte — cada linha da tabela tem os seus próprios
 // ícones de gravar/imprimir, e há um botão "Imprimir todos" para todas de uma vez.
@@ -2286,14 +2363,14 @@ function contabPrintFooterHtml(){
     '</div>';
 }
 function printOnePersonReport(person, start, end){
-  const periodKey = contabPeriodKey(start, end);
+  const periodKey = contabMonthKey();
   const r = computeContabPersonReport(person, start, end, periodKey);
   const area = document.getElementById("contabPersonPrintArea");
   area.innerHTML = buildContabPersonReportHtml(person, start, end, r) + contabPrintFooterHtml();
   printContabDoc();
 }
 function printAllPersonReports(people, start, end){
-  const periodKey = contabPeriodKey(start, end);
+  const periodKey = contabMonthKey();
   const area = document.getElementById("contabPersonPrintArea");
   area.innerHTML = people.map(person=>{
     const r = computeContabPersonReport(person, start, end, periodKey);
