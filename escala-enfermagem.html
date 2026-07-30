@@ -275,6 +275,9 @@
   @media print{
     /* Margens reduzidas: com 28-31 colunas de dias, cada mm de largura conta */
     @page{ size: A4 landscape; margin: 6mm; }
+    /* Ao gerar PDF, o browser "economiza tinta" e desbota fundos e cores. Isto obriga-o a
+       imprimir exatamente as cores que estão no ecrã, em toda a página, sem exceções. */
+    *, *::before, *::after{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
     body{ background:white; }
     body::before, body::after{ display:none !important; }
     h1{ background:none; color:var(--sage-deep); -webkit-text-fill-color:initial; font-size:16px; }
@@ -304,13 +307,36 @@
     .day-head .num{ font-size:11px; }
     .day-head .dow{ font-size:8px; }
     /* Grelha do horário: forçar TODAS as colunas a caber na largura da página (sem cortar dias) */
-    #section-horario table.excel{ width:100%; table-layout:fixed; border-collapse:collapse; font-size:7.3px; }
-    #section-horario table.excel th, #section-horario table.excel td{ border:0.5px solid #bbb; padding:1px; overflow:hidden; }
-    #section-horario table.excel thead tr:last-child th{ background:#EAF6EF; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    #section-horario table.excel tfoot td{ background:#F5FBF7; font-weight:700; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    /* Grelha com moldura arredondada. Precisa de border-collapse:separate (com collapse o
+       browser ignora o border-radius), por isso as células levam só borda à direita e em
+       baixo — senão ficavam linhas duplas entre colunas. */
+    #section-horario table.excel{
+      width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:7.3px;
+      border:0.6px solid #b9c5bf; border-radius:9px; overflow:hidden;
+    }
+    #section-horario table.excel th, #section-horario table.excel td{
+      border:none; border-right:0.5px solid #d3ddd7; border-bottom:0.5px solid #d3ddd7;
+      padding:1px; overflow:hidden;
+    }
+    #section-horario table.excel tr > *:last-child{ border-right:none; }
+    #section-horario table.excel tfoot tr:last-child > *{ border-bottom:none; }
+    /* cantos: arredondar as células dos extremos para o fundo não passar por fora da moldura */
+    #section-horario table.excel thead tr:first-child > *:first-child{ border-top-left-radius:8px; }
+    #section-horario table.excel thead tr:first-child > *:last-child{ border-top-right-radius:8px; }
+    #section-horario table.excel tfoot tr:last-child > *:first-child{ border-bottom-left-radius:8px; }
+    #section-horario table.excel tfoot tr:last-child > *:last-child{ border-bottom-right-radius:8px; }
+    #section-horario table.excel thead tr:last-child th{ background:#EAF6EF; }
+    #section-horario table.excel tfoot td{ background:#F5FBF7; font-weight:700; }
     #section-horario table.excel th.name-col, #section-horario table.excel td.name-col{ width:62px; min-width:62px; max-width:62px; font-size:7.3px; padding:2px 3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:white; }
-    #section-horario select.cell-select{ width:100%; min-width:0; padding:0; font-size:7px; border-radius:0; }
-    #section-horario table.excel td span.sans{ display:block !important; min-width:0 !important; width:100% !important; padding:1px 0 !important; font-size:7px !important; border-radius:0 !important; box-sizing:border-box; }
+    /* Fins de semana e feriados a cinzento no papel (no ecrã continuam verde e rosa, que
+       ajudam a distinguir à vista). Vem depois das regras de cabeçalho/rodapé de propósito,
+       para uma coluna de fim de semana ficar cinzenta também na linha de totais. */
+    #section-horario table.excel th.weekend-col, #section-horario table.excel td.weekend-col,
+    #section-horario table.excel th.holiday-col, #section-horario table.excel td.holiday-col{
+      background:#E6E9EB !important;
+    }
+    #section-horario select.cell-select{ width:100%; min-width:0; padding:0; font-size:7px; border-radius:2px; }
+    #section-horario table.excel td span.sans{ display:block !important; min-width:0 !important; width:100% !important; padding:1px 0 !important; font-size:7px !important; border-radius:2px !important; box-sizing:border-box; }
     #section-horario .day-head{ min-width:0; }
     #section-horario .day-head .num{ font-size:7.3px; }
     #section-horario .day-head .dow{ font-size:6px; }
@@ -329,13 +355,6 @@
        folha em branco no fim. Marcado no JS, porque o :last-of-type acima olha para a ordem
        no ecrã e não sabe quais os blocos escondidos da impressão. */
     #section-dispequipa .disp-person-block.disp-ultimo-impresso{ page-break-after:auto !important; break-after:auto !important; }
-    /* Rodapé da folha de cada pessoa: a linha de observações ocupa a largura toda por baixo
-       da tabela, e a assinatura fica em baixo à direita. (A regra partilhada encostava a
-       coluna toda à direita com 340px, o que deixava a linha "Obs:" curta e a meio da folha.) */
-    #section-dispequipa .print-footer{ display:block !important; }
-    #section-dispequipa .print-side{ max-width:none; width:100%; display:block; }
-    #section-dispequipa .obs-line{ margin-top:6px; }
-    #section-dispequipa .sign-block{ margin-left:auto; margin-top:30px; }
     table.print-legend{ border-collapse:collapse; font-size:9px; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
     table.print-legend th, table.print-legend td{ border:0.5px solid #c8d3ce; padding:3px 11px; text-align:left; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     table.print-legend thead th{ text-align:center; font-size:11px; font-weight:700; background:var(--sage-deep); color:#fff; font-family:"Space Grotesk",sans-serif; letter-spacing:0.3px; padding:5px 10px; }
@@ -350,6 +369,14 @@
     #section-horario .sign-date, #section-dispequipa .sign-date, #section-relatorios .sign-date{ display:block; font-size:9px; white-space:nowrap; margin-top:14px; margin-bottom:14px; color:#555; }
     #section-horario .sign-fill, #section-dispequipa .sign-fill, #section-relatorios .sign-fill{ display:block; border-bottom:1px solid #333; height:10px; margin-bottom:4px; }
     #section-horario .sign-caption, #section-dispequipa .sign-caption, #section-relatorios .sign-caption{ font-size:9.5px; font-weight:600; }
+    /* Rodapé da folha de cada pessoa (Disponibilidades da equipa): a linha de observações
+       ocupa a largura toda por baixo da tabela e a assinatura fica em baixo à direita.
+       TEM de vir depois das regras partilhadas acima — têm a mesma especificidade, por isso
+       ganha a última. Antes estava antes delas e não fazia efeito nenhum. */
+    #section-dispequipa .print-footer{ display:block !important; }
+    #section-dispequipa .print-side{ max-width:none; width:100%; display:block; }
+    #section-dispequipa .obs-line{ margin-top:6px; }
+    #section-dispequipa .sign-block{ align-self:auto; margin-left:auto; margin-top:30px; }
     #section-relatorios .contab-person-report{ font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
     #section-relatorios .contab-person-head{ display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
     #section-relatorios .contab-person-name{ font-size:17px; font-weight:700; color:var(--sage-deep); font-family:"Space Grotesk",sans-serif; }
