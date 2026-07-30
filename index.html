@@ -325,6 +325,17 @@
     #section-dispequipa .print-footer, #section-relatorios .print-footer{ justify-content:flex-end; }
     #section-dispequipa .disp-person-block{ page-break-inside:avoid; break-inside:avoid; page-break-after:always; break-after:page; }
     #section-dispequipa .disp-person-block:last-of-type{ page-break-after:auto; break-after:auto; }
+    /* O último bloco que REALMENTE vai para o papel não leva quebra de página, senão sai uma
+       folha em branco no fim. Marcado no JS, porque o :last-of-type acima olha para a ordem
+       no ecrã e não sabe quais os blocos escondidos da impressão. */
+    #section-dispequipa .disp-person-block.disp-ultimo-impresso{ page-break-after:auto !important; break-after:auto !important; }
+    /* Rodapé da folha de cada pessoa: a linha de observações ocupa a largura toda por baixo
+       da tabela, e a assinatura fica em baixo à direita. (A regra partilhada encostava a
+       coluna toda à direita com 340px, o que deixava a linha "Obs:" curta e a meio da folha.) */
+    #section-dispequipa .print-footer{ display:block !important; }
+    #section-dispequipa .print-side{ max-width:none; width:100%; display:block; }
+    #section-dispequipa .obs-line{ margin-top:6px; }
+    #section-dispequipa .sign-block{ margin-left:auto; margin-top:30px; }
     table.print-legend{ border-collapse:collapse; font-size:9px; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
     table.print-legend th, table.print-legend td{ border:0.5px solid #c8d3ce; padding:3px 11px; text-align:left; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     table.print-legend thead th{ text-align:center; font-size:11px; font-weight:700; background:var(--sage-deep); color:#fff; font-family:"Space Grotesk",sans-serif; letter-spacing:0.3px; padding:5px 10px; }
@@ -2731,6 +2742,9 @@ function renderTeamAvailability(){
     block.appendChild(footer);
     wrap.appendChild(block);
   });
+  // marca o último bloco que vai mesmo para o papel, para não sair uma folha em branco no fim
+  const impressos = Array.from(wrap.querySelectorAll(".disp-person-block:not(.no-print)"));
+  impressos.forEach((b,i)=> b.classList.toggle("disp-ultimo-impresso", i === impressos.length-1));
 }
 function renderAvailabilityInto(wrap){
   wrap.innerHTML = "";
