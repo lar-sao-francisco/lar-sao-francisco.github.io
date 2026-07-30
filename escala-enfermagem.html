@@ -1220,8 +1220,7 @@ function enterApp(){
   }
   renderOwnerNotifications();
   renderMyStats();
-  const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
-  document.getElementById("monthLabel").textContent = label;
+  updateMonthLabel();
   ensureMonthlyBackup();
 }
 function logoutApp(){
@@ -1326,6 +1325,7 @@ function showSection(name){
     if(podeCtb) renderContabilidadeAny();
   }
   if(name==="dispequipa") renderTeamAvailability();
+  updateMonthLabel();
 }
 // ---------- RENDER: STAFF (Configurações) ----------
 function renderStaff(){
@@ -1795,6 +1795,34 @@ function contabPrefill(force){
     ei.value = weekKey(new Date(m.getFullYear(), m.getMonth(), 20));
   }
 }
+// O período de contabilidade vai do dia 21 de um mês ao dia 20 do seguinte, por isso
+// atravessa sempre dois meses — a etiqueta mostra os dois (ex: "junho/julho de 2026").
+// É lida das datas realmente escolhidas, para acompanhar também períodos postos à mão.
+function contabPeriodLabel(){
+  const si = document.getElementById("contabStart").value;
+  const ei = document.getElementById("contabEnd").value;
+  if(!si || !ei) return state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+  const s = new Date(si + "T00:00:00"), e = new Date(ei + "T00:00:00");
+  if(isNaN(s) || isNaN(e) || s > e) return state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+  const mes = d => d.toLocaleDateString("pt-PT", {month:"long"});
+  if(s.getFullYear() !== e.getFullYear()){
+    // período que muda de ano (ex: 21 dez 2026 a 20 jan 2027)
+    return mes(s) + " de " + s.getFullYear() + "/" + mes(e) + " de " + e.getFullYear();
+  }
+  if(s.getMonth() === e.getMonth()) return mes(e) + " de " + e.getFullYear();
+  return mes(s) + "/" + mes(e) + " de " + e.getFullYear();
+}
+// A etiqueta do topo é partilhada por todas as secções. Na vista de quem só tem
+// Contabilidade (a contabilista) mostra o período 21→20; nas restantes, o mês.
+function updateMonthLabel(){
+  const rel = document.getElementById("section-relatorios");
+  const soContabilidade = rel && rel.style.display !== "none"
+    && document.getElementById("contabPanel").style.display !== "none"
+    && document.getElementById("reportPanel").style.display === "none";
+  document.getElementById("monthLabel").textContent = soContabilidade
+    ? contabPeriodLabel()
+    : state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+}
 function renderContabilidade(){
   contabPrefill(false);
   const start = new Date(document.getElementById("contabStart").value + "T00:00:00");
@@ -1900,6 +1928,8 @@ function renderContabilidadeAny(){
   } else {
     renderContabilidade();
   }
+  // as datas podem ter mudado (mês novo, ou período posto à mão) — acertar a etiqueta
+  updateMonthLabel();
 }
 // Estado visual de uma linha da Contabilidade (trancada vs. em edição). Igual ao que o
 // render completo produz — está numa função só para os dois caminhos não divergirem.
@@ -2479,7 +2509,7 @@ function renderAvailabilityPanel(){
 }
 function renderTeamAvailability(){
   const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
-  document.getElementById("monthLabel").textContent = label;
+  updateMonthLabel();
   document.getElementById("teamDispMonthLabel").textContent = label;
   const allRvStaff = state.staff.filter(p=>isRvLike(p.tipo));
   const sel = document.getElementById("teamDispPrintSelect");
@@ -2786,8 +2816,7 @@ function renderExcelGrid(){
   const isGestor = authRole === "gestor";
   const gridViewer = staffById(authNurseId);
   const monthStart = state.monthStart;
-  const label = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
-  document.getElementById("monthLabel").textContent = label;
+  updateMonthLabel();
   const autoFillBtnEl = document.getElementById("autoFillBtn");
   if(autoFillBtnEl) autoFillBtnEl.style.display = isGestor ? "" : "none";
   const undoFillBtnEl = document.getElementById("undoFillBtn");
@@ -3256,12 +3285,14 @@ document.getElementById("horarioFilterClear").addEventListener("click", ()=>{
 document.getElementById("prevMonth").addEventListener("click", ()=>{
   state.monthStart = addMonths(state.monthStart, -1);
   nurseDraft = null; nurseEditing = false;
+  contabPrefill(true); // o período da Contabilidade acompanha o mês escolhido
   refreshVisibleSection();
   scheduleSave();
 });
 document.getElementById("nextMonth").addEventListener("click", ()=>{
   state.monthStart = addMonths(state.monthStart, 1);
   nurseDraft = null; nurseEditing = false;
+  contabPrefill(true);
   refreshVisibleSection();
   scheduleSave();
 });
@@ -3275,8 +3306,7 @@ function refreshVisibleSection(){
     if(document.getElementById("contabPanel").style.display !== "none") renderContabilidadeAny();
   }
   if(document.getElementById("section-dispequipa").style.display !== "none") renderTeamAvailability();
-  const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
-  document.getElementById("monthLabel").textContent = label;
+  updateMonthLabel();
 }
 // ---------- NURSE VIEW ----------
 document.getElementById("showChangePinLink").addEventListener("click", ()=>{
@@ -3310,8 +3340,7 @@ document.getElementById("changePinBtn").addEventListener("click", async ()=>{
   }
 });
 function renderNurseView(){
-  const label = state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
-  document.getElementById("monthLabel").textContent = label;
+  updateMonthLabel();
   const person = staffById(authNurseId);
   if(person && isRvLike(person.tipo)){
     document.getElementById("nurseGestorNotice").style.display = "none";
@@ -3470,7 +3499,7 @@ function renderRelatorios(){
   const monthStart = state.monthStart;
   const nDays = daysInMonth(monthStart);
   const label = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
-  document.getElementById("monthLabel").textContent = label;
+  updateMonthLabel();
   document.getElementById("reportMonthLabel").textContent = label;
   const wrap = document.getElementById("reportTableWrap");
   wrap.innerHTML = "";
