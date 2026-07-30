@@ -1073,6 +1073,11 @@ function principalWorkingOn(date){
   return !isOff(principal, date);
 }
 function getNeededForShift(date, code){
+  // O MT1 é um turno partido — a mesma pessoa faz a manhã E a tarde, valendo por um M1 mais
+  // um T1. Por isso nunca é distribuído pela equipa no preenchimento automático: somá-lo a um
+  // M1 e a um T1 já preenchidos punha três pessoas onde bastam duas. Fica reservado para o
+  // último recurso (dia sem ninguém disponível), tratado no fim de cada dia em autoGenerate().
+  if(code === "MT1") return 0;
   if(!isWeekendDay(date)){
     const isWed = dowIndex(date) === 2; // Quarta-feira
     if(code === "M1"){
@@ -3357,6 +3362,35 @@ function autoGenerate(){
         monthHours[OWNER_ID] += effectiveShiftHours(owner, code);
       }
     });
+    // ÚLTIMO RECURSO — MT1. Se, depois de tudo, não ficou ninguém da equipa a trabalhar neste
+    // dia (nem a principal), é o dono da conta que cobre o dia inteiro num só turno partido,
+    // em vez de ficar só com meia cobertura. Enquanto houver outra pessoa a trabalhar no dia,
+    // o MT1 não é usado — seria uma terceira pessoa onde M1 + T1 já chegam.
+    if(shiftType("MT1") && owner){
+      const equipaCobreODia = state.staff.some(p=>{
+        if(p.id === OWNER_ID) return false;
+        const c = getPersonShiftForDate(p.id, date);
+        if(!c) return false;
+        const stc = shiftType(c);
+        return !!(stc && !stc.isRest);
+      });
+      if(!equipaCobreODia && isShiftAllowed(owner, date, "MT1")){
+        const anterior = getPersonShiftForDate(OWNER_ID, date);
+        const stAnterior = anterior ? shiftType(anterior) : null;
+        // não mexe se ele estiver de descanso ou de férias nesse dia
+        if(!anterior || (stAnterior && !stAnterior.isRest)){
+          setPersonShiftForDate(OWNER_ID, date, "");
+          if(!hasAnyConflict(OWNER_ID, date, "MT1")){
+            setPersonShiftForDate(OWNER_ID, date, "MT1");
+            if(!anterior) weeklyCounts[wKey][OWNER_ID]++;
+            monthHours[OWNER_ID] += effectiveShiftHours(owner, "MT1")
+                                  - (anterior ? effectiveShiftHours(owner, anterior) : 0);
+          } else if(anterior){
+            setPersonShiftForDate(OWNER_ID, date, anterior); // em conflito: fica como estava
+          }
+        }
+      }
+    }
   });
   renderExcelGrid();
   scheduleSave();
