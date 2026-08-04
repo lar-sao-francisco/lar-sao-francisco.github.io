@@ -978,7 +978,10 @@ function applyLoadedState(raw){
       if(!parsed.salarioFinal) parsed.salarioFinal = {};
       if(!parsed.salarioLocked) parsed.salarioLocked = {};
       if(!parsed.contabPeriods) parsed.contabPeriods = {};
+      if(!parsed.contabRates) parsed.contabRates = {};
+      if(!Array.isArray(parsed.staffRemovidos)) parsed.staffRemovidos = [];
       migrateContabKeys(parsed);
+      congelarTaxasDosMesesJaUsados(parsed);
       if(!parsed.schedules) parsed.schedules = {};
       if(!parsed.availabilityRequests) parsed.availabilityRequests = {};
       if(!parsed.availabilityMeta) parsed.availabilityMeta = {};
@@ -1528,7 +1531,11 @@ function renderStaff(){
     removeBtn.title = "Remover";
     if(isOwnerRow) removeBtn.style.display = "none";
     removeBtn.addEventListener("click", ()=>{
-      if(!confirm(`Remover ${person.nome} da equipa? Isto não apaga turnos já atribuídos em meses passados, mas a pessoa deixa de aparecer para novas atribuições.`)) return;
+      if(!confirm(`Remover ${person.nome} da equipa? Isto não apaga turnos já atribuídos em meses passados, mas a pessoa deixa de aparecer para novas atribuições.\n\nPodes voltar a repô-la a qualquer momento, em "Pessoas removidas", aqui em baixo.`)) return;
+      // guarda o registo em vez de o deitar fora, para poder ser reposto tal e qual
+      if(!Array.isArray(state.staffRemovidos)) state.staffRemovidos = [];
+      state.staffRemovidos = state.staffRemovidos.filter(p=> p.id !== person.id);
+      state.staffRemovidos.push(Object.assign({}, person, { removidoEm: new Date().toISOString() }));
       state.staff = state.staff.filter(p=>p.id!==person.id);
       renderStaff(); renderAvailabilityPanel(); scheduleSave();
     });
@@ -1679,6 +1686,53 @@ function renderStaff(){
     }
     list.appendChild(row);
   });
+  renderStaffRemovidos(list);
+}
+// Pessoas removidas: ficam guardadas tal e qual, para poderem voltar com o histórico todo
+// (turnos já atribuídos, disponibilidades, PIN). Repor é só voltar a pô-las na equipa.
+function renderStaffRemovidos(list){
+  const removidos = Array.isArray(state.staffRemovidos) ? state.staffRemovidos : [];
+  if(!removidos.length) return;
+  const bloco = document.createElement("div");
+  bloco.className = "sans";
+  bloco.style.cssText = "margin-top:18px; padding-top:14px; border-top:1px dashed var(--line);";
+  const titulo = document.createElement("p");
+  titulo.className = "blk-label";
+  titulo.style.cssText = "margin:0 0 8px;";
+  titulo.textContent = "Pessoas removidas — carrega em Repor para voltarem à equipa com o histórico todo.";
+  bloco.appendChild(titulo);
+  removidos.slice().sort((a,b)=> (a.nome||"").localeCompare(b.nome||"")).forEach(pessoa=>{
+    const linha = document.createElement("div");
+    linha.className = "exc-row";
+    linha.style.cssText = "gap:10px; margin-bottom:6px; align-items:center;";
+    const nome = document.createElement("span");
+    nome.style.cssText = "font-weight:600; color:var(--ink-soft);";
+    let txt = pessoa.nome || "(sem nome)";
+    if(pessoa.removidoEm){
+      const d = new Date(pessoa.removidoEm);
+      if(!isNaN(d)) txt += " · removida em " + d.toLocaleDateString("pt-PT", {day:"2-digit", month:"2-digit", year:"numeric"});
+    }
+    nome.textContent = txt;
+    const repor = document.createElement("button");
+    repor.className = "exc-add-btn";
+    repor.textContent = "↩︎ Repor";
+    repor.title = "Voltar a colocar " + (pessoa.nome||"esta pessoa") + " na equipa";
+    repor.addEventListener("click", ()=>{
+      if(state.staff.some(p=> p.id === pessoa.id)){
+        alert("Já existe alguém na equipa com este registo.");
+        return;
+      }
+      const reposta = Object.assign({}, pessoa);
+      delete reposta.removidoEm;
+      state.staff.push(reposta);
+      state.staffRemovidos = removidos.filter(p=> p.id !== pessoa.id);
+      renderStaff(); renderAvailabilityPanel(); scheduleSave();
+    });
+    linha.appendChild(nome);
+    linha.appendChild(repor);
+    bloco.appendChild(linha);
+  });
+  list.appendChild(bloco);
 }
 document.getElementById("addStaffBtn").addEventListener("click", ()=>{
   const id = "s" + Date.now();
@@ -1888,6 +1942,34 @@ function contabDefaultPeriod(){
   return { de: weekKey(new Date(m.getFullYear(), m.getMonth()-1, 21)),
            ate: weekKey(new Date(m.getFullYear(), m.getMonth(), 20)) };
 }
+// ---------- €/HORA POR MÊS ----------
+// O valor à hora pertence ao MÊS, não à pessoa: mudar o valor em setembro não pode reescrever
+// o que agosto mostra, ainda por cima estando fechado. Um mês sem valor próprio herda o do mês
+// anterior mais recente (e, se não houver nenhum, o valor base da pessoa), para não ser preciso
+// reescrever tudo todos os meses. Ao trancar (🔒), o valor em vigor fica gravado nesse mês.
+function contabRateFor(person, mk){
+  if(!state.contabRates) state.contabRates = {};
+  const chave = person.id + "|" + (mk || contabMonthKey());
+  const propria = state.contabRates[chave];
+  if(propria) return { h: propria.h, fds: propria.fds };
+  const mes = mk || contabMonthKey();
+  const anteriores = Object.keys(state.contabRates)
+    .filter(k => k.slice(0, k.lastIndexOf("|")) === person.id && k.slice(k.lastIndexOf("|")+1) < mes)
+    .sort();
+  if(anteriores.length){
+    const herdada = state.contabRates[anteriores[anteriores.length-1]];
+    return { h: herdada.h, fds: herdada.fds };
+  }
+  return { h: person.rateHora, fds: person.rateFds };
+}
+function contabSetRate(person, mk, h, fds){
+  if(!state.contabRates) state.contabRates = {};
+  state.contabRates[person.id + "|" + (mk || contabMonthKey())] = { h: h, fds: fds };
+}
+// converte para número, tratando vazio/indefinido como "sem valor"
+function numOuNaN(v){
+  return (v === undefined || v === null || v === "") ? NaN : parseFloat(v);
+}
 // Período que a contabilista fixou para este mês (null se ainda não fixou nenhum).
 function contabSavedPeriod(){
   if(!state.contabPeriods) state.contabPeriods = {};
@@ -1897,6 +1979,28 @@ function contabSavedPeriod(){
 // Converte chaves do formato antigo ("id|2026-06-21_2026-07-20") para o novo ("id|2026-07").
 // É idempotente — as chaves novas não têm o formato antigo, por isso não são tocadas.
 // Corre sempre ao carregar, para que também cubra restauros de cópias de segurança antigas.
+// Migração única: antes desta versão o €/h era só um por pessoa, partilhado por todos os meses.
+// Isto grava o valor atual de cada pessoa em cada mês que já tem contabilidade feita, para o
+// histórico ficar congelado nos valores com que foi fechado e não voltar a mexer-se.
+function congelarTaxasDosMesesJaUsados(parsed){
+  if(!parsed.contabRates) parsed.contabRates = {};
+  const meses = new Set();
+  ["salarioLocked","salarioFinal","estimativaPonto"].forEach(campo=>{
+    Object.keys(parsed[campo] || {}).forEach(k=>{
+      const i = k.lastIndexOf("|");
+      if(i > 0) meses.add(k.slice(i+1));
+    });
+  });
+  Object.keys(parsed.contabPeriods || {}).forEach(m=> meses.add(m));
+  if(!meses.size) return;
+  (parsed.staff || []).forEach(p=>{
+    if(p.rateHora === undefined || p.rateHora === null || p.rateHora === "") return;
+    meses.forEach(m=>{
+      const chave = p.id + "|" + m;
+      if(!parsed.contabRates[chave]) parsed.contabRates[chave] = { h: p.rateHora, fds: p.rateFds };
+    });
+  });
+}
 function migrateContabKeys(parsed){
   const rxAntiga = /^(.+)\|(\d{4})-(\d{2})-(\d{2})_(\d{4})-(\d{2})-(\d{2})$/;
   ["salarioLocked","salarioFinal","estimativaPonto"].forEach(campo=>{
@@ -2148,9 +2252,12 @@ function renderContabilidadeAccountant(){
     const rHInp = document.createElement("input");
     rHInp.type = "number"; rHInp.min = "0"; rHInp.step = "0.5"; rHInp.inputMode = "decimal"; rHInp.placeholder = "0,00";
     rHInp.style.cssText = inpCss;
-    if(person.rateHora !== undefined && person.rateHora !== null && person.rateHora !== "") rHInp.value = person.rateHora;
+    // o €/h mostrado é o deste mês (próprio, ou herdado do mês anterior)
+    const taxaDoMes = contabRateFor(person, periodKey);
+    rHInp.title = "Valor à hora deste mês. Alterar aqui não mexe nos meses anteriores.";
+    if(taxaDoMes.h !== undefined && taxaDoMes.h !== null && taxaDoMes.h !== "") rHInp.value = taxaDoMes.h;
     rHInp.addEventListener("change", ()=>{
-      person.rateHora = rHInp.value === "" ? undefined : parseFloat(rHInp.value);
+      contabSetRate(person, periodKey, numOuNaN(rHInp.value), numOuNaN(rFInp.value));
       scheduleSave();
       renderContabilidadeAccountant();
     });
@@ -2158,10 +2265,10 @@ function renderContabilidadeAccountant(){
     const rFInp = document.createElement("input");
     rFInp.type = "number"; rFInp.min = "0"; rFInp.step = "0.5"; rFInp.inputMode = "decimal"; rFInp.placeholder = "0,00";
     rFInp.style.cssText = inpCss;
-    rFInp.title = "Deixa em branco para usar o mesmo valor do €/h útil ao fim de semana.";
-    if(person.rateFds !== undefined && person.rateFds !== null && person.rateFds !== "") rFInp.value = person.rateFds;
+    rFInp.title = "Deixa em branco para usar o mesmo valor do €/h útil ao fim de semana. Vale só para este mês.";
+    if(taxaDoMes.fds !== undefined && taxaDoMes.fds !== null && taxaDoMes.fds !== "") rFInp.value = taxaDoMes.fds;
     rFInp.addEventListener("change", ()=>{
-      person.rateFds = rFInp.value === "" ? undefined : parseFloat(rFInp.value);
+      contabSetRate(person, periodKey, numOuNaN(rHInp.value), numOuNaN(rFInp.value));
       scheduleSave();
       renderContabilidadeAccountant();
     });
@@ -2179,8 +2286,8 @@ function renderContabilidadeAccountant(){
     tdFeitas.textContent = feitas + "h";
     tr.appendChild(tdFeitas);
     const pKey = person.id + "|" + periodKey;
-    const rH = (person.rateHora === undefined || person.rateHora === null || person.rateHora === "") ? NaN : parseFloat(person.rateHora);
-    const rF = (person.rateFds === undefined || person.rateFds === null || person.rateFds === "") ? rH : parseFloat(person.rateFds);
+    const rH = numOuNaN(taxaDoMes.h);
+    const rF = isNaN(numOuNaN(taxaDoMes.fds)) ? rH : numOuNaN(taxaDoMes.fds);
     if(!state.salarioLocked) state.salarioLocked = {};
     const isLocked = !!state.salarioLocked[pKey];
     rHInp.disabled = isLocked;
@@ -2254,7 +2361,12 @@ function renderContabilidadeAccountant(){
     lockBtn.addEventListener("click", ()=>{
       const ref = contabRowRefs.find(r=> r.pKey === pKey);
       if(!ref){ renderContabilidadeAccountant(); return; }
-      if(!ref.isLocked) ref.commitFinal();
+      if(!ref.isLocked){
+        ref.commitFinal();
+        // ao fechar, o €/h em vigor fica gravado neste mês — a partir daqui não muda mais,
+        // mesmo que o valor seja alterado nos meses seguintes
+        contabSetRate(person, periodKey, numOuNaN(rHInp.value), numOuNaN(rFInp.value));
+      }
       ref.isLocked = !ref.isLocked;
       state.salarioLocked[pKey] = ref.isLocked;
       applyContabRowLockState(ref);
@@ -2350,8 +2462,10 @@ function computeContabPersonReport(person, start, end, periodKey){
     if(contaComoFimDeSemana(d)) hF += h; else hU += h;
   }
   const feitas = hU + hF;
-  const rH = (person.rateHora === undefined || person.rateHora === null || person.rateHora === "") ? NaN : parseFloat(person.rateHora);
-  const rF = (person.rateFds === undefined || person.rateFds === null || person.rateFds === "") ? rH : parseFloat(person.rateFds);
+  // usa o €/h guardado neste mês, para um documento de um mês fechado nunca mudar depois
+  const taxa = contabRateFor(person, periodKey);
+  const rH = numOuNaN(taxa.h);
+  const rF = isNaN(numOuNaN(taxa.fds)) ? rH : numOuNaN(taxa.fds);
   let estApp = null;
   if(!isNaN(rH) && rH > 0) estApp = hU*rH + hF*(isNaN(rF) ? rH : rF);
   if(!state.estimativaPonto) state.estimativaPonto = {};
@@ -2561,8 +2675,10 @@ function renderMyStats(){
   document.getElementById("myStatsMonth").textContent = monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
   const mk = (v, lbl) => '<span><strong style="color:var(--sage-deep); font-size:15px;">' + v + '</strong> ' + lbl + '</span>';
   let extra = "";
-  const myRH = (person.rateHora === undefined || person.rateHora === null || person.rateHora === "") ? NaN : parseFloat(person.rateHora);
-  const myRF = (person.rateFds === undefined || person.rateFds === null || person.rateFds === "") ? myRH : parseFloat(person.rateFds);
+  // a estimativa de cada pessoa usa o €/h em vigor no mês que está a ver
+  const minhaTaxa = contabRateFor(person, contabMonthKey());
+  const myRH = numOuNaN(minhaTaxa.h);
+  const myRF = isNaN(numOuNaN(minhaTaxa.fds)) ? myRH : numOuNaN(minhaTaxa.fds);
   if(!isNaN(myRH) && myRH > 0){
     const val = (feitas - fds) * myRH + fds * (isNaN(myRF) ? myRH : myRF);
     extra = mk(val.toFixed(2).replace(".", ",") + " €", "estimativa do mês");
@@ -2589,7 +2705,13 @@ function renderMyStats(){
   const rateToggle = document.createElement("span");
   rateToggle.className = "back-link";
   rateToggle.style.cssText = "font-size:12px; margin-bottom:0;";
-  rateToggle.textContent = (!isNaN(myRH) && myRH > 0) ? "💶 Alterar o meu valor/hora" : "💶 Definir quanto ganho por hora (para veres a tua estimativa do mês)";
+  // Se a Contabilidade já definiu um €/h para este mês, é esse que vale — não faria sentido
+  // cada pessoa poder mudar o valor por que vai ser paga. Nesse caso mostramos de onde vem.
+  const taxaOficial = !!(state.contabRates && state.contabRates[person.id + "|" + contabMonthKey()]);
+  rateToggle.textContent = taxaOficial
+    ? "💶 O teu valor/hora deste mês vem da Contabilidade"
+    : ((!isNaN(myRH) && myRH > 0) ? "💶 Alterar o meu valor/hora" : "💶 Definir quanto ganho por hora (para veres a tua estimativa do mês)");
+  if(taxaOficial) rateToggle.style.cursor = "default";
   const rateForm = document.createElement("div");
   rateForm.style.cssText = "display:none; margin-top:8px; align-items:center; gap:8px; flex-wrap:wrap;";
   const mkRateInput = (val)=>{
@@ -2612,7 +2734,10 @@ function renderMyStats(){
     scheduleSave();
     renderMyStats();
   });
-  rateToggle.addEventListener("click", ()=>{ rateForm.style.display = rateForm.style.display === "none" ? "flex" : "none"; });
+  rateToggle.addEventListener("click", ()=>{
+    if(taxaOficial) return;
+    rateForm.style.display = rateForm.style.display === "none" ? "flex" : "none";
+  });
   rateForm.appendChild(rl1); rateForm.appendChild(rIn1);
   rateForm.appendChild(rl2); rateForm.appendChild(rIn2);
   rateForm.appendChild(rSave);
