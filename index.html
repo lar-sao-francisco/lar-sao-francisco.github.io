@@ -389,6 +389,13 @@
     #section-relatorios .contab-print-all-block{ page-break-inside:avoid; break-inside:avoid; page-break-after:always; break-after:page; }
     #section-relatorios .contab-print-all-block:last-of-type{ page-break-after:auto; break-after:auto; }
     .print-doc-footer{ display:block !important; margin-top:14px; font-size:8.5px; color:#8a978f; text-align:right; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
+    /* Autoria e frase da app, por baixo da legenda dos turnos, nas folhas do Horário. */
+    .print-legend-col{ display:flex; flex-direction:column; }
+    .print-credits{ margin-top:12px; padding-top:9px; border-top:0.75px solid #c8d3ce; max-width:360px; font-family:"Plus Jakarta Sans","Manrope",sans-serif; }
+    .print-credit-name{ font-size:10.5px; font-weight:700; color:var(--sage-deep); letter-spacing:.01em; margin-bottom:6px; }
+    .print-credit-quote{ display:block; font-size:9px; line-height:1.5; color:#4a5a52; font-style:italic; }
+    .print-credit-quote .pcq-text{ display:block; }
+    .print-credit-quote .pcq-attr{ display:block; margin-top:3px; font-style:normal; font-size:8px; font-weight:600; color:var(--sage-deep); letter-spacing:.02em; }
     /* Impressão de fichas de contabilidade (uma pessoa, ou todas as bloqueadas).
        Isto tem de ser feito por CSS e não mexendo em style.display no JavaScript:
        o window.print() devolve o controlo antes de o browser paginar a folha, por
@@ -549,7 +556,16 @@
       </div>
       <div class="legend" id="legend"></div>
       <div class="print-footer">
-        <div class="print-legend-table" id="printLegendTable"></div>
+        <div class="print-legend-col">
+          <div class="print-legend-table" id="printLegendTable"></div>
+          <div class="print-credits">
+            <div class="print-credit-name">Realizado por Enfermeiro Luís de Sales</div>
+            <div class="print-credit-quote">
+              <span class="pcq-text">"Quality of life, as described and lived by the person, is the goal of nursing practice."</span>
+              <span class="pcq-attr">— Rosemarie Rizzo Parse (1994, Nursing Science Quarterly)</span>
+            </div>
+          </div>
+        </div>
         <div class="print-side">
           <div class="obs-line">
             <span class="obs-line-label">Obs:</span>
@@ -562,7 +578,7 @@
           </div>
         </div>
       </div>
-      <div class="print-doc-footer">Lar de São Francisco — Escala de Enfermagem · documento gerado em <span id="printGenTime"></span></div>
+      <div class="print-doc-footer">Lar de São Francisco — Horário de Enfermagem · documento gerado em <span id="printGenTime"></span></div>
     </div>
   </div>
   <!-- SECTION: DISPONIBILIDADE (nurse self-service) -->
@@ -607,7 +623,7 @@
       <h2>Disponibilidades da equipa — <span id="teamDispMonthLabel"></span></h2>
       <div id="teamAvailabilityList"></div>
       <p class="note">Isto é o que cada recibo verde marcou como disponível na vista "Disponibilidades", para o mês em exibição. Usa as setas no topo para mudar de mês. Já se aplica automaticamente à grelha do Horário. Na impressão, cada pessoa sai numa página própria, já com o campo de Obs e a assinatura da direção.</p>
-      <div class="print-doc-footer">Lar de São Francisco — Escala de Enfermagem · documento gerado em <span id="printGenTimeDisp"></span></div>
+      <div class="print-doc-footer">Lar de São Francisco — Horário de Enfermagem · documento gerado em <span id="printGenTimeDisp"></span></div>
     </div>
   </div>
   <!-- SECTION: RELATORIOS -->
@@ -3935,7 +3951,7 @@ loadState().then(()=>{
 </style>
 <button id="helpFab" title="Ajuda">?</button>
 <div id="helpPanel">
-  <div id="helpHeader"><span>💬 Ajuda — Escala de Enfermagem</span><button id="helpClose">✕</button></div>
+  <div id="helpHeader"><span>💬 Ajuda — Horário de Enfermagem</span><button id="helpClose">✕</button></div>
   <div id="helpMsgs"></div>
   <div id="helpSugs"></div>
   <div id="helpInputRow">
@@ -4023,7 +4039,7 @@ loadState().then(()=>{
   document.getElementById("helpFab").addEventListener("click", ()=>{
     panel.classList.toggle("open");
     if(panel.classList.contains("open") && msgs.children.length===0){
-      addMsg("Olá! Sou o assistente de ajuda da Escala de Enfermagem. Pergunta-me como usar a app, ou escolhe uma sugestão em baixo.", "bot");
+      addMsg("Olá! Sou o assistente de ajuda do Horário de Enfermagem. Pergunta-me como usar a app, ou escolhe uma sugestão em baixo.", "bot");
     }
     if(panel.classList.contains("open")) input.focus();
   });
