@@ -98,6 +98,9 @@
   }
   /* home menu */
   .home-menu{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin:26px 0; animation:fadeUp .45s ease both; }
+  /* Cadeado do plano da principal, à frente do nome dela na grelha */
+  .principal-lock{ background:none; border:none; cursor:pointer; font-size:13px; line-height:1; padding:0 0 0 6px; }
+  .principal-lock:hover{ transform:scale(1.2); }
   /* "última atualização" ao lado do título — no ecrã discreta, no papel bem legível */
   .upd-label{ font-family:"Plus Jakarta Sans","Manrope",sans-serif; font-size:12.5px; font-weight:600; color:var(--ink-soft); letter-spacing:0; margin-left:8px; }
   .upd-label:empty{ display:none; }
@@ -346,6 +349,10 @@
     #section-horario .day-lock, #section-horario .holiday-flag{ font-size:7px; }
     #section-horario .week-lock{ font-size:7px; padding:0; }
     #section-horario .legend{ display:none !important; }
+    /* Plano da principal ainda por trancar: quem o pode editar vê-o no ecrã, mas não sai no
+       papel — o documento oficial não deve levar um plano que ainda pode mudar. */
+    #section-horario td.principal-por-trancar > *{ display:none !important; }
+    #section-horario td.principal-por-trancar::after{ content:"·"; color:#9aa8a1; font-size:7px; }
     #section-horario .print-footer, #section-dispequipa .print-footer, #section-relatorios .print-footer{
       display:flex !important; align-items:stretch; gap:56px; margin-top:20px; padding-top:14px;
       border-top:0.75px solid var(--line); page-break-inside:avoid;
@@ -1000,6 +1007,7 @@ function applyLoadedState(raw){
       if(!parsed.contabRates) parsed.contabRates = {};
       if(!Array.isArray(parsed.staffRemovidos)) parsed.staffRemovidos = [];
       if(!parsed.horarioAtualizado) parsed.horarioAtualizado = {};
+      if(!parsed.principalLocked) parsed.principalLocked = {};
       migrateContabKeys(parsed);
       congelarTaxasDosMesesJaUsados(parsed);
       if(!parsed.schedules) parsed.schedules = {};
@@ -1108,6 +1116,21 @@ function textoUltimaAtualizacao(mesesChave){
 function mostrarUltimaAtualizacao(mesesChave){
   const el = document.getElementById("horarioUpdatedLabel");
   if(el) el.textContent = textoUltimaAtualizacao(mesesChave);
+}
+// ---------- BLOQUEIO DO PLANO DA PRINCIPAL (Cátia) ----------
+// A principal preenche o próprio plano e tranca-o quando estiver como quer. Enquanto não
+// trancar, o plano dela só é visto por ela e pela gestão — e não sai na impressão. É por mês.
+function planoPrincipalBloqueado(mk){
+  if(!state.principalLocked) state.principalLocked = {};
+  return !!state.principalLocked[mk || mesDaData(state.monthStart)];
+}
+function alternarPlanoPrincipal(){
+  if(!state.principalLocked) state.principalLocked = {};
+  const k = mesDaData(state.monthStart);
+  if(state.principalLocked[k]) delete state.principalLocked[k];
+  else state.principalLocked[k] = true;
+  scheduleSave();
+  renderExcelGrid();
 }
 // ---------- SCHEDULE DATA ACCESS ----------
 function ensureWeek(weekStartDate){
@@ -3258,9 +3281,25 @@ function renderExcelGrid(){
       horarioFilterId = horarioFilterId===person.id ? null : person.id;
       renderExcelGrid();
     });
-    tr.appendChild(tdName);
     const canEditRow = isGestor || (gridViewer && Array.isArray(gridViewer.editHorarioIds) && gridViewer.editHorarioIds.includes(person.id));
     const isPrincipalRow = person.principal === true;
+    // Cadeado do plano da principal, à frente do nome — só para quem o pode editar (ela e a gestão)
+    if(isPrincipalRow && canEditRow){
+      const trancado = planoPrincipalBloqueado();
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "principal-lock no-print";
+      btn.textContent = trancado ? "🔒" : "🔓";
+      btn.title = trancado
+        ? "Plano trancado — clica para voltar a alterar. Enquanto estiver destrancado, a equipa não o vê e não sai na impressão."
+        : "Trancar o teu plano deste mês. Só depois de trancado é que a equipa o vê e sai na impressão.";
+      btn.addEventListener("click", e=>{
+        e.stopPropagation();   // não deixar que o clique filtre a grelha por esta pessoa
+        alternarPlanoPrincipal();
+      });
+      tdName.querySelector(".name-cell-inner").appendChild(btn);
+    }
+    tr.appendChild(tdName);
     let monthHours = 0;
     const rowCells = [];
     dates.forEach((date, di)=>{
@@ -3270,8 +3309,13 @@ function renderExcelGrid(){
       if(getHolidayLabel(dayIso)) td.classList.add("holiday-col");
       const dayLocked = !!state.lockedDays[dayIso];
       if(dayLocked) td.classList.add("locked-col");
-      // O horário da principal (ex: Cátia) fica sempre visível para todos, mesmo com a semana por bloquear.
-      const canSeeCell = canEditRow || dayLocked || isPrincipalRow;
+      // O plano da principal (ex: Cátia) só fica visível aos outros depois de ela o trancar.
+      // Antes disso é só ela e a gestão que o veem, para o poderem trabalhar.
+      const canSeeCell = isPrincipalRow
+        ? (canEditRow || planoPrincipalBloqueado())
+        : (canEditRow || dayLocked);
+      // ... e por trancar não sai na impressão, mesmo para quem o vê no ecrã (ver @media print)
+      if(isPrincipalRow && !planoPrincipalBloqueado()) td.classList.add("principal-por-trancar");
       const current = getPersonShiftForDate(person.id, date);
       if(current && canSeeCell){
         const curSt = shiftType(current);
@@ -3436,7 +3480,11 @@ function buildHorarioPrintRangeTable(start, end){
       if(getHolidayLabel(dayIso)) td.classList.add("holiday-col");
       const dayLocked = !!state.lockedDays[dayIso];
       if(dayLocked) td.classList.add("locked-col");
-      const canSeeCell = canEditRow || dayLocked || isPrincipalRow;
+      // esta tabela é só para imprimir, por isso o plano da principal só entra se estiver
+      // trancado — mesmo para a gestão, tal como na grelha do mês
+      const canSeeCell = isPrincipalRow
+        ? planoPrincipalBloqueado(mesDaData(date))
+        : (canEditRow || dayLocked);
       const current = getPersonShiftForDate(person.id, date);
       const span = document.createElement("span");
       span.className = "sans";
