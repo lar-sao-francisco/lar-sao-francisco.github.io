@@ -98,6 +98,10 @@
   }
   /* home menu */
   .home-menu{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin:26px 0; animation:fadeUp .45s ease both; }
+  /* "Última alteração" — só o dono da conta a vê, e nunca sai na impressão */
+  #ultimaAlteracaoBox{ margin:-4px 0 12px; padding:7px 12px; background:var(--weekend-bg); border-radius:9px; font-size:12.5px; color:var(--ink); line-height:1.5; }
+  #ultimaAlteracaoBox .ua-eti{ font-weight:700; color:var(--sage-deep); margin-right:4px; }
+  #ultimaAlteracaoBox .ua-meta{ color:var(--ink-soft); }
   /* Cadeado do plano da principal, à frente do nome dela na grelha */
   .principal-lock{ background:none; border:none; cursor:pointer; font-size:13px; line-height:1; padding:0 0 0 6px; }
   .principal-lock:hover{ transform:scale(1.2); }
@@ -546,6 +550,7 @@
     </div>
     <div class="panel">
       <h2>Escala do mês <span id="horarioUpdatedLabel" class="upd-label"></span></h2>
+      <div id="ultimaAlteracaoBox" class="sans no-print" style="display:none;"></div>
       <div id="horarioFilterBar" class="sans" style="display:none; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 12px; padding:8px 12px; background:var(--weekend-bg); border-radius:10px; font-size:13px;">
         <span id="horarioFilterText"></span>
         <button class="exc-add-btn" id="horarioFilterClear">Mostrar todos</button>
@@ -1008,6 +1013,7 @@ function applyLoadedState(raw){
       if(!Array.isArray(parsed.staffRemovidos)) parsed.staffRemovidos = [];
       if(!parsed.horarioAtualizado) parsed.horarioAtualizado = {};
       if(!parsed.principalLocked) parsed.principalLocked = {};
+      if(!parsed.horarioUltimaAlteracao) parsed.horarioUltimaAlteracao = null;
       migrateContabKeys(parsed);
       congelarTaxasDosMesesJaUsados(parsed);
       if(!parsed.schedules) parsed.schedules = {};
@@ -1117,6 +1123,31 @@ function mostrarUltimaAtualizacao(mesesChave){
   const el = document.getElementById("horarioUpdatedLabel");
   if(el) el.textContent = textoUltimaAtualizacao(mesesChave);
 }
+// ---------- ÚLTIMA ALTERAÇÃO: quem, quando e o quê ----------
+// Guarda só a mais recente. Aparece apenas ao dono da conta e nunca sai na impressão.
+// Nota: o nome vem da sessão do browser, por isso serve para saber o que se passou no dia a
+// dia — não é um registo de auditoria à prova de quem queira contorná-lo.
+function registarAlteracao(descricao){
+  const quem = staffById(authNurseId);
+  state.horarioUltimaAlteracao = {
+    quem: quem ? quem.nome : "(desconhecido)",
+    quando: new Date().toISOString(),
+    oQue: descricao
+  };
+}
+function mostrarUltimaAlteracao(){
+  const box = document.getElementById("ultimaAlteracaoBox");
+  if(!box) return;
+  const reg = state.horarioUltimaAlteracao;
+  if(authNurseId !== OWNER_ID || !reg || !reg.quando){ box.style.display = "none"; return; }
+  const d = new Date(reg.quando);
+  if(isNaN(d)){ box.style.display = "none"; return; }
+  const quando = d.toLocaleDateString("pt-PT", {day:"2-digit", month:"2-digit", year:"numeric"})
+               + " às " + d.toLocaleTimeString("pt-PT", {hour:"2-digit", minute:"2-digit"});
+  box.style.display = "";
+  box.innerHTML = '<span class="ua-eti">Última alteração</span> ' + esc(reg.oQue || "—") +
+                  ' <span class="ua-meta">— por ' + esc(reg.quem || "—") + ', ' + esc(quando) + '</span>';
+}
 // ---------- BLOQUEIO DO PLANO DA PRINCIPAL (Cátia) ----------
 // A principal preenche o próprio plano e tranca-o quando estiver como quer. Enquanto não
 // trancar, o plano dela só é visto por ela e pela gestão — e não sai na impressão. É por mês.
@@ -1129,6 +1160,7 @@ function alternarPlanoPrincipal(){
   const k = mesDaData(state.monthStart);
   if(state.principalLocked[k]) delete state.principalLocked[k];
   else state.principalLocked[k] = true;
+  registarAlteracao((state.principalLocked[k] ? "Plano da principal trancado" : "Plano da principal destrancado") + " — " + state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"}));
   scheduleSave();
   renderExcelGrid();
 }
@@ -3182,6 +3214,7 @@ function renderExcelGrid(){
   const monthStart = state.monthStart;
   updateMonthLabel();
   mostrarUltimaAtualizacao(mesDaData(state.monthStart));
+  mostrarUltimaAlteracao();
   const autoFillBtnEl = document.getElementById("autoFillBtn");
   if(autoFillBtnEl) autoFillBtnEl.style.display = isGestor ? "" : "none";
   const undoFillBtnEl = document.getElementById("undoFillBtn");
@@ -3353,10 +3386,15 @@ function renderExcelGrid(){
       select.className = "cell-select";
       applyCellSelectState(select, person, date, current);
       select.addEventListener("change", e=>{
+        // lê o valor anterior do estado (o `current` da closure fica desatualizado
+        // depois da primeira alteração nesta célula)
+        const anterior = getPersonShiftForDate(person.id, date);
         setPersonShiftForDate(person.id, date, e.target.value);
         marcarHorarioAlterado(date);
+        registarAlteracao(person.nome + ", " + fmtDate(date) + ": " + (anterior || "—") + " → " + (e.target.value || "—"));
         updateGridAfterCellChange(person.id, di);
         mostrarUltimaAtualizacao(mesDaData(state.monthStart));
+        mostrarUltimaAlteracao();
         scheduleSave();
       });
       td.appendChild(select);
@@ -3675,6 +3713,7 @@ function autoGenerate(){
     }
   });
   marcarHorarioAlterado(state.monthStart);
+  registarAlteracao("Preenchimento automático de " + state.monthStart.toLocaleDateString("pt-PT", {month:"long", year:"numeric"}));
   renderExcelGrid();
   scheduleSave();
 }
@@ -3691,6 +3730,7 @@ function undoAutoFill(){
   });
   autoFillUndo = null;
   marcarHorarioAlterado(state.monthStart);
+  registarAlteracao("Desfeito o preenchimento automático");
   renderExcelGrid();
   scheduleSave();
 }
