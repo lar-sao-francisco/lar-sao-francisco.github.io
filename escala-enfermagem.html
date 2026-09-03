@@ -759,6 +759,7 @@ let state = {
     {id:"s5", nome:"Igor", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:""},
     {id:"s6", nome:"Joanna", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:""},
     {id:"s8", nome:"Sandra", tipo:"rv", off:[], principal:false, isManager:false, exceptions:{}, allowedWeekday:["M1","T1"], allowedWeekend:["M1","T1"], pin:""},
+    {id:"s1783602965465", nome:"Enf. Alexandrina", tipo:"efetivo", off:[5,6], principal:false, isManager:true, exceptions:{}, allowedWeekday:["M","T","DC","DO","Fe"], allowedWeekend:["M1","T1","DC","DO","Fe"], pin:""},
   ],
   shiftTypes: defaultShiftTypes(),
   rules: { restHours:11, maxShifts:5, maxConsecutive:5 },
@@ -766,7 +767,7 @@ let state = {
   schedules: {},
   availabilityRequests: {},
   availabilityMeta: {},
-  lockedDays: {}, // { "YYYY-MM-DD": true }
+  weekLocks: {}, // { wKey: { luis: true/false, catia: true/false } }
   customHolidays: {}, // manager-added extra holidays: { "YYYY-MM-DD": "Nome" }
   removedHolidays: {}, // auto-calculated holidays the manager chose to hide: { "YYYY-MM-DD": true }
   notifSeen: {},
@@ -815,6 +816,39 @@ function isRvLike(tipo){ return tipo === "rv" || tipo === "rv_gestao"; }
 function isSchedulableTipo(tipo){ return tipo === "efetivo" || tipo === "rv" || tipo === "rv_gestao"; }
 function isManagerTipo(tipo){ return tipo === "rv_gestao" || tipo === "gestao"; }
 // ---------- HOLIDAYS (auto-calculated every year, incl. Easter-based ones) ----------
+
+// ========== LOCK MANAGEMENT (Luis + Catia) ==========
+function initializeWeekLock(wKey) {
+  if (!state.weekLocks[wKey]) {
+    state.weekLocks[wKey] = { luis: false, catia: false };
+  }
+  return state.weekLocks[wKey];
+}
+
+function canEditRVShifts(userId) {
+  return userId === "s7"; // Luis only
+}
+
+function canEditCatiaShifts(userId) {
+  return userId === "s7" || userId === "s1" || userId === "s1783602965465";
+}
+
+function canManageLocks(userId) {
+  if (userId === "s7") return { luis: true, catia: true };
+  if (userId === "s1" || userId === "s1783602965465") return { luis: false, catia: true };
+  return { luis: false, catia: false };
+}
+
+function isCatiaLockedForThisWeek(wKey) {
+  const locks = state.weekLocks[wKey];
+  return locks && locks.catia === true;
+}
+
+function isRVLockedForThisWeek(wKey) {
+  const locks = state.weekLocks[wKey];
+  return locks && locks.luis === true;
+}
+
 function computeEaster(year){
   // Meeus/Jones/Butcher algorithm (Gregorian calendar)
   const a = year % 19;
@@ -3246,16 +3280,44 @@ function renderExcelGrid(){
     const allLocked = group.dates.every(d=> state.lockedDays[weekKey(d)]);
     const first = group.dates[0], last = group.dates[group.dates.length-1];
     const rangeLabel = fmtDate(first) + "–" + fmtDate(last);
+    const wKey = weekKey(group.dates[0]);
+    const locks = initializeWeekLock(wKey);
+    
     if(isGestor){
-      th.innerHTML = `<span class="week-lock ${allLocked?'locked':''}" title="${allLocked ? 'Semana bloqueada — clicar para desbloquear' : 'Clicar para bloquear esta semana'}">${allLocked?'🔒':'🔓'} ${rangeLabel}</span>`;
-      th.querySelector(".week-lock").addEventListener("click", ()=>{
-        if(allLocked){ group.dates.forEach(d=> delete state.lockedDays[weekKey(d)]); }
-        else { group.dates.forEach(d=> state.lockedDays[weekKey(d)] = true); }
+      let lockHtml = `<span class="week-lock" data-lock-type="luis" style="cursor:pointer;" title="${locks.luis ? 'Luis bloqueado' : 'Luis desbloqueado'}">${locks.luis?'🔒':'🔓'} Luis</span>`;
+      lockHtml += `<span class="week-lock" data-lock-type="catia" style="cursor:pointer;" title="${locks.catia ? 'Cátia bloqueada' : 'Cátia desbloqueada'}">${locks.catia?'🔒':'🔓'} Cátia</span>`;
+      th.innerHTML = `<div style="display:flex; gap:8px; align-items:center;">${lockHtml}<span>${rangeLabel}</span></div>`;
+      th.querySelectorAll(".week-lock[data-lock-type]").forEach(lockEl => {
+        lockEl.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const lockType = lockEl.getAttribute("data-lock-type");
+          group.dates.forEach(d => {
+            const wk = weekKey(d);
+            initializeWeekLock(wk);
+            state.weekLocks[wk][lockType] = !state.weekLocks[wk][lockType];
+          });
+          scheduleSave();
+          renderExcelGrid();
+        });
+      });
+    } else if(authNurseId === "s1" || authNurseId === "s1783602965465") {
+      let lockHtml = `<span class="week-lock" data-lock-type="catia" style="cursor:pointer;" title="${locks.catia ? 'Cátia bloqueada' : 'Cátia desbloqueada'}">${locks.catia?'🔒':'🔓'} Cátia</span>`;
+      th.innerHTML = `<div style="display:flex; gap:8px; align-items:center;">${lockHtml}<span>${rangeLabel}</span></div>`;
+      th.querySelector(".week-lock[data-lock-type]").addEventListener("click", (e) => {
+        e.stopPropagation();
+        group.dates.forEach(d => {
+          const wk = weekKey(d);
+          initializeWeekLock(wk);
+          state.weekLocks[wk].catia = !state.weekLocks[wk].catia;
+        });
         scheduleSave();
         renderExcelGrid();
       });
     } else {
-      th.innerHTML = `<span class="week-lock">${allLocked?'🔒 ':''}${rangeLabel}</span>`;
+      let lockHtml = '';
+      if(locks.luis) lockHtml += '<span class="week-lock">🔒 Luis</span>';
+      if(locks.catia) lockHtml += '<span class="week-lock">🔒 Cátia</span>';
+      th.innerHTML = `<div style="display:flex; gap:8px; align-items:center;">${lockHtml}<span>${rangeLabel}</span></div>`;
     }
     trWeek.appendChild(th);
   });
@@ -3315,6 +3377,24 @@ function renderExcelGrid(){
       renderExcelGrid();
     });
     const canEditRow = isGestor || (gridViewer && Array.isArray(gridViewer.editHorarioIds) && gridViewer.editHorarioIds.includes(person.id));
+    
+    const isRVPerson = isRvLike(person.tipo);
+    const isCatiaPerson = person.id === "s1";
+    let actualCanEditRow = canEditRow;
+    
+    if(canEditRow) {
+      let hasUnlockedWeek = false;
+      for(let date of dates) {
+        const wk = weekKey(date);
+        const locks = state.weekLocks[wk] || { luis: false, catia: false };
+        if((isRVPerson && !locks.luis) || (isCatiaPerson && !locks.catia)) {
+          hasUnlockedWeek = true;
+          break;
+        }
+      }
+      actualCanEditRow = !hasUnlockedWeek;
+    }
+    
     const isPrincipalRow = person.principal === true;
     // Cadeado do plano da principal, à frente do nome — só para quem o pode editar (ela e a gestão)
     if(isPrincipalRow && canEditRow){
@@ -3364,7 +3444,7 @@ function renderExcelGrid(){
         tr.appendChild(td);
         return;
       }
-      if(!canEditRow){
+      if(!actualCanEditRow){
         const span = document.createElement("span");
         span.className = "sans";
         span.style.cssText = "display:inline-block; min-width:40px; padding:3px 6px; border-radius:5px; font-size:11.5px; font-weight:700; text-align:center;";
@@ -3430,6 +3510,25 @@ function renderExcelGrid(){
   const tdCorner = document.createElement("td");
   trf.appendChild(tdCorner);
   foot.appendChild(trf);
+  
+  // Hide Cátia row if not locked
+  const bodyTrs = document.getElementById("excelBody").querySelectorAll("tr");
+  bodyTrs.forEach(tr => {
+    const nameCell = tr.querySelector(".name-col");
+    if(nameCell && nameCell.textContent.trim().startsWith("Catia")) {
+      let hasCatiaLocked = false;
+      for(let date of dates) {
+        const wk = weekKey(date);
+        const locks = state.weekLocks[wk] || { luis: false, catia: false };
+        if(locks.catia === true) {
+          hasCatiaLocked = true;
+          break;
+        }
+      }
+      tr.style.display = hasCatiaLocked ? "" : "none";
+    }
+  });
+  
   if(gridScroller){ gridScroller.scrollLeft = keepLeft; gridScroller.scrollTop = keepTop; }
 }
 // ---------- IMPRESSÃO DE PERÍODO PERSONALIZADO (ex: 21 de junho a 22 de julho) ----------
@@ -3509,6 +3608,24 @@ function buildHorarioPrintRangeTable(start, end){
     tdName.innerHTML = `<span class="name-cell-inner"><span class="dot ${dotClass}"></span>${esc(person.nome)}</span>`;
     tr.appendChild(tdName);
     const canEditRow = isGestor || (gridViewer && Array.isArray(gridViewer.editHorarioIds) && gridViewer.editHorarioIds.includes(person.id));
+    
+    const isRVPerson = isRvLike(person.tipo);
+    const isCatiaPerson = person.id === "s1";
+    let actualCanEditRow = canEditRow;
+    
+    if(canEditRow) {
+      let hasUnlockedWeek = false;
+      for(let date of dates) {
+        const wk = weekKey(date);
+        const locks = state.weekLocks[wk] || { luis: false, catia: false };
+        if((isRVPerson && !locks.luis) || (isCatiaPerson && !locks.catia)) {
+          hasUnlockedWeek = true;
+          break;
+        }
+      }
+      actualCanEditRow = !hasUnlockedWeek;
+    }
+    
     const isPrincipalRow = person.principal === true;
     let periodHours = 0;
     dates.forEach(date=>{
