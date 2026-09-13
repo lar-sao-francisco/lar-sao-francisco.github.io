@@ -492,6 +492,16 @@
     /* o botão de ajuda não pode tapar o "Guardar disponibilidade" */
     #helpFab{ width:48px; height:48px; right:12px; bottom:12px; font-size:21px; }
     #helpPanel{ right:10px; left:10px; width:auto; bottom:70px; }
+
+    /* A barra de impressão/preenchimento passa para DEPOIS da escala. No
+       telemóvel o que interessa é ver a escala logo ao abrir; a barra continua
+       lá, basta rolar até ao fim. Nada foi escondido. */
+    #section-horario{ display:flex; flex-direction:column; }
+    #section-horario > .toolbar{ order:2; margin:18px 0 0; }
+    /* o "Voltar ao início" é um <span>: dentro de um flex passaria a ocupar a
+       linha toda e o sublinhado tracejado esticava de ponta a ponta — isto
+       prende-o à largura do texto, como está hoje */
+    #section-horario > .back-link{ align-self:flex-start; }
   }
 </style>
 </head>
