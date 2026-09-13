@@ -2,6 +2,7 @@
 <html lang="pt-PT">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lar de São Francisco — Horário de Enfermagem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -430,6 +431,67 @@
        em vez da grelha do mês. Mesmo motivo para ser por CSS e não por style.display. */
     body.print-horario-periodo #section-horario .grid-scroll:not(#horarioPrintRangeWrap){ display:none !important; }
     body.print-horario-periodo #horarioPrintRangeWrap{ display:block !important; }
+  }
+
+  /* ---------- TELEMÓVEL ----------
+     Tudo o que está aqui dentro só se aplica a ecrãs com menos de 680px. Num
+     computador o browser nem chega a ler estas linhas: a grelha de gestão, os
+     cadeados e a impressão ficam exatamente como estavam. */
+  @media (max-width:680px){
+    /* nenhuma página deve obrigar a arrastar para o lado — só as tabelas largas
+       arrastam, e dentro da caixa delas (.grid-scroll) */
+    body{ overflow-x:hidden; }
+    .wrap{ padding:16px 14px 46px; }
+    header{ gap:8px; margin-bottom:4px; }
+    .brand{ gap:11px; }
+    .brand-mark{ width:40px; height:40px; border-radius:13px; }
+    .brand-mark svg{ width:21px; height:21px; }
+    h1{ font-size:21px; }
+    .eyebrow{ font-size:10px; letter-spacing:1.4px; }
+    .week-nav{ width:100%; justify-content:space-between; gap:8px; }
+    .week-nav button{ padding:11px 14px; min-height:44px; }
+    .week-label{ font-size:16px; min-width:0; flex:1; }
+    .home-menu{ grid-template-columns:1fr; gap:12px; margin:18px 0; }
+    .home-card{ padding:18px; border-radius:18px; }
+    .home-card .icon{ width:44px; height:44px; font-size:21px; margin-bottom:9px; }
+    .panel{ padding:16px 14px; border-radius:18px; margin-bottom:16px; }
+    #appLoginGate{ margin:18px auto; padding:22px 18px; border-radius:18px; }
+    /* alvos de dedo: 44px é o mínimo confortável */
+    .toolbar{ gap:8px; margin:14px 0; }
+    .toolbar .btn{ flex:1 1 100%; }
+    .btn{ padding:13px 18px; font-size:15px; min-height:46px; }
+    .tab-btn{ min-height:44px; }
+    .back-link{ font-size:14px; padding:4px 0; }
+    /* 16px nos campos é o que impede o iPhone de dar zoom sozinho quando se toca
+       num campo — as caixas de turno da grelha ficam de fora, senão a grelha
+       alargava */
+    /* !important porque alguns campos trazem o tamanho no próprio elemento, e sem
+       isto o iPhone continuava a dar zoom ao tocar neles */
+    input:not([type=hidden]), textarea, select:not(.cell-select){ font-size:16px !important; }
+    .field input, .field select{ padding:12px; font-size:16px; }
+    .exc-row input[type=date], .exc-row select,
+    .shift-row input[type=text], .shift-row input[type=time], .shift-row input[type=number],
+    .staff-row-top input[type=text], .staff-row-top select{ font-size:16px; }
+    .exc-row, .staff-row-top, .shift-row, .avail-days{ flex-wrap:wrap; }
+    /* grupos de campos dentro das barras (ex.: "Imprimir período: [data] até [data]")
+       ocupam a linha toda e quebram, em vez de sair fora do ecrã */
+    .toolbar > span{ flex:1 1 100%; flex-wrap:wrap; }
+    .toolbar input[type=date]{ flex:1 1 132px; min-width:0; }
+    /* calendário de disponibilidades: mantém os 7 dias por linha, mas compacto e
+       com os turnos em alvos maiores */
+    .calendar, .calendar-head{ gap:4px; }
+    .calendar-head div{ font-size:9.5px; letter-spacing:0; }
+    .day-cell-cal{ min-height:auto; padding:6px 4px; border-radius:11px; }
+    .day-num{ font-size:12.5px; margin-bottom:5px; }
+    .day-num .dow{ font-size:9px; }
+    .cal-chip{ font-size:11px; padding:5px 4px; text-align:center; }
+    /* tabelas largas: arrastam dentro da caixa, com a coluna dos nomes fixa */
+    .grid-scroll{ max-height:66vh; -webkit-overflow-scrolling:touch; }
+    table.excel th.name-col, table.excel td.name-col{ min-width:104px; max-width:104px; font-size:11px; padding:6px; }
+    img, table{ max-width:100%; }
+    /* o botão de ajuda não pode tapar o "Guardar disponibilidade" */
+    #helpFab{ width:48px; height:48px; right:12px; bottom:12px; font-size:21px; }
+    #helpPanel{ right:10px; left:10px; width:auto; bottom:70px; }
   }
 </style>
 </head>
