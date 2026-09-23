@@ -649,7 +649,7 @@
         <div class="print-legend-col">
           <div class="print-legend-table" id="printLegendTable"></div>
           <div class="print-credits">
-            <div class="print-credit-name">Realizado por Enfermeiro Luís de Sales</div>
+            <div class="print-credit-name" id="printCreditName">Realizado por Enfermeiro Luís de Sales</div>
             <div class="print-credit-quote">
               <span class="pcq-text">"Quality of life, as described and lived by the person, is the goal of nursing practice."</span>
               <span class="pcq-attr">— Rosemarie Rizzo Parse (1994, Nursing Science Quarterly)</span>
@@ -3883,6 +3883,15 @@ window.addEventListener("beforeprint", ()=>{
     const el = document.getElementById(id);
     if(el) el.textContent = stamp;
   });
+  // Autoria impressa: horário filtrado só à enfermeira principal (Cátia) → Enf. Alexandrina;
+  // qualquer outro caso (equipa toda ou outra pessoa) → Luís.
+  const credit = document.getElementById("printCreditName");
+  if(credit){
+    const fp = horarioFilterId ? staffById(horarioFilterId) : null;
+    credit.textContent = (fp && fp.principal === true)
+      ? "Realizado por Enf. Alexandrina"
+      : "Realizado por Enfermeiro Luís de Sales";
+  }
 });
 document.getElementById("horarioFilterClear").addEventListener("click", ()=>{
   horarioFilterId = null;
