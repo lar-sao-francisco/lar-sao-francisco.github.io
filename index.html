@@ -531,11 +531,20 @@
   .eqd-mark{ position:absolute; top:-4px; bottom:-4px; width:2px; margin-left:-1px; background:#DC2626; border-radius:1px; }
   .eqd-foot{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-soft); }
   .eqd-empty{ font-size:13px; color:var(--ink-soft); padding:10px 0; }
+  .eqd-mini, .eqd-mnav, .eqd-live{ display:none; }
   @media (max-width:680px){
     .eqd-head{ padding:14px 14px 12px; } .eqd-body{ padding:10px 14px 14px; }
-    .eqd-row{ grid-template-columns:1fr; gap:4px; } .eqd-axis-row{ display:none !important; }
-    .eqd-title{ font-size:17px; } .eqd-nav{ width:28px; flex-basis:28px; }
-    .eqd-day{ font-size:10.5px; } .eqd-day b{ font-size:15px; }
+    .eqd-axis-row, .eqd-track, .eqd-av, .eqd-strip{ display:none !important; }
+    .eqd-head{ border-bottom:0; padding-bottom:4px; } .eqd-top{ margin-bottom:0; align-items:center; }
+    .eqd-row{ display:flex; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--line); }
+    .eqd-live{ display:inline; }
+    .eqd-row .eqd-who{ font-size:14px; }
+    .eqd-mini{ display:inline-flex; align-items:center; gap:8px; }
+    .eqd-pill{ color:#fff; font-size:11px; font-weight:800; border-radius:6px; padding:2px 7px; min-width:36px; text-align:center; }
+    .eqd-hrs{ font-size:12.5px; color:var(--ink-soft); min-width:84px; font-weight:600; }
+    .eqd-live{ margin-left:auto; font-size:11.5px; color:#DC2626; font-weight:700; }
+    .eqd-mnav{ display:flex; gap:6px; } .eqd-mnav button{ border:1px solid var(--line); background:#fff; color:var(--sage-deep); border-radius:10px; min-width:40px; min-height:36px; font-weight:800; font-size:16px; font-family:inherit; }
+    .eqd-now{ display:none; } .eqd-title{ font-size:16px; } .eqd-foot{ border-top:1px solid var(--line); }
   }
   /* ---- Estatísticas dos colegas (Contabilidade) — só leitura ---- */
   .cst-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; align-items:center; }
@@ -560,10 +569,19 @@
   .cst-hm td{ padding:0; text-align:center; }
   .cst-hm td div{ margin:2px; border-radius:7px; height:32px; display:flex; align-items:center; justify-content:center; }
   .cst-legend{ font-size:12px; color:var(--ink-soft); margin-top:6px; }
+  .cst-hm-n{ width:96px; text-align:left !important; font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cst-hm-m{ color:var(--ink-soft); font-size:11px; padding-bottom:2px !important; }
+  .cst-hm-m.atual{ color:var(--sage-deep); font-weight:800; }
+  .din-top{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .din-v{ font-family:"Space Grotesk",sans-serif; font-size:26px; font-weight:700; color:var(--ink); }
+  .din-m{ font-size:13px; color:var(--ink-soft); }
+  .din-svg{ width:100%; height:auto; display:block; margin-top:8px; max-height:240px; }
   @media (max-width:680px){
     .cst-kpis{ grid-template-columns:repeat(2,minmax(0,1fr)); }
     .cst-bar{ grid-template-columns:70px 1fr 74px; font-size:12px; }
-    .cst-hm{ min-width:520px; }
+    .cst-hm-n{ width:64px; font-size:12px; }
+    .cst-hm td div{ height:28px; font-size:11.5px; margin:1.5px; }
+    .din-v{ font-size:22px; }
   }
 </style>
 </head>
@@ -814,9 +832,13 @@
       <div id="contabPersonPrintArea" style="display:none;"></div>
     </div>
     <div class="panel no-print" id="colegasStatsPanel" style="display:none;">
-      <h2>Estatísticas dos colegas — recibos verdes</h2>
+      <h2>Horas feitas — mês a mês</h2>
       <div id="cstWrap"></div>
-      <p class="note">Só leitura. Conta os colegas de recibos verdes (sem a conta de gestão e sem a enfermeira efetiva). "Horas feitas" e "Nº de turnos" vêm da grelha do Horário (descansos e férias não contam). "Fim de semana/feriados" = sábado, domingo e feriados. "Horas disponibilizadas" soma os turnos marcados nas Disponibilidades. "Aproveitamento" = horas feitas ÷ horas disponibilizadas.</p>
+    </div>
+    <div class="panel no-print" id="meuDinheiroPanel" style="display:none;">
+      <h2>O teu dinheiro — estimativa <span style="font-weight:600; font-size:12px; color:var(--ink-soft);">· só tu vês</span></h2>
+      <div id="dinWrap"></div>
+      <p class="note">Mesma conta da "estimativa do mês" da página inicial: horas úteis × €/h + horas de fim de semana e feriados × €/h de fim de semana, mês do calendário (1 a 31).</p>
     </div>
   </div>
   <!-- SECTION: CONFIGURAÇÕES -->
@@ -1678,6 +1700,7 @@ function showSection(name){
     if(podeRel) renderRelatorios();
     if(podeCtb) renderContabilidadeAny();
     renderColegasStats();
+    renderMeuDinheiro();
   }
   if(name==="dispequipa") renderTeamAvailability();
   updateMonthLabel();
@@ -3074,8 +3097,12 @@ function renderEquipaDia(){
       const blocos = st.blocks.map(([a,b])=>
         '<div class="eqd-blk" style="left:' + pct(a) + '%; width:calc(' + (pct(b) - pct(a)) + '% - 2px); background:' + esc(cor) + ';" title="' + esc(st.label || st.code) + '">' +
         esc(st.code) + ' · ' + eqdFmtH(a) + '–' + eqdFmtH(b) + '</div>').join("");
-      html += '<div class="eqd-row"><div class="eqd-who"><span class="eqd-av" style="background:' + eqdCorSuave(cor) + '; color:' + esc(cor) + ';">' +
+      const emTurnoAgora = ehHoje && st.blocks.some(([a,b])=> agoraH >= a && agoraH < b);
+      html += '<div class="eqd-row"><span class="eqd-mini"><span class="eqd-pill" style="background:' + esc(cor) + ';">' + esc(st.code) + '</span>' +
+        '<span class="eqd-hrs">' + st.blocks.map(([a,b])=> eqdFmtH(a) + '–' + eqdFmtH(b)).join(" · ") + '</span></span>' +
+        '<div class="eqd-who"><span class="eqd-av" style="background:' + eqdCorSuave(cor) + '; color:' + esc(cor) + ';">' +
         esc(p.nome.slice(0,2).toUpperCase()) + '</span><span class="eqd-name">' + esc(p.nome) + '</span></div>' +
+        (emTurnoAgora ? '<span class="eqd-live">● agora</span>' : '') +
         '<div class="eqd-track">' + blocos + (marcaAgora ? '<div class="eqd-mark" style="left:' + pct(agoraH) + '%;"></div>' : '') + '</div></div>';
     });
   } else {
@@ -3088,6 +3115,15 @@ function renderEquipaDia(){
   if(rows.length && porPublicar) pe.push("Há turnos ainda por publicar");
   if(pe.length) html += '<div class="eqd-foot">' + pe.join(" · ") + '</div>';
   body.innerHTML = html;
+  // telemóvel: setas simples dia a dia
+  let mnav = card.querySelector(".eqd-mnav");
+  if(!mnav){
+    mnav = document.createElement("div");
+    mnav.className = "eqd-mnav";
+    mnav.innerHTML = '<button type="button" data-eqd-d="-1" aria-label="Dia anterior">‹</button><button type="button" data-eqd-d="1" aria-label="Dia seguinte">›</button>';
+    mnav.querySelectorAll("button").forEach(b=> b.addEventListener("click", ()=>{ eqdDate = addDays(eqdDate || hoje, +b.dataset.eqdD); renderEquipaDia(); }));
+    card.querySelector(".eqd-top").appendChild(mnav);
+  }
   // "agora" / voltar a hoje
   const now = document.getElementById("eqdNow");
   now.innerHTML = "";
@@ -3108,28 +3144,26 @@ setInterval(()=>{
   renderEquipaDia();
 }, 60000);
 // ---------- ESTATÍSTICAS DOS COLEGAS (recibos verdes) ----------
-// Painel só de leitura na Contabilidade, só para gestores. Conta apenas quem é "rv"
-// (fica de fora a conta de gestão do Luís e a enfermeira efetiva). Mesmas regras de horas
-// do resto da app: horas feitas = effectiveShiftHours; disponibilizadas = soma dos turnos
-// marcados nas Disponibilidades (como no Relatório do mês); fim de semana = sábado,
-// domingo e feriados (contaComoFimDeSemana). Conta tudo o que está na grelha, publicado ou não.
-let cstMeses = 6, cstMetrica = "horas", cstPlaneado = false;
-const CST_METRICAS = [["horas","Horas feitas","h"],["turnos","Nº de turnos",""],["fds","Horas fim de semana/feriados","h"],["disp","Horas disponibilizadas","h"]];
+// Painel só de leitura na Contabilidade, só para gestores: horas feitas por cada colega "rv"
+// (sem a conta de gestão e sem a enfermeira efetiva), mês a mês. Conta tudo o que está na grelha.
+// Meses mostrados nas estatísticas: os 4 anteriores, o atual e o próximo (planeado).
+function cstMesesJanela(){
+  const h = new Date();
+  const r = [];
+  for(let i = -4; i <= 1; i++) r.push(new Date(h.getFullYear(), h.getMonth() + i, 1));
+  return r;
+}
 function cstMesStats(person, ano, mes){
-  const r = { horas:0, turnos:0, fds:0, disp:0 };
+  const r = { horas:0, uteis:0, fds:0 };
   const n = new Date(ano, mes + 1, 0).getDate();
-  const reqs = (state.availabilityRequests && state.availabilityRequests[person.id]) || {};
   for(let day=1; day<=n; day++){
     const date = new Date(ano, mes, day);
-    const iso = weekKey(date);
-    if(reqs[iso]) Object.keys(reqs[iso]).forEach(c=>{ if(reqs[iso][c]) r.disp += shiftHours(c); });
     const code = lerTurnoSemCriar(person.id, date);
     if(!code) continue;
     const h = effectiveShiftHours(person, code);
     if(h <= 0) continue;
     r.horas += h;
-    if(code !== "Fe") r.turnos++;
-    if(contaComoFimDeSemana(date)) r.fds += h;
+    if(contaComoFimDeSemana(date)) r.fds += h; else r.uteis += h;
   }
   return r;
 }
@@ -3141,71 +3175,82 @@ function renderColegasStats(){
   const wrap = document.getElementById("cstWrap");
   const colegas = state.staff.filter(p=> p.tipo === "rv");
   if(!colegas.length){ wrap.innerHTML = '<p class="note">Não há colegas de recibos verdes na equipa.</p>'; return; }
+  const meses = cstMesesJanela();
   const hoje = new Date();
-  const fim = new Date(hoje.getFullYear(), hoje.getMonth() + (cstPlaneado ? 1 : 0), 1);
-  const meses = [];
-  for(let i = cstMeses - 1; i >= 0; i--) meses.push(new Date(fim.getFullYear(), fim.getMonth() - i, 1));
   const mesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1).getTime();
-  const dados = colegas.map(p=> ({ p, m: meses.map(d=> cstMesStats(p, d.getFullYear(), d.getMonth())) }));
-  const met = CST_METRICAS.find(x=> x[0] === cstMetrica) || CST_METRICAS[0];
-  const k = met[0], u = met[2];
-  const soma = (linha, campo)=> linha.m.reduce((s,x)=> s + x[campo], 0);
-  const tot = c => dados.reduce((s,l)=> s + soma(l, c), 0);
-  const tH = tot("horas"), tT = tot("turnos"), tF = tot("fds"), tD = tot("disp");
-  let h = "";
-  // filtros
-  h += '<div class="cst-chips">' + [[3,"3 meses"],[6,"6 meses"],[12,"12 meses"]].map(([n,l])=>
-    '<button type="button" class="cst-chip' + (n === cstMeses ? ' on' : '') + '" data-cst-meses="' + n + '">' + l + '</button>').join("") +
-    '<label class="cst-plan"><input type="checkbox" id="cstPlaneado"' + (cstPlaneado ? ' checked' : '') + '> Incluir o próximo mês (planeado)</label></div>';
-  h += '<div class="cst-chips">' + CST_METRICAS.map(([id,l])=>
-    '<button type="button" class="cst-chip' + (id === k ? ' on' : '') + '" data-cst-met="' + id + '">' + l + '</button>').join("") + '</div>';
-  const nomeMes = d=> d.toLocaleDateString("pt-PT", {month:"long"}) + " " + d.getFullYear();
-  const per = nomeMes(meses[0]) + " – " + nomeMes(meses[meses.length-1]);
-  h += '<p class="note" style="margin:4px 0 0;">Período: ' + esc(per) + '</p>';
-  // resumo
-  const kp = [["Horas feitas", fmtNumPt(tH) + "h"], ["Turnos", tT],
-    ["Fim de semana/feriados", fmtNumPt(tF) + "h" + (tH ? " · " + Math.round(tF / tH * 100) + "%" : "")],
-    ["Aproveitamento", tD ? Math.round(tH / tD * 100) + "%" : "—"]];
-  h += '<div class="cst-kpis">' + kp.map(([l,v])=> '<div class="cst-kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div></div>').join("") + '</div>';
-  // equilíbrio
-  const tots = dados.map(l=> [l.p.nome, soma(l, k)]).sort((a,b)=> b[1] - a[1]);
-  const media = tots.reduce((s,x)=> s + x[1], 0) / tots.length;
-  const mx = Math.max(...tots.map(x=> x[1]), media, 1);
-  h += '<div class="cst-sec">Equilíbrio · total do período vs média da equipa</div>';
-  h += tots.map(([n,v])=>{
-    const d = v - media;
-    const longe = Math.abs(d) > media * 0.15;
-    const cor = !longe ? "var(--ink-soft)" : d > 0 ? "#B45309" : "#0891B2";
-    return '<div class="cst-bar"><span class="n">' + esc(n) + '</span><div class="cst-track"><div class="cst-fill" style="width:' + (v / mx * 100) + '%;"></div>' +
-      '<div class="cst-avg" style="left:' + (media / mx * 100) + '%;"></div><span class="cst-val">' + fmtNumPt(v) + u + '</span></div>' +
-      '<span class="cst-d" style="color:' + cor + ';">' + (Math.round(d) > 0 ? "+" : "") + fmtNumPt(d) + u + ' vs média</span></div>';
-  }).join("");
-  h += '<div class="cst-legend">Traço preto = média da equipa (' + fmtNumPt(media) + u + '). Laranja = mais de 15% acima da média; azul = mais de 15% abaixo.</div>';
-  // mês a mês
-  h += '<div class="cst-sec">Mês a mês</div>';
-  const todos = dados.flatMap(l=> l.m.map(x=> x[k]));
-  const hx = Math.max(...todos, 1);
-  h += '<div class="cst-hm-wrap"><table class="cst-hm"><tr><td style="width:96px;"></td>' + meses.map(d=>{
+  const dados = colegas.map(p=> ({ p, m: meses.map(d=> cstMesStats(p, d.getFullYear(), d.getMonth()).horas) }));
+  const hx = Math.max(...dados.flatMap(l=> l.m), 1);
+  let h = '<div class="cst-hm-wrap"><table class="cst-hm"><tr><td class="cst-hm-n"></td>' + meses.map(d=>{
     const lbl = d.toLocaleDateString("pt-PT", {month:"short"}).replace(".", "") + (d.getTime() > mesAtual ? "*" : "");
-    return '<td style="color:var(--ink-soft); font-size:11px; padding-bottom:2px;' + (d.getTime() === mesAtual ? ' font-weight:800; color:var(--sage-deep);' : '') + '">' + esc(lbl) + '</td>';
-  }).join("") + '</tr>' + dados.map(l=> '<tr><td style="text-align:left; font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(l.p.nome) + '</td>' +
-    l.m.map(x=>{ const a = x[k] / hx;
-      return '<td><div style="background:rgba(14,166,107,' + (0.07 + a * 0.83).toFixed(2) + '); color:' + (a > 0.55 ? '#fff' : 'var(--ink)') + '; font-weight:' + (a > 0.55 ? 700 : 500) + ';">' + fmtNumPt(x[k]) + u + '</div></td>';
+    return '<td class="cst-hm-m' + (d.getTime() === mesAtual ? ' atual' : '') + '">' + esc(lbl) + '</td>';
+  }).join("") + '</tr>' + dados.map(l=> '<tr><td class="cst-hm-n">' + esc(l.p.nome) + '</td>' +
+    l.m.map(v=>{ const a = v / hx;
+      return '<td><div style="background:rgba(14,166,107,' + (0.07 + a * 0.83).toFixed(2) + '); color:' + (a > 0.55 ? '#fff' : 'var(--ink)') + '; font-weight:' + (a > 0.55 ? 700 : 500) + ';">' + fmtNumPt(v) + '</div></td>';
     }).join("") + '</tr>').join("") + '</table></div>';
-  if(meses.some(d=> d.getTime() > mesAtual)) h += '<div class="cst-legend">* mês ainda não aconteceu — valores do plano.</div>';
-  // disponibilizado vs atribuído
-  h += '<div class="cst-sec">Disponibilizado vs atribuído · no período</div>';
-  const ap = dados.map(l=> [l.p.nome, soma(l, "horas"), soma(l, "disp")])
-    .sort((a,b)=> (b[2] ? b[1]/b[2] : -1) - (a[2] ? a[1]/a[2] : -1));
-  h += ap.map(([n,f,d])=>{
-    const r = d ? Math.round(f / d * 100) : null;
-    return '<div class="cst-bar"><span class="n">' + esc(n) + '</span><div class="cst-track disp"><div class="cst-fill" style="width:' + Math.min(r || 0, 100) + '%;"></div>' +
-      '<span class="cst-val">' + fmtNumPt(f) + 'h de ' + fmtNumPt(d) + 'h</span></div><span class="cst-d" style="font-weight:700; color:var(--ink);">' + (r === null ? "—" : r + "%") + '</span></div>';
-  }).join("");
+  h += '<div class="cst-legend">Horas feitas em cada mês (turnos da grelha do Horário). * mês seguinte — valores do plano.</div>';
   wrap.innerHTML = h;
-  wrap.querySelectorAll("[data-cst-meses]").forEach(b=> b.addEventListener("click", ()=>{ cstMeses = +b.dataset.cstMeses; renderColegasStats(); }));
-  wrap.querySelectorAll("[data-cst-met]").forEach(b=> b.addEventListener("click", ()=>{ cstMetrica = b.dataset.cstMet; renderColegasStats(); }));
-  document.getElementById("cstPlaneado").addEventListener("change", e=>{ cstPlaneado = e.target.checked; renderColegasStats(); });
+}
+// ---------- O TEU DINHEIRO (só o Luís) ----------
+// Curva da estimativa mensal, mês do calendário. Mesma conta da "estimativa do mês" da página
+// inicial: horas úteis × €/h + horas de fim de semana/feriado × €/h fim de semana, com o €/h
+// em vigor em cada mês (contabRateFor). Só leitura.
+let dinSel = null;
+function estimativaMes(person, d){
+  const mk = d.getFullYear() + "-" + pad2(d.getMonth() + 1);
+  const taxa = contabRateFor(person, mk);
+  let rH = numOuNaN(taxa.h), rF = numOuNaN(taxa.fds);
+  if(isNaN(rH) || rH <= 0){
+    if(person.id === OWNER_ID && state.payRates){ rH = state.payRates.gestorHora || 0; rF = state.payRates.gestorFds || 0; }
+    else return null;
+  }
+  if(isNaN(rF)) rF = rH;
+  const s = cstMesStats(person, d.getFullYear(), d.getMonth());
+  return s.uteis * rH + s.fds * rF;
+}
+function renderMeuDinheiro(){
+  const panel = document.getElementById("meuDinheiroPanel");
+  if(!panel) return;
+  const eu = staffById(authNurseId);
+  if(authNurseId !== OWNER_ID || !eu){ panel.style.display = "none"; return; }
+  panel.style.display = "";
+  const meses = cstMesesJanela();
+  const hoje = new Date();
+  const mesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1).getTime();
+  const vals = meses.map(d=> estimativaMes(eu, d));
+  if(dinSel === null) dinSel = meses.findIndex(d=> d.getTime() === mesAtual);
+  const fmtE = v => v === null ? "—" : v.toFixed(2).replace(".", ",") + " €";
+  const W = 600, H = 190, pl = 46, pr = 14, pt = 14, pb = 26;
+  const mx = Math.max(...vals.map(v=> v || 0), 100);
+  const topo = Math.ceil(mx / 500) * 500;
+  const x = i => pl + i * (W - pl - pr) / (meses.length - 1);
+  const y = v => pt + (1 - v / topo) * (H - pt - pb);
+  let g = "";
+  for(let t = 0; t <= topo; t += topo / 4){
+    g += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="#E1EFE8" stroke-width="1"/>' +
+      '<text x="' + (pl - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end" font-size="11" fill="#5E7168">' + Math.round(t) + '€</text>';
+  }
+  const pts = vals.map((v,i)=> v === null ? null : [x(i), y(v)]);
+  const ultimoReal = meses.findIndex(d=> d.getTime() > mesAtual);
+  const seg = (a,b,dash)=> '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#067A4F" stroke-width="2.5" stroke-linecap="round"' + (dash ? ' stroke-dasharray="5 5"' : '') + '/>';
+  let area = "", linhas = "";
+  const reais = pts.map((p,i)=> (p && (ultimoReal < 0 || i < ultimoReal)) ? p : null).filter(Boolean);
+  if(reais.length > 1) area = '<path d="M' + reais[0][0] + ',' + y(0) + ' ' + reais.map(p=> 'L' + p[0] + ',' + p[1]).join(' ') + ' L' + reais[reais.length-1][0] + ',' + y(0) + 'Z" fill="rgba(14,166,107,0.10)"/>';
+  for(let i = 1; i < pts.length; i++) if(pts[i-1] && pts[i]) linhas += seg(pts[i-1], pts[i], ultimoReal >= 0 && i >= ultimoReal);
+  const pontos = pts.map((p,i)=>{
+    if(!p) return "";
+    const plan = ultimoReal >= 0 && i >= ultimoReal;
+    return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (i === dinSel ? 7 : 4.5) + '" fill="' + (plan ? '#fff' : '#067A4F') + '" stroke="#067A4F" stroke-width="2"/>' +
+      '<rect data-din="' + i + '" x="' + (p[0] - 22) + '" y="' + pt + '" width="44" height="' + (H - pt) + '" fill="transparent" style="cursor:pointer"/>';
+  }).join("");
+  const eixo = meses.map((d,i)=> '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11" fill="' + (i === dinSel ? '#067A4F' : '#5E7168') + '" font-weight="' + (i === dinSel ? 700 : 400) + '">' +
+    esc(d.toLocaleDateString("pt-PT", {month:"short"}).replace(".", "")) + '</text>').join("");
+  const sd = meses[dinSel];
+  const nomeSel = sd.toLocaleDateString("pt-PT", {month:"long", year:"numeric"}) + (sd.getTime() > mesAtual ? " · planeado" : sd.getTime() === mesAtual ? " · em curso" : "");
+  document.getElementById("dinWrap").innerHTML =
+    '<div class="din-top"><span class="din-v">' + fmtE(vals[dinSel]) + '</span><span class="din-m">' + esc(nomeSel) + '</span></div>' +
+    '<svg class="din-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Estimativa mensal">' + g + area + linhas + pontos + eixo + '</svg>' +
+    '<div class="cst-legend">Toca num mês para ver o valor. Tracejado = mês seguinte (planeado).</div>';
+  document.querySelectorAll("#dinWrap [data-din]").forEach(r=> r.addEventListener("click", ()=>{ dinSel = +r.dataset.din; renderMeuDinheiro(); }));
 }
 // ---------- ESTATISTICAS PESSOAIS (recibos verdes) ----------
 function renderMyStats(){
@@ -4239,6 +4284,7 @@ function refreshVisibleSection(){
     if(document.getElementById("reportPanel").style.display !== "none") renderRelatorios();
     if(document.getElementById("contabPanel").style.display !== "none") renderContabilidadeAny();
     renderColegasStats();
+    renderMeuDinheiro();
   }
   if(document.getElementById("section-dispequipa").style.display !== "none") renderTeamAvailability();
   updateMonthLabel();
