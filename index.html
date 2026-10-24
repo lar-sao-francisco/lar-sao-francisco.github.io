@@ -503,6 +503,68 @@
        prende-o à largura do texto, como está hoje */
     #section-horario > .back-link{ align-self:flex-start; }
   }
+  /* ---- Equipa do dia (página inicial) — só leitura ---- */
+  .eqd-card{ grid-column:1/-1; background:var(--glass); border:1px solid rgba(255,255,255,0.65); border-radius:22px; box-shadow:0 4px 18px rgba(6,122,79,0.09); overflow:hidden; font-family:"Plus Jakarta Sans","Manrope",-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .eqd-head{ padding:18px 22px 14px; border-bottom:1px solid var(--line); }
+  .eqd-top{ display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  .eqd-eyebrow{ font-size:11px; letter-spacing:1.4px; color:var(--sage-deep); font-weight:700; text-transform:uppercase; }
+  .eqd-title{ font-family:"Space Grotesk",sans-serif; font-size:20px; font-weight:700; color:var(--ink); margin-top:2px; }
+  .eqd-now{ font-size:12.5px; color:var(--sage-deep); font-weight:700; display:flex; align-items:center; gap:7px; }
+  .eqd-now .eqd-pulse{ width:8px; height:8px; border-radius:50%; background:#DC2626; box-shadow:0 0 0 3px rgba(220,38,38,0.18); }
+  .eqd-now button{ border:1px solid var(--line); background:#fff; color:var(--sage-deep); border-radius:10px; padding:5px 12px; font-weight:700; font-size:12.5px; cursor:pointer; font-family:inherit; }
+  .eqd-strip{ display:flex; gap:4px; align-items:stretch; }
+  .eqd-nav{ border:1px solid var(--line); background:#fff; border-radius:10px; width:34px; flex:0 0 34px; cursor:pointer; color:var(--sage-deep); font-size:17px; font-weight:700; font-family:inherit; }
+  .eqd-day{ flex:1; min-width:0; text-align:center; padding:7px 0 6px; border-radius:12px; cursor:pointer; font-size:11.5px; color:var(--ink-soft); border:1px solid transparent; background:none; font-family:inherit; }
+  .eqd-day b{ display:block; font-size:17px; color:var(--ink); font-family:"Space Grotesk",sans-serif; }
+  .eqd-day.today{ border-color:var(--sage); }
+  .eqd-day.on{ background:var(--sage-deep); border-color:var(--sage-deep); color:#d6f3e6; }
+  .eqd-day.on b{ color:#fff; }
+  .eqd-body{ padding:12px 22px 18px; }
+  .eqd-row{ display:grid; grid-template-columns:130px 1fr; align-items:center; gap:12px; padding:6px 0; }
+  .eqd-who{ display:flex; align-items:center; gap:9px; font-weight:700; font-size:14px; min-width:0; }
+  .eqd-who .eqd-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .eqd-av{ width:30px; height:30px; flex:0 0 30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; }
+  .eqd-track{ position:relative; height:32px; background:rgba(14,166,107,0.06); border-radius:9px; }
+  .eqd-axis{ position:relative; height:16px; font-size:11px; color:var(--ink-soft); }
+  .eqd-axis span{ position:absolute; transform:translateX(-50%); white-space:nowrap; }
+  .eqd-blk{ position:absolute; top:3px; bottom:3px; border-radius:7px; color:#fff; font-size:11.5px; font-weight:700; display:flex; align-items:center; padding:0 9px; white-space:nowrap; overflow:hidden; }
+  .eqd-mark{ position:absolute; top:-4px; bottom:-4px; width:2px; margin-left:-1px; background:#DC2626; border-radius:1px; }
+  .eqd-foot{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-soft); }
+  .eqd-empty{ font-size:13px; color:var(--ink-soft); padding:10px 0; }
+  @media (max-width:680px){
+    .eqd-head{ padding:14px 14px 12px; } .eqd-body{ padding:10px 14px 14px; }
+    .eqd-row{ grid-template-columns:1fr; gap:4px; } .eqd-axis-row{ display:none !important; }
+    .eqd-title{ font-size:17px; } .eqd-nav{ width:28px; flex-basis:28px; }
+    .eqd-day{ font-size:10.5px; } .eqd-day b{ font-size:15px; }
+  }
+  /* ---- Estatísticas dos colegas (Contabilidade) — só leitura ---- */
+  .cst-chips{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; align-items:center; }
+  .cst-chip{ border:1px solid var(--line); background:#fff; color:var(--ink-soft); padding:6px 13px; border-radius:999px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .cst-chip.on{ background:var(--sage-deep); border-color:var(--sage-deep); color:#fff; }
+  .cst-plan{ font-size:12.5px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; margin-left:6px; }
+  .cst-kpis{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:14px 0 4px; }
+  .cst-kpi{ background:rgba(14,166,107,0.07); border-radius:14px; padding:12px 14px; }
+  .cst-kpi .l{ font-size:11.5px; color:var(--ink-soft); }
+  .cst-kpi .v{ font-family:"Space Grotesk",sans-serif; font-size:22px; font-weight:700; color:var(--ink); margin-top:2px; }
+  .cst-sec{ font-size:11px; letter-spacing:1.4px; color:var(--sage-deep); font-weight:700; text-transform:uppercase; margin:22px 0 10px; }
+  .cst-bar{ display:grid; grid-template-columns:96px 1fr 104px; align-items:center; gap:10px; padding:5px 0; font-size:13px; }
+  .cst-bar .n{ font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cst-track{ position:relative; height:24px; background:rgba(14,166,107,0.07); border-radius:7px; }
+  .cst-track.disp{ border:1px dashed var(--sage); }
+  .cst-fill{ position:absolute; left:0; top:0; bottom:0; background:var(--sage); border-radius:7px; }
+  .cst-avg{ position:absolute; top:-3px; bottom:-3px; width:2px; margin-left:-1px; background:var(--ink); }
+  .cst-val{ position:absolute; right:8px; top:4px; font-size:12px; font-weight:700; color:var(--ink); }
+  .cst-d{ font-size:12px; text-align:right; }
+  .cst-hm-wrap{ overflow-x:auto; }
+  .cst-hm{ width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px; }
+  .cst-hm td{ padding:0; text-align:center; }
+  .cst-hm td div{ margin:2px; border-radius:7px; height:32px; display:flex; align-items:center; justify-content:center; }
+  .cst-legend{ font-size:12px; color:var(--ink-soft); margin-top:6px; }
+  @media (max-width:680px){
+    .cst-kpis{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .cst-bar{ grid-template-columns:70px 1fr 74px; font-size:12px; }
+    .cst-hm{ min-width:520px; }
+  }
 </style>
 </head>
 <body>
@@ -562,6 +624,16 @@
   </div>
   <!-- HOME MENU -->
   <div id="homeMenu" class="home-menu" style="display:none;">
+    <div id="equipaDiaCard" class="eqd-card" style="display:none;">
+      <div class="eqd-head">
+        <div class="eqd-top">
+          <div><div class="eqd-eyebrow">Equipa de enfermagem</div><div class="eqd-title" id="eqdTitle"></div></div>
+          <div class="eqd-now" id="eqdNow"></div>
+        </div>
+        <div class="eqd-strip" id="eqdStrip"></div>
+      </div>
+      <div class="eqd-body" id="eqdBody"></div>
+    </div>
     <div class="home-card" data-target="horario" id="horarioCard">
       <span class="icon">🗓️</span>
       <h3>Horário</h3>
@@ -740,6 +812,11 @@
       <div class="grid-scroll" id="contabTableWrap"></div>
       <p class="note">As horas vêm dos turnos atribuídos na grelha do Horário dentro do período escolhido (descansos DC/DO e Férias não contam). "Útil" = segunda a sexta; "fim de semana" = sábado, domingo e feriados — um feriado em dia de semana conta como fim de semana e é pago ao €/h de fim de semana. Clica num nome para ver só essa pessoa.</p>
       <div id="contabPersonPrintArea" style="display:none;"></div>
+    </div>
+    <div class="panel no-print" id="colegasStatsPanel" style="display:none;">
+      <h2>Estatísticas dos colegas — recibos verdes</h2>
+      <div id="cstWrap"></div>
+      <p class="note">Só leitura. Conta os colegas de recibos verdes (sem a conta de gestão e sem a enfermeira efetiva). "Horas feitas" e "Nº de turnos" vêm da grelha do Horário (descansos e férias não contam). "Fim de semana/feriados" = sábado, domingo e feriados. "Horas disponibilizadas" soma os turnos marcados nas Disponibilidades. "Aproveitamento" = horas feitas ÷ horas disponibilizadas.</p>
     </div>
   </div>
   <!-- SECTION: CONFIGURAÇÕES -->
@@ -1495,6 +1572,8 @@ function enterApp(){
   }
   renderOwnerNotifications();
   renderMyStats();
+  eqdDate = null;
+  renderEquipaDia();
   updateMonthLabel();
   ensureMonthlyBackup();
 }
@@ -1583,7 +1662,7 @@ function showSection(name){
   }
   document.getElementById("homeMenu").style.display = name ? "none" : "grid";
   document.getElementById("logoutSmallBar").style.display = name ? "none" : "";
-  if(name){ document.getElementById("myStatsBar").style.display = "none"; } else { renderMyStats(); }
+  if(name){ document.getElementById("myStatsBar").style.display = "none"; } else { renderMyStats(); renderEquipaDia(); }
   ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = (n===name) ? "" : "none";
   });
@@ -1598,6 +1677,7 @@ function showSection(name){
     document.getElementById("printReportBtn").style.display = podeRel ? "" : "none";
     if(podeRel) renderRelatorios();
     if(podeCtb) renderContabilidadeAny();
+    renderColegasStats();
   }
   if(name==="dispequipa") renderTeamAvailability();
   updateMonthLabel();
@@ -2888,6 +2968,245 @@ async function renderBackupList(){
     wrap.innerHTML = '<span class="blk-label">Não foi possível carregar a lista de cópias.</span>';
   }
 }
+// ---------- LEITURA SEM EFEITOS ----------
+// Lê o turno de uma pessoa num dia SEM criar semanas vazias no estado (o getPersonShiftForDate
+// passa pelo ensureWeek, que cria). Usado pelos dois blocos só de leitura abaixo.
+function lerTurnoSemCriar(personId, date){
+  const week = state.schedules ? state.schedules[weekKey(startOfWeek(date))] : null;
+  const day = week ? week[dowIndex(date)] : null;
+  if(!day) return "";
+  for(const st of state.shiftTypes){
+    if(Array.isArray(day[st.code]) && day[st.code].includes(personId)) return st.code;
+  }
+  return "";
+}
+function fmtNumPt(v){ return String(Math.round(v * 10) / 10).replace(".", ","); }
+// ---------- EQUIPA DO DIA (página inicial) ----------
+// Cartão só de leitura: quem trabalha num dia, numa linha das horas, com uma tira da semana.
+// Só o veem o Luís, a enfermeira principal (Cátia) e a Lúcia. Não grava nada.
+// Quem não é gestor só vê as linhas já publicadas (mesma regra do Horário: diaPublicado).
+const EQD_LUCIA_ID = "s1783602985327";
+let eqdDate = null;
+function podeVerEquipaDia(){
+  if(!authNurseId) return false;
+  if(authNurseId === OWNER_ID || authNurseId === EQD_LUCIA_ID) return true;
+  const p = getPrincipal();
+  return !!(p && p.id === authNurseId);
+}
+function eqdFmtH(h){
+  const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+  return hh + "h" + (mm ? pad2(mm) : "");
+}
+function eqdCorSuave(cor){
+  return /^#[0-9a-fA-F]{6}$/.test(cor || "") ? cor + "24" : "rgba(14,166,107,0.14)";
+}
+function renderEquipaDia(){
+  const card = document.getElementById("equipaDiaCard");
+  if(!card) return;
+  if(!podeVerEquipaDia()){ card.style.display = "none"; return; }
+  card.style.display = "";
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  if(!eqdDate) eqdDate = new Date(hoje);
+  const dia = eqdDate, iso = weekKey(dia);
+  const ehHoje = iso === weekKey(hoje);
+  const ehAmanha = iso === weekKey(addDays(hoje, 1));
+  let nomeDia = dia.toLocaleDateString("pt-PT", {weekday:"long", day:"numeric", month:"long"});
+  nomeDia = nomeDia.charAt(0).toUpperCase() + nomeDia.slice(1);
+  document.getElementById("eqdTitle").textContent = (ehHoje ? "Hoje · " : ehAmanha ? "Amanhã · " : "") + nomeDia;
+  // tira da semana
+  const strip = document.getElementById("eqdStrip");
+  strip.innerHTML = "";
+  const seg = startOfWeek(dia);
+  const mkNav = (txt, delta, titulo)=>{
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "eqd-nav"; b.textContent = txt; b.title = titulo;
+    b.addEventListener("click", ()=>{ eqdDate = addDays(dia, delta); renderEquipaDia(); });
+    return b;
+  };
+  strip.appendChild(mkNav("‹", -7, "Semana anterior"));
+  for(let i=0; i<7; i++){
+    const d = addDays(seg, i);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "eqd-day" + (weekKey(d) === iso ? " on" : "") + (weekKey(d) === weekKey(hoje) ? " today" : "");
+    b.innerHTML = ["seg","ter","qua","qui","sex","sáb","dom"][i] + "<b>" + d.getDate() + "</b>";
+    b.addEventListener("click", ()=>{ eqdDate = d; renderEquipaDia(); });
+    strip.appendChild(b);
+  }
+  strip.appendChild(mkNav("›", 7, "Semana seguinte"));
+  // quem trabalha
+  const gestor = authRole === "gestor";
+  const rows = [], descanso = [], ferias = [], ausente = [];
+  let porPublicar = false;
+  state.staff.filter(p=> isSchedulableTipo(p.tipo)).forEach(p=>{
+    const code = lerTurnoSemCriar(p.id, dia);
+    if(!code) return;
+    if(!gestor && !diaPublicado(p, iso)){ porPublicar = true; return; }
+    const st = shiftType(code);
+    if(!st) return;
+    if(st.isRest){
+      if(code === "Fe") ferias.push(p.nome);
+      else if(code === "DC" || code === "DO") descanso.push(p.nome);
+      else ausente.push(p.nome); // ex.: doença — não se mostra o motivo
+      return;
+    }
+    if(!st.blocks || !st.blocks.length) return;
+    rows.push({ p, st });
+  });
+  rows.sort((a,b)=> (a.st.blocks[0][0] - b.st.blocks[0][0]) || a.p.nome.localeCompare(b.p.nome, "pt"));
+  let lo = 8, hi = 20;
+  rows.forEach(r=> r.st.blocks.forEach(([a,b])=>{ lo = Math.min(lo, a); hi = Math.max(hi, b); }));
+  const pct = h => ((h - lo) / (hi - lo) * 100);
+  const agora = new Date();
+  const agoraH = agora.getHours() + agora.getMinutes() / 60;
+  const marcaAgora = ehHoje && agoraH >= lo && agoraH <= hi;
+  const body = document.getElementById("eqdBody");
+  let html = "";
+  if(rows.length){
+    const marcas = [];
+    for(let h = lo; h <= hi; h += 3) marcas.push(h);
+    if(marcas[marcas.length-1] !== hi) marcas.push(hi);
+    html += '<div class="eqd-row eqd-axis-row" style="padding:0;"><span></span><div class="eqd-axis">' +
+      marcas.map(h=> '<span style="left:' + pct(h) + '%;' + (h===lo ? 'transform:none;' : h===hi ? 'transform:translateX(-100%);' : '') + '">' + eqdFmtH(h) + '</span>').join("") +
+      '</div></div>';
+    rows.forEach(({p, st})=>{
+      const cor = st.color || "#0EA66B";
+      const blocos = st.blocks.map(([a,b])=>
+        '<div class="eqd-blk" style="left:' + pct(a) + '%; width:calc(' + (pct(b) - pct(a)) + '% - 2px); background:' + esc(cor) + ';" title="' + esc(st.label || st.code) + '">' +
+        esc(st.code) + ' · ' + eqdFmtH(a) + '–' + eqdFmtH(b) + '</div>').join("");
+      html += '<div class="eqd-row"><div class="eqd-who"><span class="eqd-av" style="background:' + eqdCorSuave(cor) + '; color:' + esc(cor) + ';">' +
+        esc(p.nome.slice(0,2).toUpperCase()) + '</span><span class="eqd-name">' + esc(p.nome) + '</span></div>' +
+        '<div class="eqd-track">' + blocos + (marcaAgora ? '<div class="eqd-mark" style="left:' + pct(agoraH) + '%;"></div>' : '') + '</div></div>';
+    });
+  } else {
+    html += '<div class="eqd-empty">' + (porPublicar ? "A escala deste dia ainda não está publicada." : "Sem turnos atribuídos neste dia.") + '</div>';
+  }
+  const pe = [];
+  if(descanso.length) pe.push("Descanso: " + descanso.map(esc).join(", "));
+  if(ferias.length) pe.push("Férias: " + ferias.map(esc).join(", "));
+  if(ausente.length) pe.push("Ausente: " + ausente.map(esc).join(", "));
+  if(rows.length && porPublicar) pe.push("Há turnos ainda por publicar");
+  if(pe.length) html += '<div class="eqd-foot">' + pe.join(" · ") + '</div>';
+  body.innerHTML = html;
+  // "agora" / voltar a hoje
+  const now = document.getElementById("eqdNow");
+  now.innerHTML = "";
+  if(ehHoje){
+    const emTurno = rows.filter(r=> r.st.blocks.some(([a,b])=> agoraH >= a && agoraH < b)).map(r=> r.p.nome);
+    now.innerHTML = '<span class="eqd-pulse"></span>Agora: ' + (emTurno.length ? emTurno.map(esc).join(", ") : "ninguém de turno");
+  } else {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = "Voltar a hoje";
+    b.addEventListener("click", ()=>{ eqdDate = null; renderEquipaDia(); });
+    now.appendChild(b);
+  }
+}
+// mantém a marca "agora" certa enquanto a página inicial está aberta
+setInterval(()=>{
+  if(document.hidden || !authNurseId) return;
+  if(document.getElementById("homeMenu").style.display === "none") return;
+  renderEquipaDia();
+}, 60000);
+// ---------- ESTATÍSTICAS DOS COLEGAS (recibos verdes) ----------
+// Painel só de leitura na Contabilidade, só para gestores. Conta apenas quem é "rv"
+// (fica de fora a conta de gestão do Luís e a enfermeira efetiva). Mesmas regras de horas
+// do resto da app: horas feitas = effectiveShiftHours; disponibilizadas = soma dos turnos
+// marcados nas Disponibilidades (como no Relatório do mês); fim de semana = sábado,
+// domingo e feriados (contaComoFimDeSemana). Conta tudo o que está na grelha, publicado ou não.
+let cstMeses = 6, cstMetrica = "horas", cstPlaneado = false;
+const CST_METRICAS = [["horas","Horas feitas","h"],["turnos","Nº de turnos",""],["fds","Horas fim de semana/feriados","h"],["disp","Horas disponibilizadas","h"]];
+function cstMesStats(person, ano, mes){
+  const r = { horas:0, turnos:0, fds:0, disp:0 };
+  const n = new Date(ano, mes + 1, 0).getDate();
+  const reqs = (state.availabilityRequests && state.availabilityRequests[person.id]) || {};
+  for(let day=1; day<=n; day++){
+    const date = new Date(ano, mes, day);
+    const iso = weekKey(date);
+    if(reqs[iso]) Object.keys(reqs[iso]).forEach(c=>{ if(reqs[iso][c]) r.disp += shiftHours(c); });
+    const code = lerTurnoSemCriar(person.id, date);
+    if(!code) continue;
+    const h = effectiveShiftHours(person, code);
+    if(h <= 0) continue;
+    r.horas += h;
+    if(code !== "Fe") r.turnos++;
+    if(contaComoFimDeSemana(date)) r.fds += h;
+  }
+  return r;
+}
+function renderColegasStats(){
+  const panel = document.getElementById("colegasStatsPanel");
+  if(!panel) return;
+  if(authRole !== "gestor"){ panel.style.display = "none"; return; }
+  panel.style.display = "";
+  const wrap = document.getElementById("cstWrap");
+  const colegas = state.staff.filter(p=> p.tipo === "rv");
+  if(!colegas.length){ wrap.innerHTML = '<p class="note">Não há colegas de recibos verdes na equipa.</p>'; return; }
+  const hoje = new Date();
+  const fim = new Date(hoje.getFullYear(), hoje.getMonth() + (cstPlaneado ? 1 : 0), 1);
+  const meses = [];
+  for(let i = cstMeses - 1; i >= 0; i--) meses.push(new Date(fim.getFullYear(), fim.getMonth() - i, 1));
+  const mesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1).getTime();
+  const dados = colegas.map(p=> ({ p, m: meses.map(d=> cstMesStats(p, d.getFullYear(), d.getMonth())) }));
+  const met = CST_METRICAS.find(x=> x[0] === cstMetrica) || CST_METRICAS[0];
+  const k = met[0], u = met[2];
+  const soma = (linha, campo)=> linha.m.reduce((s,x)=> s + x[campo], 0);
+  const tot = c => dados.reduce((s,l)=> s + soma(l, c), 0);
+  const tH = tot("horas"), tT = tot("turnos"), tF = tot("fds"), tD = tot("disp");
+  let h = "";
+  // filtros
+  h += '<div class="cst-chips">' + [[3,"3 meses"],[6,"6 meses"],[12,"12 meses"]].map(([n,l])=>
+    '<button type="button" class="cst-chip' + (n === cstMeses ? ' on' : '') + '" data-cst-meses="' + n + '">' + l + '</button>').join("") +
+    '<label class="cst-plan"><input type="checkbox" id="cstPlaneado"' + (cstPlaneado ? ' checked' : '') + '> Incluir o próximo mês (planeado)</label></div>';
+  h += '<div class="cst-chips">' + CST_METRICAS.map(([id,l])=>
+    '<button type="button" class="cst-chip' + (id === k ? ' on' : '') + '" data-cst-met="' + id + '">' + l + '</button>').join("") + '</div>';
+  const nomeMes = d=> d.toLocaleDateString("pt-PT", {month:"long"}) + " " + d.getFullYear();
+  const per = nomeMes(meses[0]) + " – " + nomeMes(meses[meses.length-1]);
+  h += '<p class="note" style="margin:4px 0 0;">Período: ' + esc(per) + '</p>';
+  // resumo
+  const kp = [["Horas feitas", fmtNumPt(tH) + "h"], ["Turnos", tT],
+    ["Fim de semana/feriados", fmtNumPt(tF) + "h" + (tH ? " · " + Math.round(tF / tH * 100) + "%" : "")],
+    ["Aproveitamento", tD ? Math.round(tH / tD * 100) + "%" : "—"]];
+  h += '<div class="cst-kpis">' + kp.map(([l,v])=> '<div class="cst-kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div></div>').join("") + '</div>';
+  // equilíbrio
+  const tots = dados.map(l=> [l.p.nome, soma(l, k)]).sort((a,b)=> b[1] - a[1]);
+  const media = tots.reduce((s,x)=> s + x[1], 0) / tots.length;
+  const mx = Math.max(...tots.map(x=> x[1]), media, 1);
+  h += '<div class="cst-sec">Equilíbrio · total do período vs média da equipa</div>';
+  h += tots.map(([n,v])=>{
+    const d = v - media;
+    const longe = Math.abs(d) > media * 0.15;
+    const cor = !longe ? "var(--ink-soft)" : d > 0 ? "#B45309" : "#0891B2";
+    return '<div class="cst-bar"><span class="n">' + esc(n) + '</span><div class="cst-track"><div class="cst-fill" style="width:' + (v / mx * 100) + '%;"></div>' +
+      '<div class="cst-avg" style="left:' + (media / mx * 100) + '%;"></div><span class="cst-val">' + fmtNumPt(v) + u + '</span></div>' +
+      '<span class="cst-d" style="color:' + cor + ';">' + (Math.round(d) > 0 ? "+" : "") + fmtNumPt(d) + u + ' vs média</span></div>';
+  }).join("");
+  h += '<div class="cst-legend">Traço preto = média da equipa (' + fmtNumPt(media) + u + '). Laranja = mais de 15% acima da média; azul = mais de 15% abaixo.</div>';
+  // mês a mês
+  h += '<div class="cst-sec">Mês a mês</div>';
+  const todos = dados.flatMap(l=> l.m.map(x=> x[k]));
+  const hx = Math.max(...todos, 1);
+  h += '<div class="cst-hm-wrap"><table class="cst-hm"><tr><td style="width:96px;"></td>' + meses.map(d=>{
+    const lbl = d.toLocaleDateString("pt-PT", {month:"short"}).replace(".", "") + (d.getTime() > mesAtual ? "*" : "");
+    return '<td style="color:var(--ink-soft); font-size:11px; padding-bottom:2px;' + (d.getTime() === mesAtual ? ' font-weight:800; color:var(--sage-deep);' : '') + '">' + esc(lbl) + '</td>';
+  }).join("") + '</tr>' + dados.map(l=> '<tr><td style="text-align:left; font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(l.p.nome) + '</td>' +
+    l.m.map(x=>{ const a = x[k] / hx;
+      return '<td><div style="background:rgba(14,166,107,' + (0.07 + a * 0.83).toFixed(2) + '); color:' + (a > 0.55 ? '#fff' : 'var(--ink)') + '; font-weight:' + (a > 0.55 ? 700 : 500) + ';">' + fmtNumPt(x[k]) + u + '</div></td>';
+    }).join("") + '</tr>').join("") + '</table></div>';
+  if(meses.some(d=> d.getTime() > mesAtual)) h += '<div class="cst-legend">* mês ainda não aconteceu — valores do plano.</div>';
+  // disponibilizado vs atribuído
+  h += '<div class="cst-sec">Disponibilizado vs atribuído · no período</div>';
+  const ap = dados.map(l=> [l.p.nome, soma(l, "horas"), soma(l, "disp")])
+    .sort((a,b)=> (b[2] ? b[1]/b[2] : -1) - (a[2] ? a[1]/a[2] : -1));
+  h += ap.map(([n,f,d])=>{
+    const r = d ? Math.round(f / d * 100) : null;
+    return '<div class="cst-bar"><span class="n">' + esc(n) + '</span><div class="cst-track disp"><div class="cst-fill" style="width:' + Math.min(r || 0, 100) + '%;"></div>' +
+      '<span class="cst-val">' + fmtNumPt(f) + 'h de ' + fmtNumPt(d) + 'h</span></div><span class="cst-d" style="font-weight:700; color:var(--ink);">' + (r === null ? "—" : r + "%") + '</span></div>';
+  }).join("");
+  wrap.innerHTML = h;
+  wrap.querySelectorAll("[data-cst-meses]").forEach(b=> b.addEventListener("click", ()=>{ cstMeses = +b.dataset.cstMeses; renderColegasStats(); }));
+  wrap.querySelectorAll("[data-cst-met]").forEach(b=> b.addEventListener("click", ()=>{ cstMetrica = b.dataset.cstMet; renderColegasStats(); }));
+  document.getElementById("cstPlaneado").addEventListener("change", e=>{ cstPlaneado = e.target.checked; renderColegasStats(); });
+}
 // ---------- ESTATISTICAS PESSOAIS (recibos verdes) ----------
 function renderMyStats(){
   const bar = document.getElementById("myStatsBar");
@@ -3912,13 +4231,14 @@ document.getElementById("nextMonth").addEventListener("click", ()=>{
   scheduleSave();
 });
 function refreshVisibleSection(){
-  if(document.getElementById("homeMenu").style.display !== "none") renderMyStats();
+  if(document.getElementById("homeMenu").style.display !== "none"){ renderMyStats(); renderEquipaDia(); }
   if(document.getElementById("section-horario").style.display !== "none") renderExcelGrid();
   if(document.getElementById("section-disponibilidade").style.display !== "none") renderNurseView();
   if(document.getElementById("section-config").style.display !== "none") renderAvailabilityPanel();
   if(document.getElementById("section-relatorios").style.display !== "none"){
     if(document.getElementById("reportPanel").style.display !== "none") renderRelatorios();
     if(document.getElementById("contabPanel").style.display !== "none") renderContabilidadeAny();
+    renderColegasStats();
   }
   if(document.getElementById("section-dispequipa").style.display !== "none") renderTeamAvailability();
   updateMonthLabel();
