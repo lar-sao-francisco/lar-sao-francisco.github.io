@@ -607,6 +607,8 @@
   .vista-toggle button{ border:0; background:transparent; color:var(--sage-deep); font:inherit; font-size:12.5px; font-weight:700; padding:6px 13px; border-radius:9px; cursor:pointer; }
   .vista-toggle button.on{ background:#fff; box-shadow:0 1px 4px rgba(6,122,79,0.18); }
   @media print{ .vista-toggle{ display:none !important; } }
+  .disp-tabs{ flex-wrap:nowrap; }
+  @media (max-width:680px){ .disp-tabs .tab-btn{ flex:1 1 0; padding:9px 8px; font-size:13px; text-align:center; } }
 </style>
 </head>
 <body>
@@ -791,6 +793,10 @@
   <!-- SECTION: DISPONIBILIDADE (nurse self-service) -->
   <div id="section-disponibilidade" class="section" style="display:none;">
     <span class="back-link" data-back>← Voltar ao início</span>
+    <div class="tabs disp-tabs" style="display:none; margin-top:0;">
+      <button type="button" class="tab-btn active" data-disp-tab="disponibilidade">Marcar disponibilidades</button>
+      <button type="button" class="tab-btn" data-disp-tab="dispequipa">Disponibilidades da equipa</button>
+    </div>
     <div class="panel" id="nurseGestorNotice" style="display:none;">
       <h2>Disponibilidades</h2>
       <p class="note">Esta vista é para os recibos verdes marcarem a própria disponibilidade. Como gestão, o resumo de todas as disponibilidades submetidas está em Configurações.</p>
@@ -817,6 +823,10 @@
   <!-- SECTION: DISPONIBILIDADES DA EQUIPA (gestão) -->
   <div id="section-dispequipa" class="section" style="display:none;">
     <span class="back-link" data-back>← Voltar ao início</span>
+    <div class="tabs disp-tabs" style="display:none; margin-top:0;">
+      <button type="button" class="tab-btn" data-disp-tab="disponibilidade">Marcar disponibilidades</button>
+      <button type="button" class="tab-btn active" data-disp-tab="dispequipa">Disponibilidades da equipa</button>
+    </div>
     <div class="toolbar">
       <span class="blk-label sans" style="display:flex; align-items:center; gap:8px;">
         Imprimir:
@@ -1626,6 +1636,8 @@ function enterApp(){
     document.getElementById("nurseBadge").style.display = "none";
   }
   atualizarVistaToggle();
+  if(temDuasDisponibilidades()) document.getElementById("teamDispCard").style.display = "none";
+  atualizarSeparadoresDisp();
   renderOwnerNotifications();
   renderMyStats();
   eqdDate = null;
@@ -1633,6 +1645,17 @@ function enterApp(){
   updateMonthLabel();
   ensureMonthlyBackup();
 }
+// Quem marca disponibilidades E vê as da equipa (na prática, o Luís em vista gestor) tem um só
+// cartão "Disponibilidades", com dois separadores dentro: Marcar disponibilidades / Da equipa.
+function temDuasDisponibilidades(){
+  const p = staffById(authNurseId);
+  return !!(p && isRvLike(p.tipo) && (authRole === "gestor" || p.canViewTeamDisp));
+}
+function atualizarSeparadoresDisp(){
+  const duas = temDuasDisponibilidades();
+  document.querySelectorAll(".disp-tabs").forEach(el=> el.style.display = duas ? "flex" : "none");
+}
+document.querySelectorAll("[data-disp-tab]").forEach(b=> b.addEventListener("click", ()=> showSection(b.dataset.dispTab)));
 function atualizarVistaToggle(){
   const box = document.getElementById("vistaToggle");
   if(!box) return;
