@@ -583,6 +583,25 @@
     .cst-hm td div{ height:28px; font-size:11.5px; margin:1.5px; }
     .din-v{ font-size:22px; }
   }
+  /* ---- Notas nos dias (cabeçalho do Horário e cartão da equipa) — não saem na impressão ---- */
+  .day-note{ display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; border-radius:50%; background:var(--sage); color:#fff; font:italic 700 10px Georgia,serif; margin-top:2px; cursor:pointer; flex:0 0 auto; }
+  .day-note-add{ display:none; font-size:10px; font-weight:800; color:var(--sage-deep); margin-top:1px; cursor:pointer; line-height:1; }
+  th.can-note{ cursor:pointer; }
+  @media (hover:hover){ th.can-note:hover .day-note-add{ display:block; } }
+  #dayNotePop{ position:absolute; z-index:1000; display:none; max-width:280px; min-width:190px; background:#10241C; color:#fff; border-radius:12px; padding:10px 12px; font:13px/1.45 "Plus Jakarta Sans","Manrope",-apple-system,"Segoe UI",Roboto,sans-serif; box-shadow:0 12px 30px rgba(6,40,28,0.28); text-align:left; }
+  #dayNotePop .dnp-d{ font-size:11px; letter-spacing:.6px; text-transform:uppercase; color:#9FE1CB; font-weight:700; margin-bottom:3px; }
+  #dayNotePop .dnp-t{ white-space:pre-wrap; word-break:break-word; }
+  #dayNotePop .dnp-by{ font-size:11px; color:#A9BDB4; margin-top:5px; }
+  #dayNotePop textarea{ width:100%; min-height:64px; border-radius:8px; border:0; padding:7px 8px; font:inherit; font-size:14px; color:#10241C; resize:vertical; box-sizing:border-box; }
+  #dayNotePop .dnp-btns{ display:flex; gap:6px; margin-top:8px; justify-content:flex-end; flex-wrap:wrap; }
+  #dayNotePop button{ border:0; border-radius:8px; padding:6px 11px; font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; background:rgba(255,255,255,0.12); color:#fff; }
+  #dayNotePop button.pri{ background:var(--sage); }
+  #dayNotePop button.del{ color:#FCA5A5; margin-right:auto; }
+  .eqd-note{ display:flex; align-items:flex-start; gap:8px; margin:8px 0 12px; padding:8px 10px; background:rgba(14,166,107,0.08); border-radius:10px; font-size:13px; color:var(--ink); }
+  .eqd-note .day-note{ margin-top:1px; }
+  .eqd-note > span:last-child{ white-space:pre-wrap; word-break:break-word; }
+  @media (max-width:680px){ #section-horario .day-note{ width:11px; height:11px; font-size:8px; margin-top:1px; } }
+  @media print{ .day-note, .day-note-add, #dayNotePop, .eqd-note{ display:none !important; } }
 </style>
 </head>
 <body>
@@ -2991,6 +3010,112 @@ async function renderBackupList(){
     wrap.innerHTML = '<span class="blk-label">Não foi possível carregar a lista de cópias.</span>';
   }
 }
+// ---------- NOTAS NOS DIAS ----------
+// Um comentário por dia (ex.: "Vacinação"), guardado em state.dayNotes["AAAA-MM-DD"] =
+// { t: texto, by: nome, at: data ISO }. Escrevem só o Luís e a enfermeira principal (Cátia);
+// todos veem. Aparece como um "i" no cabeçalho do dia do Horário e no cartão da equipa.
+// Não sai na impressão (CSS @media print).
+function podeEscreverNotas(){
+  if(authNurseId === OWNER_ID) return true;
+  const p = getPrincipal();
+  return !!(p && p.id === authNurseId);
+}
+function notaDoDia(iso){
+  const n = state.dayNotes ? state.dayNotes[iso] : null;
+  return (n && typeof n.t === "string" && n.t.trim()) ? n : null;
+}
+function notaDiaHtml(iso){
+  const n = notaDoDia(iso);
+  if(n) return '<span class="day-note" data-note-iso="' + esc(iso) + '" aria-label="Tem comentário">i</span>';
+  return podeEscreverNotas() ? '<span class="day-note-add" aria-label="Adicionar comentário">+ nota</span>' : "";
+}
+let dnpHover = false;
+function dnpEl(){
+  let el = document.getElementById("dayNotePop");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "dayNotePop";
+    el.addEventListener("click", e=> e.stopPropagation());
+    document.body.appendChild(el);
+    document.addEventListener("click", ()=> fecharNotaDia());
+    document.addEventListener("keydown", e=>{ if(e.key === "Escape") fecharNotaDia(); });
+  }
+  return el;
+}
+function fecharNotaDia(){
+  const el = document.getElementById("dayNotePop");
+  if(el){ el.style.display = "none"; el.innerHTML = ""; el.dataset.modo = ""; }
+}
+function posicionarNotaDia(el, alvo){
+  const r = alvo.getBoundingClientRect();
+  el.style.display = "block";
+  const w = el.offsetWidth;
+  let left = r.left + window.scrollX + r.width / 2 - w / 2;
+  left = Math.max(window.scrollX + 8, Math.min(left, window.scrollX + document.documentElement.clientWidth - w - 8));
+  el.style.left = left + "px";
+  el.style.top = (r.bottom + window.scrollY + 6) + "px";
+}
+function nomeDiaNota(date){
+  let s = date.toLocaleDateString("pt-PT", {weekday:"long", day:"numeric", month:"long"});
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function mostrarNotaDia(alvo, iso, date){
+  const n = notaDoDia(iso);
+  if(!n) return;
+  const el = dnpEl();
+  el.dataset.modo = "ver";
+  let quando = "";
+  if(n.at){ const d = new Date(n.at); if(!isNaN(d)) quando = ", " + d.toLocaleDateString("pt-PT", {day:"2-digit", month:"2-digit"}); }
+  el.innerHTML = '<div class="dnp-d">' + esc(nomeDiaNota(date)) + '</div><div class="dnp-t">' + esc(n.t) + '</div>' +
+    (n.by ? '<div class="dnp-by">por ' + esc(n.by) + quando + '</div>' : '');
+  posicionarNotaDia(el, alvo);
+}
+function editarNotaDia(alvo, iso, date){
+  if(!podeEscreverNotas()) return;
+  const el = dnpEl();
+  const n = notaDoDia(iso);
+  el.dataset.modo = "editar";
+  el.innerHTML = '<div class="dnp-d">' + esc(nomeDiaNota(date)) + '</div>' +
+    '<textarea maxlength="300" placeholder="Ex.: Vacinação da gripe — 10h"></textarea>' +
+    '<div class="dnp-btns">' + (n ? '<button type="button" class="del">Apagar</button>' : '') +
+    '<button type="button" class="can">Cancelar</button><button type="button" class="pri">Guardar</button></div>';
+  const ta = el.querySelector("textarea");
+  ta.value = n ? n.t : "";
+  const gravar = texto=>{
+    if(!state.dayNotes) state.dayNotes = {};
+    const eu = staffById(authNurseId);
+    if(texto) state.dayNotes[iso] = { t: texto, by: eu ? eu.nome : "", at: new Date().toISOString() };
+    else delete state.dayNotes[iso];
+    scheduleSave();
+    fecharNotaDia();
+    refreshVisibleSection();
+  };
+  el.querySelector(".pri").addEventListener("click", ()=> gravar(ta.value.trim().slice(0, 300)));
+  el.querySelector(".can").addEventListener("click", fecharNotaDia);
+  const del = el.querySelector(".del");
+  if(del) del.addEventListener("click", ()=> gravar(""));
+  posicionarNotaDia(el, alvo);
+  ta.focus();
+}
+// Liga um cabeçalho de dia: rato por cima do "i" mostra a nota; tocar/clicar no "i" mostra-a
+// (telemóvel); quem pode escrever clica no cabeçalho para escrever/alterar.
+function ligarNotaDia(th, iso, date){
+  const icon = th.querySelector(".day-note");
+  const escreve = podeEscreverNotas();
+  if(escreve){ th.classList.add("can-note"); th.title = "Clica para escrever um comentário neste dia"; }
+  if(icon){
+    icon.addEventListener("mouseenter", ()=>{ const el = dnpEl(); if(el.dataset.modo !== "editar"){ dnpHover = true; mostrarNotaDia(icon, iso, date); } });
+    icon.addEventListener("mouseleave", ()=>{ const el = dnpEl(); if(dnpHover && el.dataset.modo === "ver"){ dnpHover = false; fecharNotaDia(); } });
+  }
+  th.addEventListener("click", e=>{
+    const noIcon = !!(icon && e.target.closest(".day-note"));
+    if(!escreve && !noIcon) return;
+    e.stopPropagation();
+    dnpHover = false;
+    if(escreve) editarNotaDia(th, iso, date);
+    else mostrarNotaDia(icon, iso, date);
+  });
+}
 // ---------- LEITURA SEM EFEITOS ----------
 // Lê o turno de uma pessoa num dia SEM criar semanas vazias no estado (o getPersonShiftForDate
 // passa pelo ensureWeek, que cria). Usado pelos dois blocos só de leitura abaixo.
@@ -3115,6 +3240,13 @@ function renderEquipaDia(){
   if(rows.length && porPublicar) pe.push("Há turnos ainda por publicar");
   if(pe.length) html += '<div class="eqd-foot">' + pe.join(" · ") + '</div>';
   body.innerHTML = html;
+  // nota do dia (comentário)
+  const nota = notaDoDia(iso);
+  let notaEl = card.querySelector(".eqd-note");
+  if(nota){
+    if(!notaEl){ notaEl = document.createElement("div"); notaEl.className = "eqd-note"; card.querySelector(".eqd-head").insertBefore(notaEl, document.getElementById("eqdStrip")); }
+    notaEl.innerHTML = '<span class="day-note">i</span><span>' + esc(nota.t) + '</span>';
+  } else if(notaEl){ notaEl.remove(); }
   // telemóvel: setas simples dia a dia
   let mnav = card.querySelector(".eqd-mnav");
   if(!mnav){
@@ -3792,7 +3924,8 @@ function renderExcelGrid(){
     if(holidayName) th.classList.add("holiday-col");
     const lockHtml = locked ? `<span class="day-lock locked" title="Dia bloqueado (faz parte de uma semana bloqueada)">🔒</span>` : "";
     const holidayHtml = holidayName ? `<span class="holiday-flag" title="Feriado: ${esc(holidayName)}">🎉</span>` : "";
-    th.innerHTML = `<div class="day-head"><span class="dow">${DAYS_SHORT[dowIndex(date)]}</span><span class="num">${date.getDate()}</span>${lockHtml}${holidayHtml}</div>`;
+    th.innerHTML = `<div class="day-head"><span class="dow">${DAYS_SHORT[dowIndex(date)]}</span><span class="num">${date.getDate()}</span>${lockHtml}${holidayHtml}${notaDiaHtml(iso)}</div>`;
+    ligarNotaDia(th, iso, date);
     trh.appendChild(th);
   });
   const thHours = document.createElement("th");
