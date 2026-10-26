@@ -602,6 +602,11 @@
   .eqd-note > span:last-child{ white-space:pre-wrap; word-break:break-word; }
   @media (max-width:680px){ #section-horario .day-note{ width:11px; height:11px; font-size:8px; margin-top:1px; } }
   @media print{ .day-note, .day-note-add, #dayNotePop, .eqd-note{ display:none !important; } }
+  /* ---- Interruptor vista gestor / vista enfermeiro (só o Luís) ---- */
+  .vista-toggle{ display:inline-flex; gap:2px; padding:3px; margin:0 0 10px; background:rgba(14,166,107,0.10); border-radius:12px; }
+  .vista-toggle button{ border:0; background:transparent; color:var(--sage-deep); font:inherit; font-size:12.5px; font-weight:700; padding:6px 13px; border-radius:9px; cursor:pointer; }
+  .vista-toggle button.on{ background:#fff; box-shadow:0 1px 4px rgba(6,122,79,0.18); }
+  @media print{ .vista-toggle{ display:none !important; } }
 </style>
 </head>
 <body>
@@ -632,6 +637,9 @@
   </div>
   <div id="gestorBadge" class="sans" style="display:none; font-size:12.5px; color:var(--sage-deep); margin-bottom:6px;">
     🔓 <span id="gestorBadgeName"></span> — acesso de gestão ativo — <span id="gestorLogoutLink" style="text-decoration:underline; cursor:pointer;">sair</span>
+  </div>
+  <div id="vistaToggle" class="sans vista-toggle" style="display:none;" role="group" aria-label="Vista">
+    <button type="button" data-vista="gestor">Vista gestor</button><button type="button" data-vista="enfermeiro">Vista enfermeiro</button>
   </div>
   <div id="nurseBadge" class="sans" style="display:none; font-size:12.5px; color:var(--sage-deep); margin-bottom:6px;">
     👤 <span id="nurseBadgeName"></span> — <span id="nurseBadgeLogoutLink" style="text-decoration:underline; cursor:pointer;">sair</span>
@@ -1063,6 +1071,11 @@ function getHolidayLabel(iso){
 const SUPABASE_URL = "https://kzcdaxbqnfsuufnkdkfx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6Y2RheGJxbmZzdXVmbmtka2Z4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1OTc2ODYsImV4cCI6MjA5OTE3MzY4Nn0.1H7KwxxCP4m70L_RwJTiJNG3qtCoprKb8L-HGMstbB8";
 const OWNER_ID = "s7"; // Luis — conta fundadora, protegida
+// Vista enfermeiro: o Luís pode alternar a sua conta entre "vista gestor" e "vista enfermeiro"
+// (o que um recibo verde vê, com os seus próprios dados). Não fica guardada: ao entrar, começa
+// sempre em vista gestor. Na vista enfermeiro authRole fica a null e donoAtivo() a false.
+let vistaEnfermeiro = false;
+function donoAtivo(){ return authNurseId === OWNER_ID && !vistaEnfermeiro; }
 let dataRev = "0";
 let loadFailed = false;
 let authToken = null;
@@ -1349,7 +1362,7 @@ function mostrarUltimaAlteracao(){
   const box = document.getElementById("ultimaAlteracaoBox");
   if(!box) return;
   const reg = state.horarioUltimaAlteracao;
-  if(authNurseId !== OWNER_ID || !reg || !reg.quando){ box.style.display = "none"; return; }
+  if(!donoAtivo() || !reg || !reg.quando){ box.style.display = "none"; return; }
   const d = new Date(reg.quando);
   if(isNaN(d)){ box.style.display = "none"; return; }
   const quando = d.toLocaleDateString("pt-PT", {day:"2-digit", month:"2-digit", year:"numeric"})
@@ -1375,8 +1388,9 @@ function principalDiaTrancado(iso){
 function diaPublicado(person, iso){
   return (person && person.principal === true) ? principalDiaTrancado(iso) : !!state.lockedDays[iso];
 }
-function podeTrancarRV(){ return authNurseId === OWNER_ID; }
+function podeTrancarRV(){ return donoAtivo(); }
 function podeTrancarPrincipal(){
+  if(vistaEnfermeiro) return false;
   if(authNurseId === OWNER_ID) return true;
   const eu = staffById(authNurseId);
   return !!eu && (eu.principal === true || eu.canLockPrincipal === true);
@@ -1611,6 +1625,7 @@ function enterApp(){
   } else {
     document.getElementById("nurseBadge").style.display = "none";
   }
+  atualizarVistaToggle();
   renderOwnerNotifications();
   renderMyStats();
   eqdDate = null;
@@ -1618,7 +1633,28 @@ function enterApp(){
   updateMonthLabel();
   ensureMonthlyBackup();
 }
+function atualizarVistaToggle(){
+  const box = document.getElementById("vistaToggle");
+  if(!box) return;
+  if(authNurseId !== OWNER_ID){ box.style.display = "none"; return; }
+  box.style.display = "inline-flex";
+  box.querySelectorAll("button").forEach(b=> b.classList.toggle("on", (b.dataset.vista === "enfermeiro") === vistaEnfermeiro));
+}
+function mudarVista(enfermeiro){
+  if(authNurseId !== OWNER_ID || enfermeiro === vistaEnfermeiro) return;
+  vistaEnfermeiro = enfermeiro;
+  authRole = (!enfermeiro && authFlags.isManager) ? "gestor" : null;
+  nursePersonId = OWNER_ID;   // nas disponibilidades, volta a ser o próprio
+  horarioFilterId = null;
+  contabFilterId = null;
+  eqdDate = null;
+  if(typeof fecharNotaDia === "function") fecharNotaDia();
+  showSection(null);
+  enterApp();
+}
+document.querySelectorAll("#vistaToggle button").forEach(b=> b.addEventListener("click", ()=> mudarVista(b.dataset.vista === "enfermeiro")));
 function logoutApp(){
+  vistaEnfermeiro = false;
   horarioFilterId = null;
   contabFilterId = null;
   authRole = null;
@@ -1635,6 +1671,7 @@ function logoutApp(){
   });
   document.getElementById("gestorBadge").style.display = "none";
   document.getElementById("nurseBadge").style.display = "none";
+  document.getElementById("vistaToggle").style.display = "none";
   document.getElementById("notifBar").style.display = "none";
   document.getElementById("myStatsBar").style.display = "none";
   document.getElementById("appLoginPin").value = "";
@@ -1664,6 +1701,7 @@ document.getElementById("appLoginBtn").addEventListener("click", async ()=>{
     authToken = r.token;
     authNurseId = r.personId;
     await fetchAndApplyState();
+    vistaEnfermeiro = false;
     authRole = authFlags.isManager ? "gestor" : null;
     const person = staffById(authNurseId);
     nursePersonId = (person && isRvLike(person.tipo)) ? person.id : null;
@@ -2485,7 +2523,7 @@ function renderContabilidade(){
   periodo.textContent = "Período: " + fmtDate(start) + " a " + fmtDate(end) + " (inclusive).";
   wrap.appendChild(periodo);
   wrap.appendChild(table);
-  if(authNurseId === OWNER_ID && state.payRates){
+  if(donoAtivo() && state.payRates){
     let ohU=0, ohF=0;
     for(let d = new Date(start); d <= end; d = addDays(d, 1)){
       const code = getPersonShiftForDate(OWNER_ID, d);
@@ -2953,7 +2991,7 @@ async function ensureMonthlyBackup(){
 async function renderBackupList(){
   const wrap = document.getElementById("backupList");
   if(!wrap) return;
-  if(authNurseId !== OWNER_ID){
+  if(!donoAtivo()){
     wrap.innerHTML = '<span class="blk-label">Só o dono da conta pode ver as cópias de segurança (contêm dados sensíveis de toda a equipa).</span>';
     return;
   }
@@ -3016,6 +3054,7 @@ async function renderBackupList(){
 // todos veem. Aparece como um "i" no cabeçalho do dia do Horário e no cartão da equipa.
 // Não sai na impressão (CSS @media print).
 function podeEscreverNotas(){
+  if(vistaEnfermeiro) return false;
   if(authNurseId === OWNER_ID) return true;
   const p = getPrincipal();
   return !!(p && p.id === authNurseId);
@@ -3137,6 +3176,7 @@ const EQD_LUCIA_ID = "s1783602985327";
 let eqdDate = null;
 function podeVerEquipaDia(){
   if(!authNurseId) return false;
+  if(vistaEnfermeiro) return false;
   if(authNurseId === OWNER_ID || authNurseId === EQD_LUCIA_ID) return true;
   const p = getPrincipal();
   return !!(p && p.id === authNurseId);
@@ -3343,7 +3383,7 @@ function renderMeuDinheiro(){
   const panel = document.getElementById("meuDinheiroPanel");
   if(!panel) return;
   const eu = staffById(authNurseId);
-  if(authNurseId !== OWNER_ID || !eu){ panel.style.display = "none"; return; }
+  if(!donoAtivo() || !eu){ panel.style.display = "none"; return; }
   panel.style.display = "";
   const meses = cstMesesJanela();
   const hoje = new Date();
@@ -3483,7 +3523,7 @@ function renderMyStats(){
 // ---------- NOTIFICACOES (apenas fundador) ----------
 function renderOwnerNotifications(){
   const bar = document.getElementById("notifBar");
-  if(authNurseId !== OWNER_ID){ bar.style.display = "none"; return; }
+  if(!donoAtivo()){ bar.style.display = "none"; return; }
   const seen = state.notifSeen || {};
   const news = [];
   Object.keys(state.availabilityMeta || {}).forEach(pid=>{
@@ -4460,7 +4500,7 @@ function renderNurseView(){
     document.getElementById("nurseGestorNotice").style.display = "none";
     document.getElementById("nurseCalendarWrap").style.display = "";
     const picker = document.getElementById("ownerDispPicker");
-    if(authNurseId === OWNER_ID){
+    if(donoAtivo()){
       picker.style.display = "flex";
       const sel = document.getElementById("ownerDispSelect");
       sel.innerHTML = "";
