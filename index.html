@@ -982,6 +982,7 @@ let state = {
   customHolidays: {}, // manager-added extra holidays: { "YYYY-MM-DD": "Nome" }
   removedHolidays: {}, // auto-calculated holidays the manager chose to hide: { "YYYY-MM-DD": true }
   notifSeen: {},
+  availabilityRemovals: [], // avisos ao fundador: turnos removidos porque o colega retirou a disponibilidade
   payRates: { efetivoMensal:1400, rvHora:15, rvFds:18, gestorHora:22, gestorFds:25 },
   salarioLocked: {},
   tzMigrated: true
@@ -1241,6 +1242,7 @@ function applyLoadedState(raw){
       if(!parsed.customHolidays) parsed.customHolidays = {};
       if(!parsed.removedHolidays) parsed.removedHolidays = {};
       if(!parsed.notifSeen) parsed.notifSeen = {};
+      if(!Array.isArray(parsed.availabilityRemovals)) parsed.availabilityRemovals = [];
       if(!parsed.payRates) parsed.payRates = { efetivoMensal:1400, rvHora:15, rvFds:18, gestorHora:22, gestorFds:25 };
       if(parsed.holidays){
         Object.keys(parsed.holidays).forEach(iso=>{
@@ -3557,10 +3559,20 @@ function renderOwnerNotifications(){
       if(seen[pid + "|" + ym] !== ts) news.push({ nome: person.nome, ym: ym, ts: ts });
     });
   });
-  if(news.length === 0){ bar.style.display = "none"; return; }
+  const remocoes = (Array.isArray(state.availabilityRemovals) ? state.availabilityRemovals : []).slice().sort((a,b)=> a.ts < b.ts ? 1 : -1);
+  if(news.length === 0 && remocoes.length === 0){ bar.style.display = "none"; return; }
   news.sort((a,b)=> a.ts < b.ts ? 1 : -1);
   const list = document.getElementById("notifList");
   list.innerHTML = "";
+  remocoes.forEach(r=>{
+    const p = staffById(r.pid);
+    const d = new Date(r.ts);
+    const dia = new Date(r.iso + "T00:00:00").toLocaleDateString("pt-PT",{day:"2-digit",month:"2-digit"});
+    const div = document.createElement("div");
+    div.style.fontWeight = "700";
+    div.textContent = "⚠️ " + (p ? p.nome : r.pid) + " retirou a disponibilidade de " + dia + " — turno " + r.code + " removido da escala (" + d.toLocaleDateString("pt-PT",{day:"2-digit",month:"2-digit"}) + " às " + d.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}) + ")";
+    list.appendChild(div);
+  });
   news.slice(0, 12).forEach(n=>{
     const d = new Date(n.ts);
     const mes = new Date(parseInt(n.ym.slice(0,4)), parseInt(n.ym.slice(5,7))-1, 1).toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
@@ -3582,6 +3594,7 @@ document.getElementById("notifClearBtn").addEventListener("click", ()=>{
     Object.keys(state.availabilityMeta[pid] || {}).forEach(ym=>{ seen[pid + "|" + ym] = state.availabilityMeta[pid][ym]; });
   });
   state.notifSeen = seen;
+  state.availabilityRemovals = [];
   scheduleSave();
   renderOwnerNotifications();
 });
@@ -4616,6 +4629,10 @@ function renderNurseCalendar(){
     numDiv.innerHTML = `<span class="dow">${DAYS_SHORT[dowIndex(date)]}</span>${date.getDate()}`;
     cell.appendChild(numDiv);
     const relevantShifts = state.shiftTypes.filter(st=> isShiftAllowed(person, date, st.code));
+    // Dia trancado (publicado): só o fundador pode alterar a disponibilidade.
+    const diaBloqueado = diaPublicado(person, iso) && authNurseId !== OWNER_ID;
+    const podeEditarDia = editMode && !diaBloqueado;
+    if(diaBloqueado){ numDiv.innerHTML += ' <span title="Dia publicado — só a gestão pode alterar">🔒</span>'; }
     if(!dataSource[iso]) dataSource[iso] = {};
     const dayReq = dataSource[iso];
     const chipsWrap = document.createElement("div");
@@ -4626,12 +4643,12 @@ function renderNurseCalendar(){
       const available = !!dayReq[st.code];
       chip.textContent = st.code;
       chip.className = "sans";
-      const cursor = editMode ? "pointer" : "default";
-      chip.style.cssText = `font-size:10.5px; font-weight:700; padding:3px 7px; border-radius:6px; cursor:${cursor}; border:1px solid ${available? st.color : 'var(--line)'}; background:${available? st.color : 'transparent'}; color:${available? 'white' : 'var(--ink-soft)'}; opacity:${editMode ? 1 : (available?1:0.5)};`;
-      chip.title = editMode
+      const cursor = podeEditarDia ? "pointer" : "default";
+      chip.style.cssText = `font-size:10.5px; font-weight:700; padding:3px 7px; border-radius:6px; cursor:${cursor}; border:1px solid ${available? st.color : 'var(--line)'}; background:${available? st.color : 'transparent'}; color:${available? 'white' : 'var(--ink-soft)'}; opacity:${podeEditarDia ? 1 : (available?1:0.5)};`;
+      chip.title = podeEditarDia
         ? (available ? `Disponível para ${st.label} — toca para desmarcar` : `Marcar como disponível para ${st.label}`)
         : (available ? `Disponível para ${st.label}` : "");
-      if(editMode){
+      if(podeEditarDia){
         chip.addEventListener("click", (e)=>{
           e.stopPropagation();
           if(dayReq[st.code]) delete dayReq[st.code];
@@ -4663,6 +4680,35 @@ document.getElementById("nurseAlterarBtn").addEventListener("click", ()=>{
 });
 document.getElementById("nurseGuardarBtn").addEventListener("click", ()=>{
   if(!nursePersonId || !nurseDraft) return;
+  const pessoaDisp = staffById(nursePersonId);
+  const antes = state.availabilityRequests[nursePersonId] || {};
+  const eDono = authNurseId === OWNER_ID;
+  const removidos = [];
+  const dias = new Set(Object.keys(antes).concat(Object.keys(nurseDraft)));
+  dias.forEach(iso=>{
+    if(diaPublicado(pessoaDisp, iso)){
+      // Dia trancado: os colegas não alteram nada; a escala também não mexe.
+      if(!eDono){
+        if(antes[iso]) nurseDraft[iso] = JSON.parse(JSON.stringify(antes[iso]));
+        else delete nurseDraft[iso];
+      }
+      return;
+    }
+    const dAntes = antes[iso] || {};
+    const dDepois = nurseDraft[iso] || {};
+    const date = new Date(iso + "T00:00:00");
+    const code = getPersonShiftForDate(nursePersonId, date);
+    // Só remove se a disponibilidade para esse turno EXISTIA e foi retirada.
+    if(code && dAntes[code] && !dDepois[code]){
+      setPersonShiftForDate(nursePersonId, date, "");
+      removidos.push({ iso: iso, code: code });
+    }
+  });
+  if(removidos.length && !eDono){
+    if(!Array.isArray(state.availabilityRemovals)) state.availabilityRemovals = [];
+    const ts = new Date().toISOString();
+    removidos.forEach(r=> state.availabilityRemovals.push({ pid: nursePersonId, iso: r.iso, code: r.code, ts: ts }));
+  }
   state.availabilityRequests[nursePersonId] = nurseDraft;
   if(!state.availabilityMeta[nursePersonId]) state.availabilityMeta[nursePersonId] = {};
   state.availabilityMeta[nursePersonId][monthPrefix(state.monthStart)] = new Date().toISOString();
