@@ -663,6 +663,16 @@
   td.tem-troca{ position:relative; }
   .troca-mark{ position:absolute; top:-1px; right:2px; font-size:15px; font-weight:900; line-height:1; color:#B4232A; pointer-events:auto; cursor:help; }
   @media print{ .troca-mark{ display:none !important; } }
+  #trocaPop .ti-row{ padding:6px 0; border-top:1px solid var(--line); }
+  #trocaPop .ti-row:first-of-type{ border-top:0; }
+  #trocaPop .ti-q{ font-weight:800; }
+  #trocaPop .ti-m{ color:var(--ink-soft); font-size:12.5px; margin-top:2px; }
+  #trocaPop .ti-a{ font-size:12px; font-weight:700; color:var(--sage-deep); margin-top:2px; }
+  #trocaPop .ti-a.uh{ color:#A32D2D; }
+  #trocaPop .ti-by{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+  #trocaPop .ti-del{ border:0; background:none; padding:2px 0; color:#A32D2D; font-size:12px; font-weight:700; cursor:pointer; }
+  #trocaPop .ti-links{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; gap:8px; }
+  #trocaPop .ti-links a{ font-size:12.5px; color:var(--sage-deep); cursor:pointer; text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -3463,10 +3473,57 @@ function abrirTroca(person, date, alvo){
 }
 // Asterisco nas células de quem ficou com um turno por troca (e, na troca por troca, também
 // no turno que a outra pessoa recebeu). Só o veem o Luís e a Cátia; o motivo aparece ao passar o rato.
+function trocasDaCelula(person, iso){
+  return trocasLista().filter(t=> (t.iso === iso && t.para === person.id) || (t.reciproca && t.iso2 === iso && t.de === person.id));
+}
+// Caixa pequena com o que aconteceu num turno trocado. O Luís pode apagar o registo daqui
+// (a célula volta ao normal) ou fazer uma nova troca nesse turno.
+function mostrarInfoTroca(person, date, alvo){
+  const iso = weekKey(date);
+  const regs = trocasDaCelula(person, iso);
+  if(!regs.length) return;
+  const nome = id=> (staffById(id) || (state.staffRemovidos || []).find(p=> p.id === id) || {}).nome || id;
+  const fd = s=>{ const d = new Date(s + "T00:00:00"); return d.toLocaleDateString("pt-PT", {weekday:"short", day:"2-digit", month:"2-digit"}).replace(".", ""); };
+  const el = trocaPopEl();
+  const edita = podeRegistarTrocas();
+  el.innerHTML = '<div class="tp-h">Troca registada</div>' + regs.map(t=>{
+    const uh = typeof t.antecedenciaH === "number" && t.antecedenciaH < TROCA_ULTIMA_HORA_H;
+    const ante = typeof t.antecedenciaH === "number" ? (t.antecedenciaH < 0 ? "aviso depois da hora do turno" : "aviso com " + fmtNumPt(t.antecedenciaH) + "h") : "";
+    const q = t.reciproca
+      ? esc(nome(t.de)) + ' ⇄ ' + esc(nome(t.para)) + '<div class="ti-m">' + esc(fd(t.iso)) + ' ' + esc(t.code) + ' ↔ ' + esc(fd(t.iso2)) + ' ' + esc(t.code2) + ' · troca por troca</div>'
+      : esc(nome(t.de)) + ' → ' + esc(nome(t.para)) + '<div class="ti-m">' + esc(fd(t.iso)) + ' ' + esc(t.code) + '</div>';
+    let quando = "";
+    if(t.registadoEm){ const d = new Date(t.registadoEm); if(!isNaN(d)) quando = d.toLocaleDateString("pt-PT", {day:"2-digit", month:"2-digit"}) + " às " + d.toLocaleTimeString("pt-PT", {hour:"2-digit", minute:"2-digit"}); }
+    return '<div class="ti-row"><div class="ti-q">' + q + '</div>' +
+      '<div class="ti-m">' + esc(t.motivo || "") + (t.detalhe ? ' — ' + esc(t.detalhe) : '') + '</div>' +
+      (ante ? '<div class="ti-a' + (uh ? ' uh' : '') + '">' + esc(ante) + (uh ? ' · última hora' : '') + '</div>' : '') +
+      (quando ? '<div class="ti-by">registado' + (t.por ? ' por ' + esc(t.por) : '') + ' em ' + esc(quando) + '</div>' : '') +
+      (edita ? '<button type="button" class="ti-del" data-ti-del="' + esc(t.id) + '">Apagar registo</button>' : '') +
+      '</div>';
+  }).join("") +
+    '<div class="ti-links">' + (edita ? '<a id="tiNova">Nova troca neste turno</a>' : '<span></span>') + '<button type="button" class="can">Fechar</button></div>';
+  el.querySelector(".can").addEventListener("click", fecharTroca);
+  el.querySelectorAll("[data-ti-del]").forEach(b=> b.addEventListener("click", ()=>{
+    if(b.dataset.confirm !== "1"){ b.dataset.confirm = "1"; b.textContent = "Tens a certeza? Carrega outra vez"; return; }
+    state.shiftSwaps = trocasLista().filter(t=> t.id !== b.dataset.tiDel);
+    scheduleSave();
+    fecharTroca();
+    renderExcelGrid();
+  }));
+  const nova = el.querySelector("#tiNova");
+  if(nova) nova.addEventListener("click", ()=>{ fecharTroca(); abrirTroca(person, date, alvo); });
+  const r = alvo.getBoundingClientRect();
+  el.style.display = "block";
+  const w = el.offsetWidth;
+  let left = r.left + window.scrollX + r.width / 2 - w / 2;
+  left = Math.max(window.scrollX + 8, Math.min(left, window.scrollX + document.documentElement.clientWidth - w - 8));
+  el.style.left = left + "px";
+  el.style.top = (r.bottom + window.scrollY + 6) + "px";
+}
 function marcarTrocaCelula(td, person, date){
   if(!podeVerTrocas()) return;
   const iso = weekKey(date);
-  const regs = trocasLista().filter(t=> (t.iso === iso && t.para === person.id) || (t.reciproca && t.iso2 === iso && t.de === person.id));
+  const regs = trocasDaCelula(person, iso);
   if(!regs.length) return;
   const nome = id=> (staffById(id) || {}).nome || id;
   const s = document.createElement("span");
@@ -3477,6 +3534,7 @@ function marcarTrocaCelula(td, person, date){
     return txt + " · " + (t.motivo || "") + (t.detalhe ? " — " + t.detalhe : "");
   }).join("\n");
   td.classList.add("tem-troca");
+  if(!podeRegistarTrocas()) s.addEventListener("click", e=>{ e.stopPropagation(); mostrarInfoTroca(person, date, td); });
   td.appendChild(s);
 }
 function ligarTrocaCelula(td, person, date){
@@ -3487,7 +3545,11 @@ function ligarTrocaCelula(td, person, date){
   if(!st || st.isRest) return;
   td.classList.add("troca-cell");
   td.title = "Clica para registar uma troca neste turno";
-  td.addEventListener("click", e=>{ e.stopPropagation(); abrirTroca(person, date, td); });
+  td.addEventListener("click", e=>{
+    e.stopPropagation();
+    if(trocasDaCelula(person, weekKey(date)).length) mostrarInfoTroca(person, date, td);
+    else abrirTroca(person, date, td);
+  });
 }
 function renderTrocasMes(){
   const panel = document.getElementById("trocasPanel");
@@ -3530,7 +3592,7 @@ function renderTrocasMes(){
     if(b.dataset.confirm !== "1"){ b.dataset.confirm = "1"; b.textContent = "Apagar?"; b.classList.add("conf"); return; }
     state.shiftSwaps = trocasLista().filter(t=> t.id !== b.dataset.trDel);
     scheduleSave();
-    renderTrocasMes();
+    renderExcelGrid();
   }));
 }
 // ---------- RASCUNHO DAS DISPONIBILIDADES ----------
