@@ -609,6 +609,37 @@
   @media print{ .vista-toggle{ display:none !important; } }
   .disp-tabs{ flex-wrap:nowrap; }
   @media (max-width:680px){ .disp-tabs .tab-btn{ flex:1 1 0; padding:9px 8px; font-size:13px; text-align:center; } }
+  /* ---- Trocas de turno (registo só do Luís; relatório Luís + Cátia) — não sai na impressão ---- */
+  td.troca-cell{ cursor:pointer; }
+  td.troca-cell select{ pointer-events:none; }
+  td.troca-cell:hover{ outline:2px solid var(--sage); outline-offset:-2px; }
+  #trocaPop{ position:absolute; z-index:1000; display:none; width:280px; background:#fff; color:var(--ink); border:1px solid var(--line); border-radius:14px; padding:12px 14px; box-shadow:0 14px 34px rgba(6,40,28,0.22); font:13px/1.4 "Plus Jakarta Sans","Manrope",-apple-system,"Segoe UI",Roboto,sans-serif; }
+  #trocaPop .tp-h{ font-weight:800; color:var(--sage-deep); margin-bottom:6px; }
+  #trocaPop .tp-l{ font-size:11px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:var(--ink-soft); margin:8px 0 3px; }
+  #trocaPop .tp-v{ font-weight:700; }
+  #trocaPop select, #trocaPop input[type=text], #trocaPop input[type=datetime-local]{ width:100%; box-sizing:border-box; padding:7px 8px; border:1px solid var(--line); border-radius:9px; font:inherit; font-size:13.5px; background:#fff; color:var(--ink); }
+  #trocaPop input[type=text]{ margin-top:5px; }
+  #trocaPop .tp-chk{ display:flex; gap:6px; align-items:center; font-size:12.5px; color:var(--ink-soft); }
+  #trocaPop .tp-ante{ margin-top:6px; font-size:12.5px; font-weight:700; color:var(--sage-deep); }
+  #trocaPop .tp-ante.uh{ color:#A32D2D; }
+  #trocaPop .tp-erro{ color:#A32D2D; font-size:12.5px; margin-top:4px; }
+  #trocaPop .tp-btns{ display:flex; gap:6px; justify-content:flex-end; margin-top:10px; }
+  #trocaPop button{ border:1px solid var(--line); background:#fff; border-radius:9px; padding:7px 12px; font:inherit; font-weight:700; cursor:pointer; color:var(--ink); }
+  #trocaPop button.pri{ background:var(--sage-deep); border-color:var(--sage-deep); color:#fff; }
+  .tr-kpis{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:6px; }
+  .tr-k{ background:rgba(14,166,107,0.07); border-radius:12px; padding:10px 12px; }
+  .tr-k span{ display:block; font-size:11.5px; color:var(--ink-soft); }
+  .tr-k b{ font-family:"Space Grotesk",sans-serif; font-size:22px; }
+  .tr-k.al{ background:#FFF1F0; } .tr-k.al b{ color:#A32D2D; }
+  .tr-lista{ display:grid; gap:6px; }
+  .tr-row{ border:1px solid var(--line); border-radius:11px; padding:8px 11px; background:#fff; font-size:13px; }
+  .tr-top{ display:flex; flex-wrap:wrap; gap:4px 12px; align-items:baseline; }
+  .tr-ante{ font-size:12px; color:var(--ink-soft); font-weight:700; } .tr-ante.uh{ color:#A32D2D; }
+  .tr-mot{ color:var(--ink-soft); font-size:12.5px; margin-top:2px; }
+  .tr-del{ margin-left:auto; border:0; background:none; color:var(--ink-soft); cursor:pointer; font:inherit; font-size:12px; }
+  .tr-del.conf{ color:#A32D2D; font-weight:800; }
+  @media (max-width:680px){ .tr-kpis{ grid-template-columns:1fr 1fr 1fr; gap:6px; } .tr-k b{ font-size:18px; } }
+  @media print{ #trocaPop, #trocasPanel{ display:none !important; } }
 </style>
 </head>
 <body>
@@ -788,6 +819,10 @@
         </div>
       </div>
       <div class="print-doc-footer">Lar de São Francisco — Horário de Enfermagem · documento gerado em <span id="printGenTime"></span></div>
+    </div>
+    <div class="panel no-print" id="trocasPanel" style="display:none;">
+      <h2>Trocas do mês</h2>
+      <div id="trocasWrap"></div>
     </div>
   </div>
   <!-- SECTION: DISPONIBILIDADE (nurse self-service) -->
@@ -982,6 +1017,7 @@ let state = {
   customHolidays: {}, // manager-added extra holidays: { "YYYY-MM-DD": "Nome" }
   removedHolidays: {}, // auto-calculated holidays the manager chose to hide: { "YYYY-MM-DD": true }
   notifSeen: {},
+  shiftSwaps: [], // registo de trocas de turno em dias já trancados (ver TROCAS DE TURNO)
   availabilityRemovals: [], // avisos ao fundador: turnos removidos porque o colega retirou a disponibilidade
   payRates: { efetivoMensal:1400, rvHora:15, rvFds:18, gestorHora:22, gestorFds:25 },
   salarioLocked: {},
@@ -1243,6 +1279,7 @@ function applyLoadedState(raw){
       if(!parsed.removedHolidays) parsed.removedHolidays = {};
       if(!parsed.notifSeen) parsed.notifSeen = {};
       if(!Array.isArray(parsed.availabilityRemovals)) parsed.availabilityRemovals = [];
+      if(!Array.isArray(parsed.shiftSwaps)) parsed.shiftSwaps = [];
       if(!parsed.payRates) parsed.payRates = { efetivoMensal:1400, rvHora:15, rvFds:18, gestorHora:22, gestorFds:25 };
       if(parsed.holidays){
         Object.keys(parsed.holidays).forEach(iso=>{
@@ -3180,6 +3217,243 @@ function ligarNotaDia(th, iso, date){
     else mostrarNotaDia(icon, iso, date);
   });
 }
+// ---------- TROCAS DE TURNO ----------
+// Registo de trocas em dias já publicados (trancados). Só o Luís (vista gestor) regista; o
+// relatório do mês é visto pelo Luís e pela enfermeira principal (Cátia).
+// state.shiftSwaps = [{ id, iso, code, de, para, motivo, detalhe, avisadoEm, registadoEm,
+//                       por, antecedenciaH, soRegisto }]
+const TROCA_ULTIMA_HORA_H = 48;
+const TROCA_MOTIVOS = ["Doença", "Motivo pessoal", "Trabalho principal", "Condições meteorológicas", "Pedido do lar", "Outro"];
+function trocasLista(){ return Array.isArray(state.shiftSwaps) ? state.shiftSwaps : []; }
+function podeRegistarTrocas(){ return donoAtivo(); }
+function podeVerTrocas(){
+  if(vistaEnfermeiro) return false;
+  if(donoAtivo()) return true;
+  const p = getPrincipal();
+  return !!(p && p.id === authNurseId);
+}
+function inicioTurno(date, code){
+  const st = shiftType(code);
+  const h = (st && st.blocks && st.blocks.length) ? st.blocks[0][0] : 8;
+  const d = new Date(date); d.setHours(Math.floor(h), Math.round((h % 1) * 60), 0, 0);
+  return d;
+}
+function paraInputLocal(d){
+  return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate()) + "T" + pad2(d.getHours()) + ":" + pad2(d.getMinutes());
+}
+// Junta um turno novo ao que a pessoa já tem nesse dia (M1 + T1 = MT1). Devolve null se não der.
+function combinarTurno(atual, novo){
+  if(!atual) return novo;
+  const a = shiftType(atual);
+  if(a && a.isRest) return novo;
+  if((atual === "M1" && novo === "T1") || (atual === "T1" && novo === "M1")) return shiftType("MT1") ? "MT1" : null;
+  return null;
+}
+function fecharTroca(){
+  const el = document.getElementById("trocaPop");
+  if(el){ el.style.display = "none"; el.innerHTML = ""; }
+}
+function trocaPopEl(){
+  let el = document.getElementById("trocaPop");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "trocaPop";
+    el.addEventListener("click", e=> e.stopPropagation());
+    document.body.appendChild(el);
+    document.addEventListener("click", fecharTroca);
+    document.addEventListener("keydown", e=>{ if(e.key === "Escape") fecharTroca(); });
+  }
+  return el;
+}
+function abrirTroca(person, date, alvo){
+  if(!podeRegistarTrocas()) return;
+  const iso = weekKey(date);
+  const code = getPersonShiftForDate(person.id, date);
+  const st = code ? shiftType(code) : null;
+  if(!st || st.isRest) return;
+  const outros = state.staff.filter(p=> isRvLike(p.tipo) && p.id !== person.id);
+  const disp = p=>{ const c = submittedAvailableCodes(p.id, iso) || []; return c.includes(code) || (code === "MT1" && c.includes("M1") && c.includes("T1")); };
+  const ordenados = outros.slice().sort((a,b)=> (disp(b) - disp(a)) || (a.id === OWNER_ID) - (b.id === OWNER_ID) || a.nome.localeCompare(b.nome, "pt"));
+  const opt = p=>{
+    const tem = getPersonShiftForDate(p.id, date);
+    const extra = disp(p) ? " — disponível" : "";
+    const ja = (tem && !(shiftType(tem) || {}).isRest) ? " (já tem " + tem + ")" : "";
+    return '<option value="' + esc(p.id) + '">' + esc(p.nome) + extra + ja + '</option>';
+  };
+  const el = trocaPopEl();
+  const dia = date.toLocaleDateString("pt-PT", {weekday:"short", day:"2-digit", month:"2-digit"}).replace(".", "");
+  el.innerHTML =
+    '<div class="tp-h">Troca · ' + esc(code) + ' · ' + esc(dia) + '</div>' +
+    '<label class="tp-chk"><input type="checkbox" id="tpSoReg"> Já troquei na escala — só registar</label>' +
+    '<div id="tpModoTroca">' +
+      '<div class="tp-l">Sai</div><div class="tp-v">' + esc(person.nome) + '</div>' +
+      '<div class="tp-l">Fica com o turno</div><select id="tpPara">' + ordenados.map(opt).join("") + '</select>' +
+      '<label class="tp-chk" style="margin-top:8px;"><input type="checkbox" id="tpRecip"> É troca por troca</label>' +
+      '<div id="tpRecipBox" style="display:none;"><div class="tp-l">Em troca, ' + esc(person.nome) + ' fica com</div><select id="tpDia2"></select></div>' +
+    '</div>' +
+    '<div id="tpModoReg" style="display:none;">' +
+      '<div class="tp-l">Quem tinha o turno (saiu)</div><select id="tpDe">' + outros.slice().sort((a,b)=> a.nome.localeCompare(b.nome, "pt")).map(p=> '<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>').join("") + '</select>' +
+      '<div class="tp-l">Quem ficou</div><div class="tp-v">' + esc(person.nome) + '</div>' +
+    '</div>' +
+    '<div class="tp-l">Motivo</div><select id="tpMotivo">' + TROCA_MOTIVOS.map(m=> '<option>' + esc(m) + '</option>').join("") + '</select>' +
+    '<input id="tpDetalhe" type="text" maxlength="200" placeholder="Detalhe (opcional)">' +
+    '<div class="tp-l">Quando foste avisado</div><input id="tpAvisado" type="datetime-local">' +
+    '<div id="tpAnte" class="tp-ante"></div>' +
+    '<div id="tpErro" class="tp-erro"></div>' +
+    '<div class="tp-btns"><button type="button" class="can">Cancelar</button><button type="button" class="pri">Registar troca</button></div>';
+  const avisado = el.querySelector("#tpAvisado");
+  avisado.value = paraInputLocal(new Date());
+  const inicio = inicioTurno(date, code);
+  const atualizarAnte = ()=>{
+    const a = new Date(avisado.value);
+    const box = el.querySelector("#tpAnte");
+    if(isNaN(a)){ box.textContent = ""; return; }
+    const h = (inicio - a) / 3600000;
+    const uh = h < TROCA_ULTIMA_HORA_H;
+    box.textContent = "Antecedência: " + (h < 0 ? "depois da hora do turno" : fmtNumPt(Math.round(h * 10) / 10) + "h") + (uh ? " · última hora" : "");
+    box.className = "tp-ante" + (uh ? " uh" : "");
+  };
+  avisado.addEventListener("input", atualizarAnte);
+  atualizarAnte();
+  const recip = el.querySelector("#tpRecip");
+  const selPara = el.querySelector("#tpPara");
+  const selDia2 = el.querySelector("#tpDia2");
+  const encherDia2 = ()=>{
+    const outro = staffById(selPara.value);
+    const ms = state.monthStart, n = daysInMonth(ms);
+    const ops = [];
+    for(let d=1; d<=n; d++){
+      const dt = new Date(ms.getFullYear(), ms.getMonth(), d);
+      if(weekKey(dt) === iso || !outro || !diaPublicado(outro, weekKey(dt))) continue;
+      const c2 = getPersonShiftForDate(outro.id, dt);
+      const s2 = c2 ? shiftType(c2) : null;
+      if(!s2 || s2.isRest) continue;
+      ops.push('<option value="' + weekKey(dt) + '|' + esc(c2) + '">' + esc(dt.toLocaleDateString("pt-PT", {weekday:"short", day:"2-digit", month:"2-digit"}).replace(".", "")) + ' · ' + esc(c2) + '</option>');
+    }
+    selDia2.innerHTML = ops.length ? ops.join("") : '<option value="">' + esc(outro ? outro.nome : "") + ' não tem turnos trancados neste mês</option>';
+  };
+  selPara.addEventListener("change", encherDia2);
+  recip.addEventListener("change", ()=>{ el.querySelector("#tpRecipBox").style.display = recip.checked ? "" : "none"; if(recip.checked) encherDia2(); });
+  const soReg = el.querySelector("#tpSoReg");
+  soReg.addEventListener("change", ()=>{
+    el.querySelector("#tpModoTroca").style.display = soReg.checked ? "none" : "";
+    el.querySelector("#tpModoReg").style.display = soReg.checked ? "" : "none";
+    el.querySelector(".pri").textContent = soReg.checked ? "Registar" : "Registar troca";
+    if(soReg.checked){ recip.checked = false; el.querySelector("#tpRecipBox").style.display = "none"; }
+  });
+  el.querySelector(".can").addEventListener("click", fecharTroca);
+  el.querySelector(".pri").addEventListener("click", ()=>{
+    const erro = el.querySelector("#tpErro");
+    const a = new Date(avisado.value);
+    if(isNaN(a)){ erro.textContent = "Indica quando foste avisado."; return; }
+    let de, para, recipInfo = null;
+    if(soReg.checked){
+      de = el.querySelector("#tpDe").value; para = person.id;
+    } else {
+      de = person.id; para = el.querySelector("#tpPara").value;
+      const novo = combinarTurno(getPersonShiftForDate(para, date), code);
+      if(!novo){ erro.textContent = (staffById(para) || {}).nome + " já tem um turno nesse dia que não dá para juntar."; return; }
+      if(recip.checked){
+        const [iso2, code2] = (selDia2.value || "").split("|");
+        if(!iso2 || !code2){ erro.textContent = "Escolhe o dia que " + person.nome + " recebe em troca."; return; }
+        const date2 = new Date(iso2 + "T00:00:00");
+        const novo2 = combinarTurno(getPersonShiftForDate(de, date2), code2);
+        if(!novo2){ erro.textContent = person.nome + " já tem um turno em " + fmtDate(date2) + " que não dá para juntar."; return; }
+        setPersonShiftForDate(de, date, "");
+        setPersonShiftForDate(para, date, novo);
+        setPersonShiftForDate(para, date2, "");
+        setPersonShiftForDate(de, date2, novo2);
+        marcarHorarioAlterado(date);
+        marcarHorarioAlterado(date2);
+        recipInfo = { iso2: iso2, code2: code2, inicio2: inicioTurno(date2, code2) };
+      } else {
+        setPersonShiftForDate(de, date, "");
+        setPersonShiftForDate(para, date, novo);
+        marcarHorarioAlterado(date);
+      }
+    }
+    const nomeDe = (staffById(de) || {}).nome || de, nomePara = (staffById(para) || {}).nome || para;
+    const eu = staffById(authNurseId);
+    if(!Array.isArray(state.shiftSwaps)) state.shiftSwaps = [];
+    const inicioRef = recipInfo && recipInfo.inicio2 < inicio ? recipInfo.inicio2 : inicio;
+    const reg = {
+      id: "tr" + Date.now(), iso: iso, code: code, de: de, para: para,
+      motivo: el.querySelector("#tpMotivo").value, detalhe: el.querySelector("#tpDetalhe").value.trim(),
+      avisadoEm: a.toISOString(), registadoEm: new Date().toISOString(), por: eu ? eu.nome : "",
+      antecedenciaH: Math.round((inicioRef - a) / 360000) / 10, soRegisto: soReg.checked
+    };
+    if(recipInfo){ reg.reciproca = true; reg.iso2 = recipInfo.iso2; reg.code2 = recipInfo.code2; }
+    state.shiftSwaps.push(reg);
+    registarAlteracao(recipInfo
+      ? "Troca por troca: " + nomeDe + " ⇄ " + nomePara + " (" + fmtDate(date) + " " + code + " ↔ " + fmtDate(new Date(recipInfo.iso2 + "T00:00:00")) + " " + recipInfo.code2 + ")"
+      : "Troca " + fmtDate(date) + " " + code + ": " + nomeDe + " → " + nomePara);
+    scheduleSave();
+    fecharTroca();
+    renderExcelGrid();
+  });
+  // posição junto à célula
+  const r = alvo.getBoundingClientRect();
+  el.style.display = "block";
+  const w = el.offsetWidth;
+  let left = r.left + window.scrollX + r.width / 2 - w / 2;
+  left = Math.max(window.scrollX + 8, Math.min(left, window.scrollX + document.documentElement.clientWidth - w - 8));
+  el.style.left = left + "px";
+  el.style.top = (r.bottom + window.scrollY + 6) + "px";
+}
+function ligarTrocaCelula(td, person, date){
+  if(!podeRegistarTrocas() || !isRvLike(person.tipo)) return;
+  if(!diaPublicado(person, weekKey(date))) return;
+  const code = getPersonShiftForDate(person.id, date);
+  const st = code ? shiftType(code) : null;
+  if(!st || st.isRest) return;
+  td.classList.add("troca-cell");
+  td.title = "Clica para registar uma troca neste turno";
+  td.addEventListener("click", e=>{ e.stopPropagation(); abrirTroca(person, date, td); });
+}
+function renderTrocasMes(){
+  const panel = document.getElementById("trocasPanel");
+  if(!panel) return;
+  if(!podeVerTrocas()){ panel.style.display = "none"; return; }
+  panel.style.display = "";
+  const pref = monthPrefix(state.monthStart);
+  const lista = trocasLista().filter(t=> t.iso && t.iso.startsWith(pref)).sort((a,b)=> a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : (a.registadoEm < b.registadoEm ? -1 : 1));
+  const nome = id=> (staffById(id) || (state.staffRemovidos || []).find(p=> p.id === id) || {}).nome || id;
+  const uh = lista.filter(t=> typeof t.antecedenciaH === "number" && t.antecedenciaH < TROCA_ULTIMA_HORA_H);
+  const porTi = lista.filter(t=> t.para === OWNER_ID && !t.reciproca);
+  const nRecip = lista.filter(t=> t.reciproca).length;
+  const cont = {};
+  lista.forEach(t=>{ cont[t.de] = (cont[t.de] || 0) + 1; });
+  const quem = Object.keys(cont).sort((a,b)=> cont[b] - cont[a]).map(id=> esc(nome(id)) + " ×" + cont[id]).join(" · ");
+  const wrap = document.getElementById("trocasWrap");
+  if(!lista.length){ wrap.innerHTML = '<p class="note" style="margin:0;">Sem trocas registadas neste mês.' + (podeRegistarTrocas() ? ' Para registar, clica num turno de um dia já trancado.' : '') + '</p>'; return; }
+  let h = '<div class="tr-kpis">' +
+    '<div class="tr-k"><span>Trocas</span><b>' + lista.length + '</b></div>' +
+    '<div class="tr-k' + (uh.length ? ' al' : '') + '"><span>Última hora (&lt;' + TROCA_ULTIMA_HORA_H + 'h)</span><b>' + uh.length + '</b></div>' +
+    '<div class="tr-k"><span>Cobertas pelo Luís</span><b>' + porTi.length + '</b></div>' +
+    '</div>';
+  if(quem) h += '<div class="note" style="margin:4px 0 10px;">Quem pediu / saiu do turno: ' + quem + (nRecip ? ' · ' + nRecip + ' troca(s) por troca' : '') + '</div>';
+  h += '<div class="tr-lista">' + lista.map(t=>{
+    const d = new Date(t.iso + "T00:00:00");
+    const dia = d.toLocaleDateString("pt-PT", {weekday:"short", day:"2-digit", month:"2-digit"}).replace(".", "");
+    const ante = typeof t.antecedenciaH === "number" ? (t.antecedenciaH < 0 ? "depois da hora" : fmtNumPt(t.antecedenciaH) + "h") : "—";
+    const eUh = typeof t.antecedenciaH === "number" && t.antecedenciaH < TROCA_ULTIMA_HORA_H;
+    return '<div class="tr-row">' +
+      (t.reciproca
+        ? '<div class="tr-top"><b>' + esc(dia) + ' · ' + esc(t.code) + ' ↔ ' + esc(new Date(t.iso2 + "T00:00:00").toLocaleDateString("pt-PT", {weekday:"short", day:"2-digit", month:"2-digit"}).replace(".", "")) + ' · ' + esc(t.code2) + '</b><span>' + esc(nome(t.de)) + ' ⇄ ' + esc(nome(t.para)) + ' · troca por troca</span>'
+        : '<div class="tr-top"><b>' + esc(dia) + ' · ' + esc(t.code) + '</b><span>' + esc(nome(t.de)) + ' → ' + esc(nome(t.para)) + '</span>') +
+      '<span class="tr-ante' + (eUh ? ' uh' : '') + '">aviso ' + ante + (eUh ? ' · última hora' : '') + '</span>' +
+      (podeRegistarTrocas() ? '<button type="button" class="tr-del" data-tr-del="' + esc(t.id) + '" title="Apagar este registo (não muda a escala)">✕</button>' : '') + '</div>' +
+      '<div class="tr-mot">' + esc(t.motivo || "") + (t.detalhe ? ' — ' + esc(t.detalhe) : '') + '</div>' +
+      '</div>';
+  }).join("") + '</div>';
+  wrap.innerHTML = h;
+  wrap.querySelectorAll("[data-tr-del]").forEach(b=> b.addEventListener("click", ()=>{
+    if(b.dataset.confirm !== "1"){ b.dataset.confirm = "1"; b.textContent = "Apagar?"; b.classList.add("conf"); return; }
+    state.shiftSwaps = trocasLista().filter(t=> t.id !== b.dataset.trDel);
+    scheduleSave();
+    renderTrocasMes();
+  }));
+}
 // ---------- LEITURA SEM EFEITOS ----------
 // Lê o turno de uma pessoa num dia SEM criar semanas vazias no estado (o getPersonShiftForDate
 // passa pelo ensureWeek, que cria). Usado pelos dois blocos só de leitura abaixo.
@@ -4107,6 +4381,7 @@ function renderExcelGrid(){
         scheduleSave();
       });
       td.appendChild(select);
+      ligarTrocaCelula(td, person, date);
       tr.appendChild(td);
       rowCells.push({ select, date, di });
     });
@@ -4118,6 +4393,7 @@ function renderExcelGrid(){
     body.appendChild(tr);
     gridRowRefs.push({ person, cells: rowCells, totalTd: tdHours });
   });
+  renderTrocasMes();
   const foot = document.getElementById("excelFoot");
   foot.innerHTML = "";
   const trf = document.createElement("tr");
