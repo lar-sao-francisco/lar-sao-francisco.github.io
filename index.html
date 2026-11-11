@@ -640,6 +640,16 @@
   .tr-del.conf{ color:#A32D2D; font-weight:800; }
   @media (max-width:680px){ .tr-kpis{ grid-template-columns:1fr 1fr 1fr; gap:6px; } .tr-k b{ font-size:18px; } }
   @media print{ #trocaPop, #trocasPanel{ display:none !important; } }
+  /* ---- Dia de hoje no Horário (só no ecrã; não sai na impressão) ---- */
+  table.excel th.today-col, table.excel td.today-col{ background:#FFF4D6 !important; box-shadow:inset 2px 0 0 #E0A21B, inset -2px 0 0 #E0A21B; }
+  table.excel thead tr:last-child th.today-col{ box-shadow:inset 2px 0 0 #E0A21B, inset -2px 0 0 #E0A21B, inset 0 3px 0 #E0A21B; }
+  table.excel tfoot td.today-col{ box-shadow:inset 2px 0 0 #E0A21B, inset -2px 0 0 #E0A21B, inset 0 -3px 0 #E0A21B; }
+  .today-tag{ display:block; margin:1px auto 0; width:max-content; font-size:9.5px; font-weight:800; letter-spacing:.4px; color:#fff; background:#D4900F; border-radius:6px; padding:1px 6px; }
+  @media print{
+    table.excel th.today-col, table.excel td.today-col{ box-shadow:none !important; }
+    table.excel th.today-col:not(.weekend-col):not(.holiday-col), table.excel td.today-col:not(.weekend-col):not(.holiday-col){ background:transparent !important; }
+    .today-tag{ display:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -1807,7 +1817,7 @@ function showSection(name){
   ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
     document.getElementById("section-"+n).style.display = (n===name) ? "" : "none";
   });
-  if(name==="horario") renderExcelGrid();
+  if(name==="horario"){ centrarHojePendente = true; renderExcelGrid(); }
   if(name==="disponibilidade") renderNurseView();
   if(name==="config") renderConfigSection();
   if(name==="relatorios"){
@@ -4185,11 +4195,25 @@ function updateGridAfterCellChange(personId, changedDi){
     foot.td.textContent = n;
   }
 }
+// Ao abrir o Horário, a grelha desliza até ao dia de hoje e põe-no ao centro, descontando a
+// coluna fixa dos nomes. Nos re-desenhos seguintes mantém a posição de quem está a editar.
+let centrarHojePendente = false;
+function centrarHojeNaGrelha(){
+  const sc = document.querySelector("#section-horario .grid-scroll");
+  const th = document.querySelector("#excelHead th.today-col");
+  if(!sc || !th) return;
+  const nome = document.querySelector("#excelHead tr:last-child th.name-col");
+  const nomeW = nome ? nome.getBoundingClientRect().width : 0;
+  const r = th.getBoundingClientRect(), s = sc.getBoundingClientRect();
+  const alvo = s.left + nomeW + (s.width - nomeW) / 2;
+  sc.scrollLeft += (r.left + r.width / 2) - alvo;
+}
 function renderExcelGrid(){
   gridRowRefs = [];
   gridFootRefs = [];
   const gridScroller = document.querySelector("#section-horario .grid-scroll");
   const keepLeft = gridScroller ? gridScroller.scrollLeft : 0;
+  const hojeIso = weekKey(new Date());
   const keepTop = gridScroller ? gridScroller.scrollTop : 0;
   const isGestor = authRole === "gestor";
   const gridViewer = staffById(authNurseId);
@@ -4274,7 +4298,9 @@ function renderExcelGrid(){
     if(holidayName) th.classList.add("holiday-col");
     const lockHtml = locked ? `<span class="day-lock locked" title="Dia bloqueado (faz parte de uma semana bloqueada)">🔒</span>` : "";
     const holidayHtml = holidayName ? `<span class="holiday-flag" title="Feriado: ${esc(holidayName)}">🎉</span>` : "";
-    th.innerHTML = `<div class="day-head"><span class="dow">${DAYS_SHORT[dowIndex(date)]}</span><span class="num">${date.getDate()}</span>${lockHtml}${holidayHtml}${notaDiaHtml(iso)}</div>`;
+    const ehHojeCol = iso === hojeIso;
+    if(ehHojeCol) th.classList.add("today-col");
+    th.innerHTML = `<div class="day-head"><span class="dow">${DAYS_SHORT[dowIndex(date)]}</span><span class="num">${date.getDate()}</span>${ehHojeCol ? '<span class="today-tag">HOJE</span>' : ''}${lockHtml}${holidayHtml}${notaDiaHtml(iso)}</div>`;
     ligarNotaDia(th, iso, date);
     trh.appendChild(th);
   });
@@ -4324,6 +4350,7 @@ function renderExcelGrid(){
       if(isWeekendDay(date)) td.classList.add("weekend-col");
       const dayIso = weekKey(date);
       if(getHolidayLabel(dayIso)) td.classList.add("holiday-col");
+      if(dayIso === hojeIso) td.classList.add("today-col");
       // Cada linha obedece ao seu cadeado: a principal ao dela, os restantes ao dos recibos verdes.
       const dayLocked = diaPublicado(person, dayIso);
       if(dayLocked) td.classList.add("locked-col");
@@ -4406,6 +4433,7 @@ function renderExcelGrid(){
     if(isWeekendDay(date)) td.classList.add("weekend-col");
     td.style.fontWeight = "700";
     const dIsoFoot = weekKey(date);
+    if(dIsoFoot === hojeIso) td.classList.add("today-col");
     const dLockedFoot = !!state.lockedDays[dIsoFoot];
     const countable = (isGestor || dLockedFoot);
     td.textContent = countable ? dailyCounts[di] : "·";
@@ -4416,6 +4444,7 @@ function renderExcelGrid(){
   trf.appendChild(tdCorner);
   foot.appendChild(trf);
   if(gridScroller){ gridScroller.scrollLeft = keepLeft; gridScroller.scrollTop = keepTop; }
+  if(centrarHojePendente){ centrarHojePendente = false; centrarHojeNaGrelha(); }
 }
 // ---------- IMPRESSÃO DE PERÍODO PERSONALIZADO (ex: 21 de junho a 22 de julho) ----------
 // Gera uma tabela só para impressão, igual em estilo à grelha do mês, mas para um intervalo
@@ -4749,6 +4778,7 @@ document.getElementById("horarioFilterClear").addEventListener("click", ()=>{
 document.getElementById("prevMonth").addEventListener("click", ()=>{
   state.monthStart = addMonths(state.monthStart, -1);
   nurseDraft = null; nurseEditing = false;
+  centrarHojePendente = true; // se o mês novo tiver o dia de hoje, centra-o
   contabPrefill(true); // o período da Contabilidade acompanha o mês escolhido
   refreshVisibleSection();
   scheduleSave();
@@ -4756,6 +4786,7 @@ document.getElementById("prevMonth").addEventListener("click", ()=>{
 document.getElementById("nextMonth").addEventListener("click", ()=>{
   state.monthStart = addMonths(state.monthStart, 1);
   nurseDraft = null; nurseEditing = false;
+  centrarHojePendente = true; // se o mês novo tiver o dia de hoje, centra-o
   contabPrefill(true);
   refreshVisibleSection();
   scheduleSave();
