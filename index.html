@@ -650,6 +650,19 @@
     table.excel th.today-col:not(.weekend-col):not(.holiday-col), table.excel td.today-col:not(.weekend-col):not(.holiday-col){ background:transparent !important; }
     .today-tag{ display:none !important; }
   }
+  /* ---- Aviso de saída automática ---- */
+  #avisoSaida{ position:fixed; inset:0; z-index:3000; display:none; align-items:center; justify-content:center; background:rgba(6,30,22,0.45); padding:16px; }
+  #avisoSaida .as-box{ background:#fff; border-radius:18px; padding:20px 22px; max-width:340px; width:100%; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.25); font-family:"Plus Jakarta Sans","Manrope",-apple-system,"Segoe UI",Roboto,sans-serif; }
+  #avisoSaida .as-t{ font-family:"Space Grotesk",sans-serif; font-size:19px; font-weight:700; color:var(--ink); margin-bottom:6px; }
+  #avisoSaida .as-m{ font-size:14px; color:var(--ink-soft); line-height:1.45; margin-bottom:14px; }
+  #avisoSaida button{ border:0; border-radius:12px; background:var(--sage-deep); color:#fff; font:inherit; font-weight:800; font-size:15px; padding:11px 26px; cursor:pointer; }
+  .rasc-info{ display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .rasc-info a{ color:var(--ink-soft); font-size:12.5px; cursor:pointer; text-decoration:underline; }
+  @media print{ #avisoSaida{ display:none !important; } }
+  /* ---- Asterisco de troca na célula (Luís e Cátia) ---- */
+  td.tem-troca{ position:relative; }
+  .troca-mark{ position:absolute; top:-1px; right:2px; font-size:15px; font-weight:900; line-height:1; color:#B4232A; pointer-events:auto; cursor:help; }
+  @media print{ .troca-mark{ display:none !important; } }
 </style>
 </head>
 <body>
@@ -1027,6 +1040,7 @@ let state = {
   customHolidays: {}, // manager-added extra holidays: { "YYYY-MM-DD": "Nome" }
   removedHolidays: {}, // auto-calculated holidays the manager chose to hide: { "YYYY-MM-DD": true }
   notifSeen: {},
+  availabilityDrafts: {}, // rascunhos das disponibilidades por guardar ("<quem edita>|<de quem>")
   shiftSwaps: [], // registo de trocas de turno em dias já trancados (ver TROCAS DE TURNO)
   availabilityRemovals: [], // avisos ao fundador: turnos removidos porque o colega retirou a disponibilidade
   payRates: { efetivoMensal:1400, rvHora:15, rvFds:18, gestorHora:22, gestorFds:25 },
@@ -1177,8 +1191,10 @@ async function fetchAndApplyState(){
 let saveTimer = null;
 let lastSaveError = null;
 let savePending = false;
-function scheduleSave(){
+function scheduleSave(opts){
   if(!authToken) return;
+  if(opts && opts.rascunho){ if(!savePending) apenasRascunhoPendente = true; }
+  else apenasRascunhoPendente = false;
   savePending = true;
   const statusEl = document.getElementById("saveStatus");
   if(statusEl) statusEl.textContent = "A guardar...";
@@ -1191,6 +1207,12 @@ async function doSave(){
     if(loadFailed) throw new Error("Os dados iniciais não carregaram — recarrega a página antes de editar.");
     if(!authToken) throw new Error("A tua sessão expirou. Recarrega a página e entra outra vez.");
     const r = await rpc("app_save_state", { p_token: authToken, p_new_state: state, p_expected_rev: String(dataRev) });
+    if(!r.ok && r.error === "stale_rev" && apenasRascunhoPendente && await regravarRascunhoAposConflito()){
+      apenasRascunhoPendente = false; savePending = false; lastSaveError = null;
+      document.getElementById("globalErrorBanner").style.display = "none";
+      if(statusEl){ statusEl.textContent = "Guardado ✓"; setTimeout(()=>{ if(statusEl.textContent==="Guardado ✓") statusEl.textContent=""; }, 1500); }
+      return;
+    }
     if(!r.ok){
       if(r.error === "stale_rev") throw new Error("Os dados foram alterados noutro dispositivo depois de abrires esta página. Recarrega a página (F5) para veres a versão mais recente — as últimas alterações feitas aqui não foram gravadas.");
       if(r.error === "session_expired") throw new Error("A tua sessão expirou. Recarrega a página e entra outra vez.");
@@ -1203,6 +1225,7 @@ async function doSave(){
     }
     lastSaveError = null;
     savePending = false;
+    apenasRascunhoPendente = false;
     document.getElementById("globalErrorBanner").style.display = "none";
   }catch(e){
     if(statusEl) statusEl.textContent = "Erro ao guardar";
@@ -1290,6 +1313,7 @@ function applyLoadedState(raw){
       if(!parsed.notifSeen) parsed.notifSeen = {};
       if(!Array.isArray(parsed.availabilityRemovals)) parsed.availabilityRemovals = [];
       if(!Array.isArray(parsed.shiftSwaps)) parsed.shiftSwaps = [];
+      if(!parsed.availabilityDrafts || typeof parsed.availabilityDrafts !== "object") parsed.availabilityDrafts = {};
       if(!parsed.payRates) parsed.payRates = { efetivoMensal:1400, rvHora:15, rvFds:18, gestorHora:22, gestorFds:25 };
       if(parsed.holidays){
         Object.keys(parsed.holidays).forEach(iso=>{
@@ -1666,6 +1690,7 @@ function populateAppLoginSelect(){
   });
 }
 function enterApp(){
+  ultimaAtividade = Date.now();
   const person = staffById(authNurseId);
   document.getElementById("appLoginGate").style.display = "none";
   document.getElementById("homeMenu").style.display = "grid";
@@ -1748,6 +1773,7 @@ function logoutApp(){
   document.getElementById("myStatsBar").style.display = "none";
   document.getElementById("appLoginPin").value = "";
   document.getElementById("appLoginError").textContent = "";
+  document.getElementById("appLoginError").style.color = "var(--danger)";
   populateAppLoginSelect();
   document.getElementById("appLoginGate").style.display = "";
 }
@@ -3304,6 +3330,8 @@ function abrirTroca(person, date, alvo){
     '<div id="tpModoReg" style="display:none;">' +
       '<div class="tp-l">Quem tinha o turno (saiu)</div><select id="tpDe">' + outros.slice().sort((a,b)=> a.nome.localeCompare(b.nome, "pt")).map(p=> '<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>').join("") + '</select>' +
       '<div class="tp-l">Quem ficou</div><div class="tp-v">' + esc(person.nome) + '</div>' +
+      '<label class="tp-chk" style="margin-top:8px;"><input type="checkbox" id="tpRecipReg"> Foi troca por troca</label>' +
+      '<div id="tpRecipRegBox" style="display:none;"><div class="tp-l">Turno que a outra pessoa ficou em troca</div><select id="tpDia2Reg"></select></div>' +
     '</div>' +
     '<div class="tp-l">Motivo</div><select id="tpMotivo">' + TROCA_MOTIVOS.map(m=> '<option>' + esc(m) + '</option>').join("") + '</select>' +
     '<input id="tpDetalhe" type="text" maxlength="200" placeholder="Detalhe (opcional)">' +
@@ -3343,6 +3371,24 @@ function abrirTroca(person, date, alvo){
     selDia2.innerHTML = ops.length ? ops.join("") : '<option value="">' + esc(outro ? outro.nome : "") + ' não tem turnos trancados neste mês</option>';
   };
   selPara.addEventListener("change", encherDia2);
+  // modo "só registar": a outra pessoa (quem saiu) já tem na escala o turno que recebeu em troca
+  const selDe = el.querySelector("#tpDe"), recipReg = el.querySelector("#tpRecipReg"), selDia2Reg = el.querySelector("#tpDia2Reg");
+  const encherDia2Reg = ()=>{
+    const outro = staffById(selDe.value);
+    const ms = state.monthStart, n = daysInMonth(ms);
+    const ops = [];
+    for(let d=1; d<=n; d++){
+      const dt = new Date(ms.getFullYear(), ms.getMonth(), d);
+      if(weekKey(dt) === iso || !outro) continue;
+      const c2 = getPersonShiftForDate(outro.id, dt);
+      const s2 = c2 ? shiftType(c2) : null;
+      if(!s2 || s2.isRest) continue;
+      ops.push('<option value="' + weekKey(dt) + '|' + esc(c2) + '">' + esc(dt.toLocaleDateString("pt-PT", {weekday:"short", day:"2-digit", month:"2-digit"}).replace(".", "")) + ' · ' + esc(c2) + '</option>');
+    }
+    selDia2Reg.innerHTML = ops.length ? ops.join("") : '<option value="">' + esc(outro ? outro.nome : "") + ' não tem turnos neste mês</option>';
+  };
+  selDe.addEventListener("change", ()=>{ if(recipReg.checked) encherDia2Reg(); });
+  recipReg.addEventListener("change", ()=>{ el.querySelector("#tpRecipRegBox").style.display = recipReg.checked ? "" : "none"; if(recipReg.checked) encherDia2Reg(); });
   recip.addEventListener("change", ()=>{ el.querySelector("#tpRecipBox").style.display = recip.checked ? "" : "none"; if(recip.checked) encherDia2(); });
   const soReg = el.querySelector("#tpSoReg");
   soReg.addEventListener("change", ()=>{
@@ -3359,6 +3405,11 @@ function abrirTroca(person, date, alvo){
     let de, para, recipInfo = null;
     if(soReg.checked){
       de = el.querySelector("#tpDe").value; para = person.id;
+      if(recipReg.checked){
+        const [iso2, code2] = (selDia2Reg.value || "").split("|");
+        if(!iso2 || !code2){ erro.textContent = "Escolhe o turno que " + ((staffById(de) || {}).nome || "a outra pessoa") + " ficou em troca."; return; }
+        recipInfo = { iso2: iso2, code2: code2, inicio2: inicioTurno(new Date(iso2 + "T00:00:00"), code2) };
+      }
     } else {
       de = person.id; para = el.querySelector("#tpPara").value;
       const novo = combinarTurno(getPersonShiftForDate(para, date), code);
@@ -3409,6 +3460,24 @@ function abrirTroca(person, date, alvo){
   left = Math.max(window.scrollX + 8, Math.min(left, window.scrollX + document.documentElement.clientWidth - w - 8));
   el.style.left = left + "px";
   el.style.top = (r.bottom + window.scrollY + 6) + "px";
+}
+// Asterisco nas células de quem ficou com um turno por troca (e, na troca por troca, também
+// no turno que a outra pessoa recebeu). Só o veem o Luís e a Cátia; o motivo aparece ao passar o rato.
+function marcarTrocaCelula(td, person, date){
+  if(!podeVerTrocas()) return;
+  const iso = weekKey(date);
+  const regs = trocasLista().filter(t=> (t.iso === iso && t.para === person.id) || (t.reciproca && t.iso2 === iso && t.de === person.id));
+  if(!regs.length) return;
+  const nome = id=> (staffById(id) || {}).nome || id;
+  const s = document.createElement("span");
+  s.className = "troca-mark";
+  s.textContent = "*";
+  s.title = regs.map(t=>{
+    const txt = t.reciproca ? "Troca por troca: " + nome(t.de) + " ⇄ " + nome(t.para) : "Troca: " + nome(t.de) + " → " + nome(t.para);
+    return txt + " · " + (t.motivo || "") + (t.detalhe ? " — " + t.detalhe : "");
+  }).join("\n");
+  td.classList.add("tem-troca");
+  td.appendChild(s);
 }
 function ligarTrocaCelula(td, person, date){
   if(!podeRegistarTrocas() || !isRvLike(person.tipo)) return;
@@ -3464,6 +3533,129 @@ function renderTrocasMes(){
     renderTrocasMes();
   }));
 }
+// ---------- RASCUNHO DAS DISPONIBILIDADES ----------
+// Cada toque nas disponibilidades grava um rascunho na base de dados
+// (state.availabilityDrafts["<quem edita>|<de quem>"] = { at, data }). O rascunho não conta
+// como disponibilidade enviada — só o botão Guardar envia. Se a app sair sozinha, o telemóvel
+// bloquear ou o browser fechar, ao voltar o rascunho reaparece tal como estava.
+let apenasRascunhoPendente = false;
+function chaveRascunho(pid){ return authNurseId + "|" + pid; }
+function rascunhoDisp(pid){
+  const r = state.availabilityDrafts ? state.availabilityDrafts[chaveRascunho(pid)] : null;
+  return (r && r.data) ? r : null;
+}
+function guardarRascunhoDisp(){
+  if(!nursePersonId || !nurseDraft || !authToken) return;
+  if(!state.availabilityDrafts) state.availabilityDrafts = {};
+  state.availabilityDrafts[chaveRascunho(nursePersonId)] = { at: new Date().toISOString(), data: JSON.parse(JSON.stringify(nurseDraft)) };
+  scheduleSave({ rascunho: true });
+}
+function apagarRascunhoDisp(pid){
+  if(state.availabilityDrafts) delete state.availabilityDrafts[chaveRascunho(pid)];
+}
+// Se a gravação de um rascunho falhar porque outra pessoa gravou entretanto, vai buscar a
+// versão mais recente, volta a pôr lá o rascunho e grava outra vez (uma vez). Só acontece
+// quando a única coisa por gravar é o rascunho — nada do resto é sobreposto.
+async function regravarRascunhoAposConflito(){
+  const chave = chaveRascunho(nursePersonId);
+  const meu = state.availabilityDrafts ? state.availabilityDrafts[chave] : null;
+  if(!meu) return false;
+  const r = await rpc("app_get_state", { p_token: authToken });
+  if(!r || !r.ok) return false;
+  const mes = state.monthStart;
+  applyLoadedState(r.value);
+  dataRev = r.rev;
+  state.monthStart = mes;
+  if(!state.availabilityDrafts) state.availabilityDrafts = {};
+  state.availabilityDrafts[chave] = meu;
+  const s = await rpc("app_save_state", { p_token: authToken, p_new_state: state, p_expected_rev: String(dataRev) });
+  if(!s || !s.ok) return false;
+  dataRev = s.rev;
+  return true;
+}
+// ---------- SAIR AUTOMATICAMENTE ----------
+// Por segurança, a sessão termina sozinha: (1) 10 minutos sem mexer na app (aviso 1 minuto
+// antes, com botão Continuar) e (2) quando a app fica escondida — outro separador, janela
+// minimizada, telemóvel bloqueado — mais de 2 minutos. Antes de sair grava o que houver por
+// gravar (incluindo o rascunho das disponibilidades).
+const SAIR_INATIVO_MIN = 10;
+const SAIR_ESCONDIDA_MIN = 2;
+let ultimaAtividade = Date.now();
+let escondidaDesde = null;
+let avisoSaidaAberto = false;
+function registarAtividade(){
+  ultimaAtividade = Date.now();
+  if(avisoSaidaAberto) fecharAvisoSaida();
+}
+["mousedown","mousemove","keydown","touchstart","wheel","scroll"].forEach(ev=>
+  document.addEventListener(ev, ()=>{ if(!avisoSaidaAberto || ev !== "mousemove") registarAtividade(); }, { passive:true, capture:true }));
+function avisoSaidaEl(){
+  let el = document.getElementById("avisoSaida");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "avisoSaida";
+    el.innerHTML = '<div class="as-box"><div class="as-t">Ainda estás aí?</div>' +
+      '<div class="as-m">Por segurança, vais sair da app daqui a <b id="avisoSaidaSeg">60</b> segundos. O que fizeste fica guardado.</div>' +
+      '<button type="button" id="avisoSaidaBtn">Continuar</button></div>';
+    document.body.appendChild(el);
+    el.querySelector("#avisoSaidaBtn").addEventListener("click", ()=> registarAtividade());
+  }
+  return el;
+}
+function fecharAvisoSaida(){
+  avisoSaidaAberto = false;
+  const el = document.getElementById("avisoSaida");
+  if(el) el.style.display = "none";
+}
+async function gravarTudoAgora(){
+  if(nurseDraft && nursePersonId) guardarRascunhoDisp();
+  if(savePending){ clearTimeout(saveTimer); try{ await doSave(); }catch(e){} }
+}
+let aSairAuto = false;
+async function sairAutomaticamente(motivo){
+  if(!authToken || aSairAuto) return;
+  aSairAuto = true;
+  try{
+    fecharAvisoSaida();
+    if(typeof fecharTroca === "function") fecharTroca();
+    if(typeof fecharNotaDia === "function") fecharNotaDia();
+    await gravarTudoAgora();
+    const falhou = !!lastSaveError;
+    logoutApp();
+    const msg = document.getElementById("appLoginError");
+    msg.style.color = falhou ? "var(--danger)" : "var(--ink-soft)";
+    msg.textContent = falhou
+      ? "Saíste automaticamente (" + motivo + "), mas a última alteração pode não ter ficado gravada. Entra outra vez e confirma."
+      : "Saíste automaticamente por segurança (" + motivo + "). O que fizeste ficou guardado.";
+  } finally {
+    aSairAuto = false;
+  }
+}
+setInterval(()=>{
+  if(!authToken || document.hidden) return;
+  const parado = Date.now() - ultimaAtividade;
+  const limite = SAIR_INATIVO_MIN * 60000;
+  if(parado >= limite){ sairAutomaticamente(SAIR_INATIVO_MIN + " minutos sem uso"); return; }
+  if(parado >= limite - 60000){
+    const el = avisoSaidaEl();
+    avisoSaidaAberto = true;
+    el.style.display = "flex";
+    document.getElementById("avisoSaidaSeg").textContent = Math.max(1, Math.ceil((limite - parado) / 1000));
+  }
+}, 1000);
+document.addEventListener("visibilitychange", ()=>{
+  if(!authToken) return;
+  if(document.hidden){
+    escondidaDesde = Date.now();
+    gravarTudoAgora(); // o telemóvel pode fechar a página em segundo plano
+    return;
+  }
+  const t = escondidaDesde; escondidaDesde = null;
+  if(t && Date.now() - t >= SAIR_ESCONDIDA_MIN * 60000){ sairAutomaticamente("app fechada ou escondida mais de " + SAIR_ESCONDIDA_MIN + " minutos"); return; }
+  if(Date.now() - ultimaAtividade >= SAIR_INATIVO_MIN * 60000){ sairAutomaticamente(SAIR_INATIVO_MIN + " minutos sem uso"); return; }
+  registarAtividade();
+});
+window.addEventListener("pagehide", ()=>{ if(authToken) gravarTudoAgora(); });
 // ---------- LEITURA SEM EFEITOS ----------
 // Lê o turno de uma pessoa num dia SEM criar semanas vazias no estado (o getPersonShiftForDate
 // passa pelo ensureWeek, que cria). Usado pelos dois blocos só de leitura abaixo.
@@ -4408,6 +4600,7 @@ function renderExcelGrid(){
         scheduleSave();
       });
       td.appendChild(select);
+      marcarTrocaCelula(td, person, date);
       ligarTrocaCelula(td, person, date);
       tr.appendChild(td);
       rowCells.push({ select, date, di });
@@ -4889,6 +5082,8 @@ function renderNurseCalendar(){
   const savedAt = (state.availabilityMeta[nursePersonId]||{})[prefix];
   const hasSaved = !!savedAt;
   const withinWindow = !hasSaved || withinEditWindow(savedAt);
+  const rasc = rascunhoDisp(nursePersonId);
+  if(rasc && !nurseDraft){ nurseDraft = JSON.parse(JSON.stringify(rasc.data)); nurseEditing = true; }
   const editMode = !hasSaved || nurseEditing;
   if(editMode && !nurseDraft){
     nurseDraft = JSON.parse(JSON.stringify(state.availabilityRequests[nursePersonId] || {}));
@@ -4918,6 +5113,17 @@ function renderNurseCalendar(){
       alterarBtn.style.display = "none";
       guardarBtn.style.display = "none";
     }
+  }
+  if(rasc){
+    const ra = new Date(rasc.at);
+    statusText.innerHTML = '<span class="rasc-info"><span>Tens alterações por guardar (gravadas como rascunho em ' + esc(ra.toLocaleDateString("pt-PT",{day:"2-digit",month:"2-digit"}) + " às " + ra.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"})) + '). Carrega em <b>Guardar</b> para as enviar.</span><a id="rascDescartar">Descartar alterações</a></span>';
+    alterarBtn.style.display = "none";
+    guardarBtn.style.display = "";
+    const dsc = document.getElementById("rascDescartar");
+    if(dsc) dsc.addEventListener("click", ()=>{
+      if(dsc.dataset.conf !== "1"){ dsc.dataset.conf = "1"; dsc.textContent = "Tens a certeza? Carrega outra vez"; return; }
+      apagarRascunhoDisp(nursePersonId); nurseDraft = null; nurseEditing = false; scheduleSave(); renderNurseCalendar();
+    });
   }
   const monthStart = state.monthStart;
   const gridStart = startOfWeek(monthStart);
@@ -4960,6 +5166,7 @@ function renderNurseCalendar(){
           e.stopPropagation();
           if(dayReq[st.code]) delete dayReq[st.code];
           else dayReq[st.code] = true;
+          guardarRascunhoDisp();
           renderNurseCalendar();
         });
       } else {
@@ -5017,6 +5224,7 @@ document.getElementById("nurseGuardarBtn").addEventListener("click", ()=>{
     removidos.forEach(r=> state.availabilityRemovals.push({ pid: nursePersonId, iso: r.iso, code: r.code, ts: ts }));
   }
   state.availabilityRequests[nursePersonId] = nurseDraft;
+  apagarRascunhoDisp(nursePersonId);
   if(!state.availabilityMeta[nursePersonId]) state.availabilityMeta[nursePersonId] = {};
   state.availabilityMeta[nursePersonId][monthPrefix(state.monthStart)] = new Date().toISOString();
   nurseDraft = null;
