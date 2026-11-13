@@ -949,11 +949,16 @@
   <!-- SECTION: CONFIGURAÇÕES -->
   <div id="section-config" class="section" style="display:none;">
     <span class="back-link" data-back>← Voltar ao início</span>
-    <div class="panel" id="staffPanel">
+    <div class="panel" id="staffPanel" style="display:none;">
       <h2>Equipa</h2>
       <div id="staffList"></div>
       <button class="btn btn-ghost" style="margin-top:10px;" id="addStaffBtn">+ Adicionar pessoa</button>
       <p class="note">"Padrão semanal" define os dias fixos de trabalho/descanso todas as semanas (ex: enfermeira principal = trabalha Seg-Sex, descansa Sáb+Dom). As "Exceções" servem para uma data específica em que alguém foge ao padrão. "Turnos permitidos" definem que tipos de turno cada pessoa pode fazer, em dias de semana e ao fim de semana.</p>
+    </div>
+    <div class="panel" id="myExcPanel" style="display:none;">
+      <h2>As minhas férias e exceções</h2>
+      <div id="myExcBody"></div>
+      <p class="note">"Exceção" é uma data em que foge ao seu padrão semanal: trabalha, descansa ou está de férias.</p>
     </div>
     <div class="panel" id="shiftsPanel">
       <h2>Turnos</h2>
@@ -2346,8 +2351,78 @@ function syncSettingsInputs(){
   document.getElementById("maxShifts").value = state.rules.maxShifts;
   document.getElementById("maxConsecutive").value = state.rules.maxConsecutive;
 }
+// A parte "Equipa" das Configurações é só do fundador (Luís). A enfermeira principal (Cátia),
+// gestora, vê em vez disso "As minhas férias e exceções", só com a sua ficha. O servidor
+// (app_save_state) ignora alterações às fichas da equipa feitas por quem não é o fundador,
+// exceto as férias/exceções da própria pessoa e os €/hora de quem edita a contabilidade.
+function renderMyExceptions(){
+  const panel = document.getElementById("myExcPanel");
+  const body = document.getElementById("myExcBody");
+  if(!panel || !body) return;
+  const eu = staffById(authNurseId);
+  if(authNurseId === OWNER_ID || !eu || eu.principal !== true){ panel.style.display = "none"; body.innerHTML = ""; return; }
+  panel.style.display = "";
+  body.innerHTML = "";
+  if(!eu.exceptions) eu.exceptions = {};
+  const excRow = document.createElement("div");
+  excRow.className = "exc-row";
+  const excDate = document.createElement("input"); excDate.type = "date";
+  const excType = document.createElement("select");
+  [["on","Trabalha"],["off","Descansa"],["ferias","Férias"]].forEach(([v,l])=>{
+    const o = document.createElement("option"); o.value=v; o.textContent=l; excType.appendChild(o);
+  });
+  const excAddBtn = document.createElement("button");
+  excAddBtn.className = "exc-add-btn";
+  excAddBtn.textContent = "+ Adicionar exceção";
+  excAddBtn.addEventListener("click", ()=>{
+    if(!excDate.value) return;
+    eu.exceptions[excDate.value] = excType.value;
+    renderMyExceptions(); scheduleSave();
+  });
+  excRow.appendChild(excDate); excRow.appendChild(excType); excRow.appendChild(excAddBtn);
+  body.appendChild(excRow);
+  const feriasRow = document.createElement("div");
+  feriasRow.className = "exc-row";
+  const feriasLbl = document.createElement("span");
+  feriasLbl.className = "blk-label";
+  feriasLbl.textContent = "Férias (intervalo):";
+  const feriasStart = document.createElement("input"); feriasStart.type = "date";
+  const feriasSep = document.createElement("span"); feriasSep.className = "sep"; feriasSep.textContent = "até";
+  const feriasEnd = document.createElement("input"); feriasEnd.type = "date";
+  const feriasBtn = document.createElement("button");
+  feriasBtn.className = "exc-add-btn";
+  feriasBtn.textContent = "+ Marcar férias";
+  feriasBtn.addEventListener("click", ()=>{
+    if(!feriasStart.value || !feriasEnd.value) return;
+    let d = new Date(feriasStart.value + "T00:00:00");
+    const end = new Date(feriasEnd.value + "T00:00:00");
+    if(d > end) return;
+    while(d <= end){ eu.exceptions[weekKey(d)] = "ferias"; d = addDays(d, 1); }
+    renderMyExceptions(); scheduleSave();
+  });
+  feriasRow.appendChild(feriasLbl); feriasRow.appendChild(feriasStart); feriasRow.appendChild(feriasSep); feriasRow.appendChild(feriasEnd); feriasRow.appendChild(feriasBtn);
+  body.appendChild(feriasRow);
+  const chipsWrap = document.createElement("div");
+  chipsWrap.className = "exc-row";
+  const excLabels = {on:"Trabalha", off:"Descansa", ferias:"Férias"};
+  Object.keys(eu.exceptions).sort().forEach(dateIso=>{
+    const val = eu.exceptions[dateIso];
+    const chip = document.createElement("span");
+    chip.className = "exc-chip " + (val==="ferias" ? "ferias" : val);
+    chip.innerHTML = `${fmtDate(new Date(dateIso + "T00:00:00"))} — ${excLabels[val] || val} `;
+    const rm = document.createElement("button");
+    rm.textContent = "✕";
+    rm.addEventListener("click", ()=>{ delete eu.exceptions[dateIso]; renderMyExceptions(); scheduleSave(); });
+    chip.appendChild(rm);
+    chipsWrap.appendChild(chip);
+  });
+  body.appendChild(chipsWrap);
+}
 function renderConfigSection(){
-  renderStaff();
+  const soDono = authNurseId === OWNER_ID;
+  document.getElementById("staffPanel").style.display = soDono ? "" : "none";
+  if(soDono) renderStaff(); else document.getElementById("staffList").innerHTML = "";
+  renderMyExceptions();
   renderShiftTypes();
   syncSettingsInputs();
   renderAvailabilityPanel();
