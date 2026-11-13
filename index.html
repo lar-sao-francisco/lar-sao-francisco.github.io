@@ -1152,9 +1152,10 @@ function getHolidayLabel(iso){
 const SUPABASE_URL = "https://kzcdaxbqnfsuufnkdkfx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6Y2RheGJxbmZzdXVmbmtka2Z4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1OTc2ODYsImV4cCI6MjA5OTE3MzY4Nn0.1H7KwxxCP4m70L_RwJTiJNG3qtCoprKb8L-HGMstbB8";
 const OWNER_ID = "s7"; // Luis — conta fundadora, protegida
-// Vista enfermeiro: o Luís pode alternar a sua conta entre "vista gestor" e "vista enfermeiro"
-// (o que um recibo verde vê, com os seus próprios dados). Não fica guardada: ao entrar, começa
-// sempre em vista gestor. Na vista enfermeiro authRole fica a null e donoAtivo() a false.
+// Vista enfermeiro: o Luís e a enfermeira principal (Cátia, se for gestora) podem alternar a sua
+// conta entre "vista gestor" e "vista enfermeiro" (o que uma enfermeira normal vê, com os seus
+// próprios dados). Não fica guardada: ao entrar, começa sempre em vista gestor. Na vista
+// enfermeiro authRole fica a null e donoAtivo() a false. Mais ninguém vê o botão.
 let vistaEnfermeiro = false;
 function donoAtivo(){ return authNurseId === OWNER_ID && !vistaEnfermeiro; }
 let dataRev = "0";
@@ -1740,18 +1741,25 @@ function atualizarSeparadoresDisp(){
   document.querySelectorAll(".disp-tabs").forEach(el=> el.style.display = duas ? "flex" : "none");
 }
 document.querySelectorAll("[data-disp-tab]").forEach(b=> b.addEventListener("click", ()=> showSection(b.dataset.dispTab)));
+function podeAlternarVista(){
+  if(!authNurseId) return false;
+  if(authNurseId === OWNER_ID) return true;
+  const p = getPrincipal();
+  return !!(p && p.id === authNurseId && authFlags.isManager);
+}
 function atualizarVistaToggle(){
   const box = document.getElementById("vistaToggle");
   if(!box) return;
-  if(authNurseId !== OWNER_ID){ box.style.display = "none"; return; }
+  if(!podeAlternarVista()){ box.style.display = "none"; return; }
   box.style.display = "inline-flex";
   box.querySelectorAll("button").forEach(b=> b.classList.toggle("on", (b.dataset.vista === "enfermeiro") === vistaEnfermeiro));
 }
 function mudarVista(enfermeiro){
-  if(authNurseId !== OWNER_ID || enfermeiro === vistaEnfermeiro) return;
+  if(!podeAlternarVista() || enfermeiro === vistaEnfermeiro) return;
   vistaEnfermeiro = enfermeiro;
   authRole = (!enfermeiro && authFlags.isManager) ? "gestor" : null;
-  nursePersonId = OWNER_ID;   // nas disponibilidades, volta a ser o próprio
+  const eu = staffById(authNurseId);
+  nursePersonId = (eu && isRvLike(eu.tipo)) ? eu.id : null;   // nas disponibilidades, volta a ser o próprio (só recibos verdes)
   horarioFilterId = null;
   contabFilterId = null;
   eqdDate = null;
