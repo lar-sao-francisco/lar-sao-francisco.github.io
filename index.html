@@ -576,6 +576,22 @@
   .din-v{ font-family:"Space Grotesk",sans-serif; font-size:26px; font-weight:700; color:var(--ink); }
   .din-m{ font-size:13px; color:var(--ink-soft); }
   .din-svg{ width:100%; height:auto; display:block; margin-top:8px; max-height:240px; }
+  /* ---- Importar picagens (Idonic) ---- */
+  .pt-card{ border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin:14px 0; background:rgba(255,255,255,0.7); }
+  .pt-head{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .pt-head .t{ font-weight:700; color:var(--sage-deep); }
+  .pt-tab{ border-collapse:collapse; font-size:12.5px; width:100%; }
+  .pt-tab th, .pt-tab td{ padding:4px 6px; border-bottom:0.75px solid var(--line); text-align:left; white-space:nowrap; }
+  .pt-tab th{ font-size:11px; color:var(--ink-soft); }
+  .pt-tab input.pt-h{ width:58px; padding:3px 5px; border:1px solid var(--line); border-radius:5px; font-size:12.5px; font-family:inherit; }
+  .pt-tab tr.vazio td{ color:#9AA9A2; }
+  .pt-tab tr.duvida td{ background:#FEF3C7; }
+  .pt-tab tr.duvida.confirmado td{ background:#FFFBEB; }
+  .pt-ok{ color:#067A4F; font-weight:700; }
+  .pt-warn{ color:#B45309; font-weight:700; }
+  .pt-bar{ position:sticky; bottom:0; background:var(--glass); border:1px solid var(--line); border-radius:14px; padding:12px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+  .pc-row{ cursor:pointer; }
+  .pc-det td{ background:rgba(14,166,107,0.04); }
   /* ---- A minha estatística (vista enfermeiro) ---- */
   .mest-tab{ border-collapse:collapse; width:100%; max-width:560px; font-size:13px; }
   .mest-tab th, .mest-tab td{ padding:7px 10px; border-bottom:0.75px solid var(--line); text-align:right; }
@@ -772,6 +788,10 @@
       <span class="icon">⚙️</span>
       <h3>Configurações</h3>
     </div>
+    <div class="home-card" data-target="ponto" id="pontoCard" style="display:none;">
+      <span class="icon">🖨️</span>
+      <h3>Importar picagens</h3>
+    </div>
     <div class="home-card" data-target="minhaest" id="minhaEstCard" style="display:none;">
       <span class="icon">📈</span>
       <h3>A minha estatística</h3>
@@ -951,6 +971,11 @@
       <p class="note">As horas vêm dos turnos atribuídos na grelha do Horário dentro do período escolhido (descansos DC/DO e Férias não contam). "Útil" = segunda a sexta; "fim de semana" = sábado, domingo e feriados — um feriado em dia de semana conta como fim de semana e é pago ao €/h de fim de semana. Clica num nome para ver só essa pessoa.</p>
       <div id="contabPersonPrintArea" style="display:none;"></div>
     </div>
+    <div class="panel no-print" id="pontoCmpPanel" style="display:none;">
+      <h2>Picagens (Idonic) vs Horário</h2>
+      <div id="pontoCmpWrap"></div>
+      <p class="note">Horas da app = turnos trancados/publicados na grelha do Horário. Horas picadas = coluna «Efectivo» das folhas importadas. Toca numa pessoa para ver dia a dia. Entrada tardia / saída antecipada = mais de 5 minutos fora da hora do turno.</p>
+    </div>
     <div class="panel no-print" id="colegasStatsPanel" style="display:none;">
       <h2>Horas feitas — mês a mês</h2>
       <div id="cstWrap"></div>
@@ -959,6 +984,25 @@
       <h2>O teu dinheiro — estimativa <span style="font-weight:600; font-size:12px; color:var(--ink-soft);">· só tu vês</span></h2>
       <div id="dinWrap"></div>
       <p class="note">Mesma conta da "estimativa do mês" da página inicial: horas úteis × €/h + horas de fim de semana e feriados × €/h de fim de semana, mês do calendário (1 a 31).</p>
+    </div>
+  </div>
+  <!-- SECTION: IMPORTAR PICAGENS (Idonic) — quem tem canImportPonto -->
+  <div id="section-ponto" class="section" style="display:none;">
+    <span class="back-link" data-back>← Voltar ao início</span>
+    <div class="panel no-print">
+      <h2>Importar picagens do Idonic</h2>
+      <p class="note">Escolhe os PDFs digitalizados das folhas de picagem (podes escolher vários de uma vez, ou um só PDF com todas as páginas). A app lê cada página — demora alguns segundos por página. Usa o computador, não o telemóvel.</p>
+      <div class="exc-row sans" style="gap:10px; flex-wrap:wrap;">
+        <input type="file" id="pontoFiles" accept="application/pdf,.pdf" multiple>
+        <button class="btn btn-primary" id="pontoLerBtn">📄 Ler ficheiros</button>
+      </div>
+      <p class="note" id="pontoProgresso"></p>
+      <div id="pontoResultados"></div>
+      <div class="pt-bar sans" id="pontoBarra" style="display:none;">
+        <span id="pontoResumo"></span>
+        <button class="btn btn-primary" id="pontoGravarBtn">💾 Gravar picagens</button>
+      </div>
+      <div id="pontoHistorico" class="note"></div>
     </div>
   </div>
   <!-- SECTION: A MINHA ESTATÍSTICA (vista enfermeiro; para já só o Luís) — só leitura -->
@@ -1750,6 +1794,7 @@ function enterApp(){
   document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
   document.getElementById("horarioCard").style.display = "";
   document.getElementById("minhaEstCard").style.display = podeVerMinhaEst() ? "" : "none";
+  document.getElementById("pontoCard").style.display = podeImportarPonto() ? "" : "none";
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
   document.getElementById("gestorBadge").style.display = authRole==="gestor" ? "" : "none";
   if(authRole==="gestor" && person) document.getElementById("gestorBadgeName").textContent = person.nome + (person.id===OWNER_ID ? " 👑" : "");
@@ -1820,7 +1865,7 @@ function logoutApp(){
   document.getElementById("homeMenu").style.display = "none";
   document.getElementById("logoutSmallBar").style.display = "none";
   document.getElementById("weekNav").style.display = "none";
-  ["horario","disponibilidade","config","relatorios","dispequipa","minhaest"].forEach(n=>{
+  ["horario","disponibilidade","config","relatorios","dispequipa","minhaest","ponto"].forEach(n=>{
     document.getElementById("section-"+n).style.display = "none";
   });
   document.getElementById("gestorBadge").style.display = "none";
@@ -1895,10 +1940,11 @@ function showSection(name){
     return;
   }
   if(name === "minhaest" && !podeVerMinhaEst()){ return; }
+  if(name === "ponto" && !podeImportarPonto()){ return; }
   document.getElementById("homeMenu").style.display = name ? "none" : "grid";
   document.getElementById("logoutSmallBar").style.display = name ? "none" : "";
   if(name){ document.getElementById("myStatsBar").style.display = "none"; } else { renderMyStats(); renderEquipaDia(); }
-  ["horario","disponibilidade","config","relatorios","dispequipa","minhaest"].forEach(n=>{
+  ["horario","disponibilidade","config","relatorios","dispequipa","minhaest","ponto"].forEach(n=>{
     document.getElementById("section-"+n).style.display = (n===name) ? "" : "none";
   });
   if(name==="horario"){ centrarHojePendente = true; renderExcelGrid(); }
@@ -1917,6 +1963,7 @@ function showSection(name){
   }
   if(name==="dispequipa") renderTeamAvailability();
   if(name==="minhaest") renderMinhaEst();
+  if(name==="ponto") pontoAbrir();
   updateMonthLabel();
 }
 // ---------- RENDER: STAFF (Configurações) ----------
@@ -2104,6 +2151,15 @@ function renderStaff(){
     top.appendChild(viewRepLbl);
     top.appendChild(viewCtbLbl);
     top.appendChild(editCtbLbl);
+    const pontoLbl = document.createElement("label");
+    pontoLbl.style.cssText = "display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);cursor:pointer;";
+    const pontoChk = document.createElement("input");
+    pontoChk.type = "checkbox";
+    pontoChk.checked = !!person.canImportPonto;
+    pontoChk.addEventListener("change", e=>{ person.canImportPonto = e.target.checked; scheduleSave(); });
+    pontoLbl.appendChild(pontoChk);
+    pontoLbl.appendChild(document.createTextNode("Importa picagens do Idonic"));
+    top.appendChild(pontoLbl);
     top.appendChild(pinLbl);
     top.appendChild(removeBtn);
     row.appendChild(top);
@@ -2784,6 +2840,7 @@ function renderContabilidadeAny(){
   } else {
     renderContabilidade();
   }
+  renderPontoComparacao();
   // as datas podem ter mudado (mês novo, ou período posto à mão) — acertar a etiqueta
   updateMonthLabel();
 }
@@ -4105,6 +4162,431 @@ function renderMeuDinheiro(){
     '<svg class="din-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Estimativa mensal">' + g + area + linhas + pontos + eixo + '</svg>' +
     '<div class="cst-legend">Toca num mês para ver o valor. Tracejado = mês seguinte (planeado).</div>';
   document.querySelectorAll("#dinWrap [data-din]").forEach(r=> r.addEventListener("click", ()=>{ dinSel = +r.dataset.din; renderMeuDinheiro(); }));
+}
+
+// ---------- PICAGENS DO IDONIC ----------
+// Importação (quem tem canImportPonto): lê os PDFs digitalizados no navegador (pdf.js + Tesseract),
+// mostra cada página para rever e grava à parte (app_ponto_save), fora do estado principal.
+// Comparação: só a vista da contabilista (app_ponto_get devolve os dias só a sessões de contabilidade).
+const PONTO_LIBS = {
+  pdf: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",
+  pdfWorker: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js",
+  tess: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
+  tessWorker: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js",
+  tessCore: "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1",
+  tessLang: "https://cdn.jsdelivr.net/npm/@tesseract.js-data/por/4.0.0_best_int"
+};
+function podeImportarPonto(){
+  const eu = staffById(authNurseId);
+  return !!(eu && eu.canImportPonto);
+}
+// Leitura da folha de picagem do Idonic (texto vindo do OCR).
+// Devolve { numero, nome, linhas:[{iso, dow, tipo, picagens:[...], efetivo, estado, motivo}], totalEfetivo, avisos }
+function pontoParseTexto(texto){
+  const out = { numero:"", nome:"", linhas:[], totalEfetivo:null, avisos:[] };
+  const L = texto.split(/\r?\n/).map(s=> s.trim()).filter(Boolean);
+  // cabeçalho
+  // cabeçalho: «Número 246   Nome Fulano   Departamento …» (tolera erros de leitura nas palavras)
+  for(const l of L.slice(0, 8)){
+    if(!/N.?mero|N.?me\b|Departamento/i.test(l)) continue;
+    const m = l.match(/N.{0,2}mero\D{0,4}(\d{1,6})/i) || l.match(/^\D{0,12}(\d{2,6})\b/);
+    const n = l.match(/\b[NM]\s?ome\s*[:.]?\s*(.+?)(?:\s+D.partamento\b|$)/i);
+    if(m) out.numero = m[1];
+    if(n) out.nome = n[1].replace(/[|—–\-_*“”"'.,;:]+/g, " ").replace(/\s+/g, " ").trim();
+    if(m || n) break;
+  }
+  // normaliza um "tempo" lido pelo OCR para minutos (ou null)
+  const tempo = (tok)=>{
+    let t = tok.replace(/[Oo]/g, "0").replace(/[Il|]/g, "1").replace(/[.,;]/g, ":");
+    let m = t.match(/^(\d{1,2}):(\d{2})$/);
+    if(m){ const h = +m[1], mi = +m[2]; return (h <= 999 && mi < 60) ? h*60 + mi : null; }
+    if(/^\d{3,4}$/.test(t)){ const h = +t.slice(0, t.length-2), mi = +t.slice(-2); return (h < 24 && mi < 60) ? h*60 + mi : null; }
+    return null;
+  };
+  const totalRx = /Total\s+Acumulado/i;
+  let anterior = null;
+  for(const l of L){
+    if(totalRx.test(l)){
+      const toks = l.split(/\s+/).map(tempo).filter(v=> v !== null);
+      if(toks.length >= 4) out.totalEfetivo = toks[toks.length - 2];
+      continue;
+    }
+    // data no início da linha (tolera lixo antes, espaços dentro e o dia da semana colado ao ano)
+    const md = l.match(/^[^\d]{0,4}(\d ?\d?)\s*[\/]\s*(\d ?\d?)\s*[\/]\s*(\d{4})/);
+    if(!md) continue;
+    md[1] = md[1].replace(/\s/g, ""); md[2] = md[2].replace(/\s/g, "");
+    let resto = l.slice(md[0].length).trim();
+    // data: se falhar a sequência, usa o dia a seguir à linha anterior
+    let d = null;
+    const dd = +md[1], mm = +md[2];
+    let yy = +md[3]; if(yy < 100) yy += 2000;
+    const cand = new Date(yy, mm-1, dd);
+    const esperado = anterior ? new Date(anterior.getFullYear(), anterior.getMonth(), anterior.getDate()+1) : null;
+    let notaData = "";
+    if(cand.getDate() === dd && cand.getMonth() === mm-1 && (!esperado || cand.getTime() === esperado.getTime())) d = cand;
+    else if(esperado && esperado.getDate() === dd && esperado.getMonth() === mm-1){ d = esperado; notaData = "ano corrigido"; }
+    else if(esperado){ d = esperado; notaData = "data corrigida pela sequência"; }
+    else d = cand;
+    anterior = d;
+    const toks = resto.split(/\s+/).filter(Boolean);
+    let dow = "", tipo = "";
+    let i = 0;
+    if(toks[i] && /^[a-zà-ú]{3}\.?$/i.test(toks[i])){ dow = toks[i]; i++; }
+    while(toks[i] && /^[|_\-—]+$/.test(toks[i])) i++;
+    if(toks[i] && /^[A-Za-zÀ-ú]{4,}/.test(toks[i])){ tipo = toks[i]; i++; }
+    const vals = [];
+    for(; i < toks.length; i++){ const v = tempo(toks[i]); if(v !== null) vals.push(v); }
+    const linha = { iso: pontoIso(d), dow, tipo, picagens: [], efetivo: null, estado: "ok", motivo: notaData };
+    if(vals.length < 5){
+      linha.estado = "duvida"; linha.motivo = "não foi possível ler todas as colunas";
+      linha.picagens = vals.slice(0, Math.max(0, vals.length - 5));
+    } else {
+      const fim = vals.slice(-5);        // Objectivo, Ausência, Falta, Efectivo, Extra
+      linha.efetivo = fim[3];
+      linha.picagens = vals.slice(0, vals.length - 5);
+      pontoValidarLinha(linha);
+      if(linha.estado === "ok" && notaData) linha.motivo = notaData;
+    }
+    out.linhas.push(linha);
+  }
+  if(out.totalEfetivo !== null){
+    const soma = out.linhas.reduce((s, r)=> s + (r.efetivo || 0), 0);
+    // Se as linhas lidas já somam o Total Acumulado, as linhas sem «Efectivo» legível só podem ser
+    // dias a zero (sem horas). Ficam resolvidas como dias vazios.
+    if(Math.abs(soma - out.totalEfetivo) <= 1){
+      out.linhas.forEach(r=>{
+        if(r.estado !== "ok" && (r.efetivo === null || r.efetivo === undefined)){
+          r.picagens = []; r.efetivo = 0; r.estado = "ok"; r.motivo = "dia vazio (confirmado pelo total)";
+        }
+      });
+    }
+    if(Math.abs(soma - out.totalEfetivo) > 1) out.avisos.push("A soma das linhas (" + pontoHhmm(soma) + ") não bate com o Total Acumulado (" + pontoHhmm(out.totalEfetivo) + ").");
+  }
+  if(!out.linhas.length) out.avisos.push("Não foram encontradas linhas de dias nesta página.");
+  return out;
+}
+function pontoValidarLinha(linha){
+  const p = linha.picagens;
+  linha.estado = "ok"; linha.motivo = "";
+  if(p.length % 2 !== 0){ linha.estado = "duvida"; linha.motivo = "número ímpar de picagens"; return linha; }
+  if(p.length > 4){ linha.estado = "duvida"; linha.motivo = "picagens a mais"; return linha; }
+  let soma = 0;
+  for(let k = 0; k < p.length; k += 2){
+    if(p[k+1] <= p[k]){ linha.estado = "duvida"; linha.motivo = "saída antes da entrada"; return linha; }
+    soma += p[k+1] - p[k];
+  }
+  if(linha.efetivo === null || linha.efetivo === undefined){ linha.estado = "duvida"; linha.motivo = "efetivo em falta"; return linha; }
+  if(Math.abs(soma - linha.efetivo) > 1){ linha.estado = "duvida"; linha.motivo = "picagens somam " + pontoHhmm(soma) + " mas o efetivo diz " + pontoHhmm(linha.efetivo); }
+  return linha;
+}
+function pontoHhmm(min){ if(min === null || min === undefined) return ""; const h = Math.floor(min/60), m = min % 60; return h + ":" + String(m).padStart(2,"0"); }
+function pontoIso(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+
+function pontoCarregarScript(src){
+  return new Promise((res, rej)=>{
+    const sc = document.createElement("script");
+    sc.src = src; sc.onload = res; sc.onerror = ()=> rej(new Error("Não foi possível carregar " + src));
+    document.head.appendChild(sc);
+  });
+}
+let pontoPaginas = [];      // [{ficheiro, pagina, numero, nome, avisos, linhas, pid}]
+let pontoMapa = {};         // nº Idonic -> id da pessoa
+function pontoNorm(t){ return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim(); }
+function pontoParseHora(v){
+  v = String(v || "").trim();
+  if(!v) return null;
+  const m = v.match(/^(\d{1,3})[:h.,](\d{2})$/) || v.match(/^(\d{1,2})(\d{2})$/);
+  if(!m) return NaN;
+  const h = +m[1], mi = +m[2];
+  return mi < 60 ? h*60 + mi : NaN;
+}
+function pontoAdivinharPessoa(pg){
+  if(pg.numero && pontoMapa[pg.numero] && staffById(pontoMapa[pg.numero])) return { pid: pontoMapa[pg.numero], como: "mapa" };
+  const nome = pontoNorm(pg.nome);
+  if(!nome) return { pid: "", como: "" };
+  const cands = state.staff.filter(p=> isSchedulableTipo(p.tipo));
+  const palavras = nome.split(/\s+/);
+  // o primeiro nome da app tem de aparecer como palavra do nome lido (tolera uma letra de lixo colada antes)
+  const hit = cands.filter(p=>{ const n = pontoNorm(p.nome).split(/\s+/)[0]; return n && palavras.some(w=> w === n || (n.length >= 4 && w.length === n.length + 1 && w.endsWith(n))); });
+  return hit.length === 1 ? { pid: hit[0].id, como: "nome" } : { pid: "", como: "" };
+}
+async function pontoAbrir(){
+  document.getElementById("pontoHistorico").textContent = "";
+  try{
+    const r = await rpc("app_ponto_get", { p_token: authToken });
+    if(r && r.ok){
+      pontoMapa = (r.value && r.value.map) || {};
+      const imps = (r.value && r.value.imports) || [];
+      if(imps.length){
+        const u = imps[imps.length - 1];
+        document.getElementById("pontoHistorico").textContent = "Última importação: " + (u.em || "") + (u.paginas ? " · " + u.paginas + " página(s)" : "") + (u.de ? " · " + u.de + " a " + u.ate : "") + ".";
+      }
+    }
+  }catch(e){ /* sem ligação: continua com o mapa vazio */ }
+  pontoRender();
+}
+document.getElementById("pontoLerBtn").addEventListener("click", async ()=>{
+  const files = Array.from(document.getElementById("pontoFiles").files || []);
+  const prog = document.getElementById("pontoProgresso");
+  if(!files.length){ alert("Escolhe primeiro os ficheiros PDF."); return; }
+  const btn = document.getElementById("pontoLerBtn");
+  btn.disabled = true;
+  pontoPaginas = [];
+  pontoRender();
+  let worker = null;
+  try{
+    prog.textContent = "A preparar a leitura…";
+    if(!window.pdfjsLib) await pontoCarregarScript(PONTO_LIBS.pdf);
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = PONTO_LIBS.pdfWorker;
+    if(!window.Tesseract) await pontoCarregarScript(PONTO_LIBS.tess);
+    worker = await window.Tesseract.createWorker("por", 1, { workerPath: PONTO_LIBS.tessWorker, corePath: PONTO_LIBS.tessCore, langPath: PONTO_LIBS.tessLang });
+    await worker.setParameters({ tessedit_pageseg_mode: "6" });
+    for(let fi = 0; fi < files.length; fi++){
+      const f = files[fi];
+      const pdf = await window.pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+      for(let pn = 1; pn <= pdf.numPages; pn++){
+        prog.textContent = "A ler " + f.name + " — página " + pn + " de " + pdf.numPages + " (ficheiro " + (fi+1) + " de " + files.length + ")…";
+        const page = await pdf.getPage(pn);
+        const vp0 = page.getViewport({ scale: 1 });
+        const vp = page.getViewport({ scale: 1700 / vp0.width });
+        const cv = document.createElement("canvas");
+        cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+        const ctx = cv.getContext("2d");
+        ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        const { data } = await worker.recognize(cv);
+        const r = pontoParseTexto(data.text || "");
+        const pg = { ficheiro: f.name, pagina: pn, texto: data.text || "", numero: r.numero, nome: r.nome, avisos: r.avisos, linhas: r.linhas, pid: "", como: "" };
+        r.linhas.forEach(l=>{ l.confirmado = false; });
+        const g = pontoAdivinharPessoa(pg);
+        pg.pid = g.pid; pg.como = g.como;
+        pontoPaginas.push(pg);
+        pontoRender();
+      }
+    }
+    prog.textContent = "Leitura terminada: " + pontoPaginas.length + " página(s). Revê as linhas a amarelo antes de gravar.";
+  }catch(e){
+    prog.textContent = "Erro na leitura: " + (e && e.message ? e.message : e);
+  }finally{
+    if(worker) try{ await worker.terminate(); }catch(_){}
+    btn.disabled = false;
+  }
+});
+function pontoPendentes(){
+  let n = 0, semPessoa = 0;
+  pontoPaginas.forEach(pg=>{
+    if(pg.pid === "") semPessoa++;
+    if(pg.pid && pg.pid !== "-") pg.linhas.forEach(l=>{ if(l.estado !== "ok" && !l.confirmado) n++; });
+  });
+  return { n, semPessoa };
+}
+function pontoAtualizarBarra(){
+  const barra = document.getElementById("pontoBarra");
+  if(!pontoPaginas.length){ barra.style.display = "none"; return; }
+  barra.style.display = "";
+  const p = pontoPendentes();
+  const btn = document.getElementById("pontoGravarBtn");
+  let txt = "";
+  if(p.semPessoa) txt += "⚠️ " + p.semPessoa + " página(s) sem colega escolhido. ";
+  if(p.n) txt += "⚠️ Faltam " + p.n + " linha(s) a amarelo por rever.";
+  if(!txt) txt = "✅ Tudo revisto — pronto a gravar.";
+  document.getElementById("pontoResumo").textContent = txt;
+  btn.disabled = !!(p.n || p.semPessoa);
+}
+function pontoRender(){
+  const wrap = document.getElementById("pontoResultados");
+  wrap.innerHTML = "";
+  const opcoes = state.staff.filter(p=> isSchedulableTipo(p.tipo));
+  pontoPaginas.forEach((pg, pi)=>{
+    const card = document.createElement("div");
+    card.className = "pt-card sans";
+    const head = document.createElement("div");
+    head.className = "pt-head";
+    const t = document.createElement("div");
+    t.innerHTML = '<span class="t">' + esc(pg.nome || "(nome não lido)") + '</span> · nº ' + esc(pg.numero || "?") +
+      '<div class="cst-legend" style="margin:2px 0 0;">' + esc(pg.ficheiro) + ' — página ' + pg.pagina + '</div>';
+    const sel = document.createElement("select");
+    sel.innerHTML = '<option value="">— escolhe o colega —</option>' + opcoes.map(p=> '<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>').join("") + '<option value="-">— ignorar esta página —</option>';
+    sel.value = pg.pid;
+    sel.style.cssText = "padding:6px 8px; border-radius:8px; border:1.5px solid " + (pg.pid ? "var(--line)" : "#F59E0B") + ";";
+    sel.addEventListener("change", ()=>{ pg.pid = sel.value; pg.como = "escolhido"; pontoRender(); });
+    head.appendChild(t); head.appendChild(sel);
+    card.appendChild(head);
+    if(pg.como === "nome") card.insertAdjacentHTML("beforeend", '<p class="note" style="margin:0 0 8px;">Colega sugerido pelo nome — confirma que está certo. Depois de gravar, este nº fica associado.</p>');
+    pg.avisos.forEach(a=> card.insertAdjacentHTML("beforeend", '<p class="note pt-warn" style="margin:0 0 8px;">⚠️ ' + esc(a) + '</p>'));
+    if(pg.pid !== "-"){
+      const tab = document.createElement("table");
+      tab.className = "pt-tab";
+      tab.innerHTML = '<thead><tr><th>Dia</th><th>Tipo</th><th>E1</th><th>S1</th><th>E2</th><th>S2</th><th>Efectivo</th><th>Estado</th></tr></thead>';
+      const tb = document.createElement("tbody");
+      pg.linhas.forEach((l, li)=>{
+        const tr = document.createElement("tr");
+        const vazio = !l.picagens.length && !l.efetivo && l.estado === "ok";
+        tr.className = (vazio ? "vazio" : "") + (l.estado !== "ok" ? " duvida" + (l.confirmado ? " confirmado" : "") : "");
+        const d = new Date(l.iso + "T00:00:00");
+        tr.insertAdjacentHTML("beforeend", '<td>' + esc(fmtDate(d) + " " + (l.dow || "")) + '</td><td>' + esc(l.tipo || "") + '</td>');
+        const inputs = [];
+        for(let k = 0; k < 5; k++){
+          const td = document.createElement("td");
+          const inp = document.createElement("input");
+          inp.className = "pt-h"; inp.inputMode = "numeric";
+          inp.value = k < 4 ? (l.picagens[k] !== undefined ? pontoHhmm(l.picagens[k]) : "") : (l.efetivo !== null && l.efetivo !== undefined ? pontoHhmm(l.efetivo) : "");
+          inp.addEventListener("change", ()=>{
+            const vals = inputs.slice(0, 4).map(x=> pontoParseHora(x.value));
+            const ef = pontoParseHora(inputs[4].value);
+            if(vals.some(v=> Number.isNaN(v)) || Number.isNaN(ef)){
+              l.estado = "duvida"; l.motivo = "hora mal escrita (usa o formato 8:05)"; l.confirmado = false;
+            } else {
+              // as picagens ficam pela ordem E1 S1 E2 S2, sem buracos
+              l.picagens = vals.filter(v=> v !== null);
+              l.efetivo = ef === null ? 0 : ef;
+              pontoValidarLinha(l);
+              l.confirmado = false;
+            }
+            pontoRender();
+          });
+          inputs.push(inp);
+          td.appendChild(inp);
+          tr.appendChild(td);
+        }
+        const tdE = document.createElement("td");
+        if(l.estado === "ok"){
+          tdE.innerHTML = '<span class="pt-ok">✓</span>' + (l.motivo ? ' <span class="cst-legend">' + esc(l.motivo) + '</span>' : "");
+        } else {
+          tdE.innerHTML = '<span class="pt-warn">' + esc(l.motivo || "por rever") + '</span> ';
+          const lb = document.createElement("label");
+          lb.style.cssText = "font-size:11.5px; cursor:pointer; margin-left:4px;";
+          const ck = document.createElement("input");
+          ck.type = "checkbox"; ck.checked = !!l.confirmado;
+          ck.title = "Confirmo que a folha em papel diz exatamente isto";
+          ck.addEventListener("change", ()=>{ l.confirmado = ck.checked; pontoRender(); });
+          lb.appendChild(ck); lb.appendChild(document.createTextNode(" está igual ao papel"));
+          tdE.appendChild(lb);
+        }
+        tr.appendChild(tdE);
+        tb.appendChild(tr);
+      });
+      tab.appendChild(tb);
+      const sc = document.createElement("div");
+      sc.className = "grid-scroll";
+      sc.appendChild(tab);
+      card.appendChild(sc);
+    }
+    wrap.appendChild(card);
+  });
+  pontoAtualizarBarra();
+}
+document.getElementById("pontoGravarBtn").addEventListener("click", async ()=>{
+  const p = pontoPendentes();
+  if(p.n || p.semPessoa){ pontoAtualizarBarra(); return; }
+  const dias = {}, mapa = {}, pessoas = new Set();
+  let de = null, ate = null;
+  pontoPaginas.forEach(pg=>{
+    if(!pg.pid || pg.pid === "-") return;
+    if(pg.numero) mapa[pg.numero] = pg.pid;
+    pessoas.add(pg.pid);
+    if(!dias[pg.pid]) dias[pg.pid] = {};
+    pg.linhas.forEach(l=>{
+      dias[pg.pid][l.iso] = { p: l.picagens.slice(), ef: l.efetivo || 0, tipo: l.tipo || "" };
+      if(!de || l.iso < de) de = l.iso;
+      if(!ate || l.iso > ate) ate = l.iso;
+    });
+  });
+  const btn = document.getElementById("pontoGravarBtn");
+  btn.disabled = true;
+  try{
+    const r = await rpc("app_ponto_save", { p_token: authToken, p_map: mapa, p_dias: dias, p_info: { paginas: pontoPaginas.length, pessoas: Array.from(pessoas), de: de, ate: ate } });
+    if(!r || !r.ok) throw new Error(r && r.error === "forbidden" ? "Esta conta não tem permissão para importar picagens." : (r && r.error) || "erro");
+    Object.assign(pontoMapa, mapa);
+    pontoPaginas = [];
+    document.getElementById("pontoFiles").value = "";
+    document.getElementById("pontoProgresso").textContent = "✅ Picagens gravadas (" + pessoas.size + " colega(s), " + de + " a " + ate + ").";
+    pontoCache = null;
+    pontoRender();
+  }catch(e){
+    alert("Não foi possível gravar: " + (e && e.message ? e.message : e));
+    btn.disabled = false;
+  }
+});
+
+// ---- Comparação (só vista da contabilista) ----
+let pontoCache = null, pontoCacheErro = "", pontoCmpAberto = null;
+async function pontoCarregarDados(){
+  try{
+    const r = await rpc("app_ponto_get", { p_token: authToken });
+    if(r && r.ok && r.full){ pontoCache = r.value || { dias:{} }; pontoCacheErro = ""; }
+    else { pontoCache = { dias:{} }; pontoCacheErro = "Sem acesso às picagens."; }
+  }catch(e){ pontoCache = null; pontoCacheErro = "Não foi possível obter as picagens."; }
+}
+function pontoAnalisarDia(person, d, reg){
+  const code = diaPublicado(person, weekKey(d)) ? lerTurnoSemCriar(person.id, d) : "";
+  const st = code ? shiftType(code) : null;
+  const hApp = (st && !st.isRest) ? effectiveShiftHours(person, code) * 60 : 0;
+  const pic = reg ? (reg.p || []) : [];
+  const ef = reg ? (reg.ef || 0) : 0;
+  const notas = [];
+  if(hApp > 0 && !pic.length) notas.push("sem picagem");
+  if(hApp === 0 && pic.length) notas.push("picagem sem turno");
+  if(hApp > 0 && pic.length && st && st.blocks){
+    const blocos = st.blocks.map(([a,b])=> [Math.round(a*60), Math.round(b*60)]);
+    const pares = [];
+    for(let k = 0; k + 1 < pic.length; k += 2) pares.push([pic[k], pic[k+1]]);
+    if(pares.length !== blocos.length) notas.push(pares.length + " período(s) picado(s) para " + blocos.length + " no turno");
+    else blocos.forEach(([a,b], i)=>{
+      if(pares[i][0] - a > 5) notas.push("entrada " + pontoHhmm(pares[i][0]) + " (+" + (pares[i][0] - a) + " min)");
+      if(b - pares[i][1] > 5) notas.push("saída " + pontoHhmm(pares[i][1]) + " (−" + (b - pares[i][1]) + " min)");
+    });
+  }
+  return { code, hApp, pic, ef, notas };
+}
+function renderPontoComparacao(){
+  const panel = document.getElementById("pontoCmpPanel");
+  if(!panel) return;
+  if(!isContabAccountant()){ panel.style.display = "none"; return; }
+  panel.style.display = "";
+  const wrap = document.getElementById("pontoCmpWrap");
+  if(pontoCache === null){
+    wrap.innerHTML = '<p class="note">A carregar as picagens…</p>';
+    pontoCarregarDados().then(()=>{ if(pontoCache !== null) renderPontoComparacao(); else wrap.innerHTML = '<p class="note">' + esc(pontoCacheErro) + '</p>'; });
+    return;
+  }
+  const start = new Date(document.getElementById("contabStart").value + "T00:00:00");
+  const end = new Date(document.getElementById("contabEnd").value + "T00:00:00");
+  if(!(start <= end)){ wrap.innerHTML = ""; return; }
+  const dias = pontoCache.dias || {};
+  const fH = m => pontoHhmm(Math.round(m));
+  let h = (pontoCacheErro ? '<p class="note">' + esc(pontoCacheErro) + '</p>' : "") +
+    '<div class="grid-scroll"><table class="pt-tab"><thead><tr><th>Pessoa</th><th>Horas app</th><th>Horas picadas</th><th>Diferença</th><th>Avisos</th></tr></thead><tbody>';
+  state.staff.filter(pp=> isSchedulableTipo(pp.tipo) && !pp.principal).forEach(person=>{
+    const regs = dias[person.id] || {};
+    let tApp = 0, tPic = 0, nAv = 0, temDados = false;
+    const linhas = [];
+    for(let d = new Date(start); d <= end; d = addDays(d, 1)){
+      const reg = regs[weekKey(d)];
+      if(reg) temDados = true;
+      const a = pontoAnalisarDia(person, d, reg);
+      tApp += a.hApp; tPic += a.ef; nAv += a.notas.length;
+      if(a.hApp || a.pic.length || a.ef) linhas.push({ d: new Date(d), a });
+    }
+    const dif = tPic - tApp;
+    const aberto = pontoCmpAberto === person.id;
+    h += '<tr class="pc-row" data-pc="' + esc(person.id) + '"><td><strong>' + (aberto ? "▾ " : "▸ ") + esc(person.nome) + '</strong></td><td>' + fH(tApp) + '</td><td>' +
+      (temDados ? fH(tPic) : '<span class="cst-legend">sem picagens importadas</span>') + '</td><td>' +
+      (temDados ? '<span class="' + (Math.abs(dif) > 1 ? "pt-warn" : "pt-ok") + '">' + (dif < 0 ? "−" : dif > 0 ? "+" : "") + fH(Math.abs(dif)) + '</span>' : "") + '</td><td>' +
+      (temDados ? (nAv ? '<span class="pt-warn">' + nAv + '</span>' : '<span class="pt-ok">0</span>') : "") + '</td></tr>';
+    if(aberto){
+      h += '<tr class="pc-det"><td colspan="5"><table class="pt-tab"><thead><tr><th>Dia</th><th>Turno</th><th>Picagens</th><th>App</th><th>Picado</th><th>Notas</th></tr></thead><tbody>' +
+        linhas.map(({d, a})=> '<tr><td>' + esc(fmtDate(d) + " " + d.toLocaleDateString("pt-PT", {weekday:"short"}).replace(".", "")) + '</td><td>' + esc(a.code || "—") + '</td><td>' +
+          esc(a.pic.map(pontoHhmm).join(" · ")) + '</td><td>' + (a.hApp ? fH(a.hApp) : "") + '</td><td>' + (a.ef ? fH(a.ef) : "") + '</td><td>' +
+          (a.notas.length ? '<span class="pt-warn">' + esc(a.notas.join("; ")) + '</span>' : "") + '</td></tr>').join("") +
+        (linhas.length ? "" : '<tr><td colspan="6" class="cst-legend">Sem turnos nem picagens neste período.</td></tr>') +
+        '</tbody></table></td></tr>';
+    }
+  });
+  h += '</tbody></table></div><p style="margin-top:8px;"><span class="back-link" id="pontoCmpRefresh" style="font-size:12.5px;">↻ Atualizar picagens</span></p>';
+  wrap.innerHTML = h;
+  wrap.querySelectorAll("[data-pc]").forEach(r=> r.addEventListener("click", ()=>{ pontoCmpAberto = (pontoCmpAberto === r.dataset.pc) ? null : r.dataset.pc; renderPontoComparacao(); }));
+  document.getElementById("pontoCmpRefresh").addEventListener("click", ()=>{ pontoCache = null; renderPontoComparacao(); });
 }
 // ---------- A MINHA ESTATÍSTICA (vista enfermeiro) ----------
 // Colegas de recibos verdes (cada um vê só os seus dados). O Luís vê-a só na vista enfermeiro.
