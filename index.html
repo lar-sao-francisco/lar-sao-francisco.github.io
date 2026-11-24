@@ -576,6 +576,17 @@
   .din-v{ font-family:"Space Grotesk",sans-serif; font-size:26px; font-weight:700; color:var(--ink); }
   .din-m{ font-size:13px; color:var(--ink-soft); }
   .din-svg{ width:100%; height:auto; display:block; margin-top:8px; max-height:240px; }
+  /* ---- A minha estatística (vista enfermeiro) ---- */
+  .mest-tab{ border-collapse:collapse; width:100%; max-width:560px; font-size:13px; }
+  .mest-tab th, .mest-tab td{ padding:7px 10px; border-bottom:0.75px solid var(--line); text-align:right; }
+  .mest-tab td:not(:first-child){ white-space:nowrap; }
+  @media (max-width:680px){ .mest-tab th, .mest-tab td{ padding:7px 6px; } }
+  .mest-tab th{ font-size:11.5px; color:var(--ink-soft); font-weight:700; }
+  .mest-tab th:first-child, .mest-tab td:first-child{ text-align:left; }
+  .mest-tab tr.tot td{ border-bottom:none; border-top:1.5px solid var(--sage-deep); font-weight:800; }
+  .mest-tab tr.fds td{ background:rgba(14,166,107,0.06); }
+  .mest-big{ font-family:"Space Grotesk",sans-serif; font-size:24px; font-weight:700; color:var(--sage-deep); }
+  .mest-prov{ display:inline-block; font-size:11px; font-weight:700; color:#B45309; background:#FEF3C7; border-radius:999px; padding:2px 9px; margin-left:6px; }
   @media (max-width:680px){
     .cst-kpis{ grid-template-columns:repeat(2,minmax(0,1fr)); }
     .cst-bar{ grid-template-columns:70px 1fr 74px; font-size:12px; }
@@ -761,6 +772,10 @@
       <span class="icon">⚙️</span>
       <h3>Configurações</h3>
     </div>
+    <div class="home-card" data-target="minhaest" id="minhaEstCard" style="display:none;">
+      <span class="icon">📈</span>
+      <h3>A minha estatística</h3>
+    </div>
     <div class="home-card" data-target="relatorios" id="reportCard">
       <span class="icon">📊</span>
       <h3>Contabilidade</h3>
@@ -944,6 +959,24 @@
       <h2>O teu dinheiro — estimativa <span style="font-weight:600; font-size:12px; color:var(--ink-soft);">· só tu vês</span></h2>
       <div id="dinWrap"></div>
       <p class="note">Mesma conta da "estimativa do mês" da página inicial: horas úteis × €/h + horas de fim de semana e feriados × €/h de fim de semana, mês do calendário (1 a 31).</p>
+    </div>
+  </div>
+  <!-- SECTION: A MINHA ESTATÍSTICA (vista enfermeiro; para já só o Luís) — só leitura -->
+  <div id="section-minhaest" class="section" style="display:none;">
+    <span class="back-link" data-back>← Voltar ao início</span>
+    <div class="panel no-print">
+      <h2>O teu dinheiro — estimativa <span style="font-weight:600; font-size:12px; color:var(--ink-soft);">· só tu vês</span></h2>
+      <div id="mestChartWrap"></div>
+      <p class="note">Mês do calendário (dia 1 ao último dia). Horas úteis × €/h + horas de fim de semana e feriados × €/h de fim de semana, com o €/h em vigor em cada mês. Contam todos os turnos atribuídos na grelha do Horário.</p>
+    </div>
+    <div class="panel no-print">
+      <h2>Horas do mês — <span id="mestMesLabel"></span></h2>
+      <div class="grid-scroll" id="mestMesWrap"></div>
+    </div>
+    <div class="panel no-print">
+      <h2>Período da contabilidade — <span id="mestPerLabel"></span></h2>
+      <div id="mestPerWrap"></div>
+      <p class="note">Serve para comparar com o documento que a contabilidade envia. A app conta o turno inteiro; a contabilidade pode descontar entradas tardias ou saídas antecipadas registadas no ponto.</p>
     </div>
   </div>
   <!-- SECTION: CONFIGURAÇÕES -->
@@ -1716,6 +1749,7 @@ function enterApp(){
   document.getElementById("reportCard").style.display = (authRole==="gestor" || (person && (person.canViewReports || person.canViewContab || person.canEditContab))) ? "" : "none";
   document.getElementById("teamDispCard").style.display = (authRole==="gestor" || (person && person.canViewTeamDisp)) ? "" : "none";
   document.getElementById("horarioCard").style.display = "";
+  document.getElementById("minhaEstCard").style.display = podeVerMinhaEst() ? "" : "none";
   document.getElementById("dispCard").style.display = (person && isRvLike(person.tipo)) ? "" : "none";
   document.getElementById("gestorBadge").style.display = authRole==="gestor" ? "" : "none";
   if(authRole==="gestor" && person) document.getElementById("gestorBadgeName").textContent = person.nome + (person.id===OWNER_ID ? " 👑" : "");
@@ -1786,7 +1820,7 @@ function logoutApp(){
   document.getElementById("homeMenu").style.display = "none";
   document.getElementById("logoutSmallBar").style.display = "none";
   document.getElementById("weekNav").style.display = "none";
-  ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
+  ["horario","disponibilidade","config","relatorios","dispequipa","minhaest"].forEach(n=>{
     document.getElementById("section-"+n).style.display = "none";
   });
   document.getElementById("gestorBadge").style.display = "none";
@@ -1860,10 +1894,11 @@ function showSection(name){
     alert("Acesso restrito à gestão.");
     return;
   }
+  if(name === "minhaest" && !podeVerMinhaEst()){ return; }
   document.getElementById("homeMenu").style.display = name ? "none" : "grid";
   document.getElementById("logoutSmallBar").style.display = name ? "none" : "";
   if(name){ document.getElementById("myStatsBar").style.display = "none"; } else { renderMyStats(); renderEquipaDia(); }
-  ["horario","disponibilidade","config","relatorios","dispequipa"].forEach(n=>{
+  ["horario","disponibilidade","config","relatorios","dispequipa","minhaest"].forEach(n=>{
     document.getElementById("section-"+n).style.display = (n===name) ? "" : "none";
   });
   if(name==="horario"){ centrarHojePendente = true; renderExcelGrid(); }
@@ -1881,6 +1916,7 @@ function showSection(name){
     renderMeuDinheiro();
   }
   if(name==="dispequipa") renderTeamAvailability();
+  if(name==="minhaest") renderMinhaEst();
   updateMonthLabel();
 }
 // ---------- RENDER: STAFF (Configurações) ----------
@@ -4069,6 +4105,129 @@ function renderMeuDinheiro(){
     '<svg class="din-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Estimativa mensal">' + g + area + linhas + pontos + eixo + '</svg>' +
     '<div class="cst-legend">Toca num mês para ver o valor. Tracejado = mês seguinte (planeado).</div>';
   document.querySelectorAll("#dinWrap [data-din]").forEach(r=> r.addEventListener("click", ()=>{ dinSel = +r.dataset.din; renderMeuDinheiro(); }));
+}
+// ---------- A MINHA ESTATÍSTICA (vista enfermeiro) ----------
+// Fase 1: só o Luís, e só na vista enfermeiro. Só leitura — não grava nada no estado.
+function podeVerMinhaEst(){ return authNurseId === OWNER_ID && vistaEnfermeiro; }
+let mestSel = null;
+// €/h em vigor num mês (mesma regra da estimativaMes)
+function mestTaxas(person, mk){
+  const taxa = contabRateFor(person, mk);
+  let rH = numOuNaN(taxa.h), rF = numOuNaN(taxa.fds);
+  if(isNaN(rH) || rH <= 0){
+    if(person.id === OWNER_ID && state.payRates){ rH = state.payRates.gestorHora || 0; rF = state.payRates.gestorFds || 0; }
+    else return null;
+  }
+  if(isNaN(rF)) rF = rH;
+  return { rH, rF };
+}
+// Turnos de uma pessoa entre duas datas (inclusive), dia a dia
+function mestDias(person, de, ate){
+  const dias = []; let uteis = 0, fds = 0, turnos = 0;
+  for(let d = new Date(de); d <= ate; d = addDays(d, 1)){
+    const code = lerTurnoSemCriar(person.id, d);
+    if(!code) continue;
+    const h = effectiveShiftHours(person, code);
+    if(h <= 0) continue;
+    const fim = contaComoFimDeSemana(d);
+    if(fim) fds += h; else uteis += h;
+    if(code !== "Fe") turnos++;
+    dias.push({ d: new Date(d), code, h, fim, feriado: isHolidayDay(d) });
+  }
+  return { dias, uteis, fds, turnos };
+}
+// Período de contabilidade do pagamento do mês d: o que foi guardado, ou 21 do mês anterior → 20
+function mestPeriodo(d){
+  const mk = d.getFullYear() + "-" + pad2(d.getMonth() + 1);
+  const p = state.contabPeriods && state.contabPeriods[mk];
+  if(p && p.de && p.ate) return { de: new Date(p.de + "T00:00:00"), ate: new Date(p.ate + "T00:00:00"), prov: false, mk };
+  return { de: new Date(d.getFullYear(), d.getMonth() - 1, 21), ate: new Date(d.getFullYear(), d.getMonth(), 20), prov: true, mk };
+}
+function renderMinhaEst(){
+  const eu = staffById(authNurseId);
+  if(!eu || !podeVerMinhaEst()) return;
+  const fmtE = v => (v === null || v === undefined || isNaN(v)) ? "—" : v.toFixed(2).replace(".", ",") + " €";
+  const fmtH = v => fmtNumPt(v) + " h";
+  const meses = cstMesesJanela();
+  const hoje = new Date();
+  const mesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1).getTime();
+  if(mestSel === null) mestSel = Math.max(0, meses.findIndex(d=> d.getTime() === mesAtual));
+  const vals = meses.map(d=> estimativaMes(eu, d));
+  // --- gráfico (mesmo desenho do "O teu dinheiro") ---
+  const W = 600, H = 190, pl = 46, pr = 14, pt = 14, pb = 26;
+  const mx = Math.max(...vals.map(v=> v || 0), 100);
+  const topo = Math.ceil(mx / 500) * 500;
+  const x = i => pl + i * (W - pl - pr) / (meses.length - 1);
+  const y = v => pt + (1 - v / topo) * (H - pt - pb);
+  let g = "";
+  for(let t = 0; t <= topo; t += topo / 4){
+    g += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="#E1EFE8" stroke-width="1"/>' +
+      '<text x="' + (pl - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end" font-size="11" fill="#5E7168">' + Math.round(t) + '€</text>';
+  }
+  const pts = vals.map((v,i)=> v === null ? null : [x(i), y(v)]);
+  const ultimoReal = meses.findIndex(d=> d.getTime() > mesAtual);
+  const seg = (a,b,dash)=> '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#067A4F" stroke-width="2.5" stroke-linecap="round"' + (dash ? ' stroke-dasharray="5 5"' : '') + '/>';
+  let area = "", linhas = "";
+  const reais = pts.map((p,i)=> (p && (ultimoReal < 0 || i < ultimoReal)) ? p : null).filter(Boolean);
+  if(reais.length > 1) area = '<path d="M' + reais[0][0] + ',' + y(0) + ' ' + reais.map(p=> 'L' + p[0] + ',' + p[1]).join(' ') + ' L' + reais[reais.length-1][0] + ',' + y(0) + 'Z" fill="rgba(14,166,107,0.10)"/>';
+  for(let i = 1; i < pts.length; i++) if(pts[i-1] && pts[i]) linhas += seg(pts[i-1], pts[i], ultimoReal >= 0 && i >= ultimoReal);
+  const pontos = pts.map((p,i)=>{
+    if(!p) return "";
+    const plan = ultimoReal >= 0 && i >= ultimoReal;
+    return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (i === mestSel ? 7 : 4.5) + '" fill="' + (plan ? '#fff' : '#067A4F') + '" stroke="#067A4F" stroke-width="2"/>' +
+      '<rect data-mest="' + i + '" x="' + (p[0] - 22) + '" y="' + pt + '" width="44" height="' + (H - pt) + '" fill="transparent" style="cursor:pointer"/>';
+  }).join("");
+  const eixo = meses.map((d,i)=> '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11" fill="' + (i === mestSel ? '#067A4F' : '#5E7168') + '" font-weight="' + (i === mestSel ? 700 : 400) + '">' +
+    esc(d.toLocaleDateString("pt-PT", {month:"short"}).replace(".", "")) + '</text>').join("");
+  const sd = meses[mestSel];
+  const nomeSel = sd.toLocaleDateString("pt-PT", {month:"long", year:"numeric"});
+  const estado = sd.getTime() > mesAtual ? " · planeado" : sd.getTime() === mesAtual ? " · em curso" : "";
+  document.getElementById("mestChartWrap").innerHTML =
+    '<div class="din-top"><span class="din-v">' + fmtE(vals[mestSel]) + '</span><span class="din-m">' + esc(nomeSel + estado) + '</span></div>' +
+    '<svg class="din-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Estimativa mensal">' + g + area + linhas + pontos + eixo + '</svg>' +
+    '<div class="cst-legend">Toca num mês para ver o valor e as tabelas em baixo. Tracejado = mês seguinte (planeado).</div>';
+  document.querySelectorAll("#mestChartWrap [data-mest]").forEach(r=> r.addEventListener("click", ()=>{ mestSel = +r.dataset.mest; renderMinhaEst(); }));
+
+  // --- tabela de horas do mês de calendário ---
+  const mk = sd.getFullYear() + "-" + pad2(sd.getMonth() + 1);
+  const tx = mestTaxas(eu, mk);
+  const fimMes = new Date(sd.getFullYear(), sd.getMonth() + 1, 0);
+  const m = mestDias(eu, sd, fimMes);
+  document.getElementById("mestMesLabel").textContent = nomeSel;
+  const linhaTab = (lbl, h, r) => '<tr><td>' + lbl + '</td><td>' + fmtH(h) + '</td><td>' + (tx ? fmtE(r) : "—") + '</td><td>' + (tx ? fmtE(h * r) : "—") + '</td></tr>';
+  const tabelaHoras = (s) =>
+    '<table class="mest-tab"><thead><tr><th></th><th>Horas</th><th>€/h</th><th>Valor</th></tr></thead><tbody>' +
+    linhaTab("Dias úteis", s.uteis, tx ? tx.rH : 0) +
+    linhaTab("Fim de semana e feriados", s.fds, tx ? tx.rF : 0) +
+    '<tr class="tot"><td>Total · ' + s.turnos + ' turnos</td><td>' + fmtH(s.uteis + s.fds) + '</td><td></td><td>' + (tx ? fmtE(s.uteis * tx.rH + s.fds * tx.rF) : "—") + '</td></tr>' +
+    '</tbody></table>';
+  document.getElementById("mestMesWrap").innerHTML = tabelaHoras(m) +
+    (tx ? "" : '<p class="note">Ainda não há €/hora definido para este mês.</p>');
+
+  // --- período da contabilidade (pagamento deste mês) ---
+  const per = mestPeriodo(sd);
+  const ps = mestDias(eu, per.de, per.ate);
+  const fmtDia = d => fmtDate(d) + " " + d.toLocaleDateString("pt-PT", {weekday:"short"}).replace(".", "");
+  document.getElementById("mestPerLabel").innerHTML = esc(fmtDate(per.de) + " a " + fmtDate(per.ate)) +
+    (per.prov ? '<span class="mest-prov" title="A contabilista ainda não fixou o período deste mês na app — usa-se 21 a 20.">provisório</span>' : "");
+  const est = tx ? ps.uteis * tx.rH + ps.fds * tx.rF : null;
+  const pago = state.salarioFinal ? state.salarioFinal[eu.id + "|" + per.mk] : undefined;
+  let h = '<div style="margin-bottom:12px;"><span class="cst-legend" style="margin:0;">Estimativa de quanto vais receber (pagamento de ' +
+    esc(sd.toLocaleDateString("pt-PT", {month:"long"})) + ')</span><div class="mest-big">' + fmtE(est) + '</div>' +
+    ((pago !== undefined && pago !== null && pago !== "" && parseFloat(pago) > 0) ? '<div class="cst-legend">Registado na Contabilidade da app: <strong>' + fmtE(parseFloat(pago)) + '</strong></div>' : "") +
+    '</div>';
+  h += tabelaHoras(ps);
+  h += '<div class="cst-sec">Dia a dia</div>';
+  if(!ps.dias.length){
+    h += '<p class="note">Sem turnos neste período.</p>';
+  } else {
+    h += '<div class="grid-scroll"><table class="mest-tab"><thead><tr><th>Dia</th><th>Turno</th><th>Horas</th><th>Tipo</th></tr></thead><tbody>' +
+      ps.dias.map(r=> '<tr' + (r.fim ? ' class="fds"' : '') + '><td>' + esc(fmtDia(r.d)) + '</td><td>' + esc(r.code) + '</td><td>' + fmtH(r.h) + '</td><td>' +
+        (r.feriado ? 'Feriado' : (r.fim ? 'Fim de semana' : 'Útil')) + '</td></tr>').join("") +
+      '<tr class="tot"><td>Total</td><td>' + ps.turnos + '</td><td>' + fmtH(ps.uteis + ps.fds) + '</td><td></td></tr>' +
+      '</tbody></table></div>';
+  }
+  document.getElementById("mestPerWrap").innerHTML = h;
 }
 // ---------- ESTATISTICAS PESSOAIS (recibos verdes) ----------
 function renderMyStats(){
