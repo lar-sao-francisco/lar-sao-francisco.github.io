@@ -4107,8 +4107,14 @@ function renderMeuDinheiro(){
   document.querySelectorAll("#dinWrap [data-din]").forEach(r=> r.addEventListener("click", ()=>{ dinSel = +r.dataset.din; renderMeuDinheiro(); }));
 }
 // ---------- A MINHA ESTATÍSTICA (vista enfermeiro) ----------
-// Fase 1: só o Luís, e só na vista enfermeiro. Só leitura — não grava nada no estado.
-function podeVerMinhaEst(){ return authNurseId === OWNER_ID && vistaEnfermeiro; }
+// Colegas de recibos verdes (cada um vê só os seus dados). O Luís vê-a só na vista enfermeiro.
+// Só leitura — não grava nada no estado.
+function podeVerMinhaEst(){
+  const eu = staffById(authNurseId);
+  if(!eu || !isRvLike(eu.tipo)) return false;
+  if(authNurseId === OWNER_ID) return vistaEnfermeiro;
+  return true;
+}
 let mestSel = null;
 // €/h em vigor num mês (mesma regra da estimativaMes)
 function mestTaxas(person, mk){
